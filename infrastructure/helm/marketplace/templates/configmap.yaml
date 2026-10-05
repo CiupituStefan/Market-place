@@ -1,0 +1,23 @@
+{{- range $name, $c := .Values.components }}
+{{- $ctx := dict "name" $name "root" $ }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name }}-config
+  labels:
+    {{- include "marketplace.labels" $ctx | nindent 4 }}
+data:
+  PORT: {{ $c.port | quote }}
+  {{- if eq (include "marketplace.enabled" $c.sharedEnv) "true" }}
+  {{- range $key, $value := $.Values.global.env }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+  {{- else }}
+  NODE_ENV: {{ $.Values.global.env.NODE_ENV | quote }}
+  {{- end }}
+  {{- include "marketplace.derivedEnv" $ctx | nindent 2 }}
+  {{- range $key, $value := $c.env }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+{{- end }}

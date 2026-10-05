@@ -26,8 +26,13 @@ grants, so splitting a busy service onto its own cluster later is an operational
 - Schema in TypeScript (`src/db/schema.ts`), queries are typed SQL with no runtime engine.
 - `pnpm db:generate` produces reviewed, committed SQL migrations (`drizzle/`). CI fails if the
   schema changed without a migration, and applies all migrations to a real PostgreSQL 16.
-- Production runs `db:migrate` as a pre-deploy Kubernetes Job; app pods never run DDL
-  (`MIGRATE_ON_START` defaults to `false` in production).
+- In Kubernetes each service's pods run `db:migrate` in an **init container** with the schema
+  owner's credentials (`DATABASE_MIGRATION_URL`); the application container connects with a
+  role that can only read and write data and never runs DDL (`MIGRATE_ON_START=false`).
+  Replicas starting together are serialised by an advisory lock in `runMigrations`.
+- Migrations must work with the previous release still running (rolling updates): add first
+  (columns nullable or with defaults, new tables), backfill, switch the code, and drop or
+  tighten only in a later release (expand/contract).
 
 ## Conventions
 

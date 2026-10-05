@@ -1,0 +1,74 @@
+suite: platform resources
+values:
+  - ../values-production.yaml
+  - ../ci/example-values.yaml
+tests:
+  - it: syncs each component's secrets from its Secrets Manager entry
+    template: externalsecret.yaml
+    documentSelector: { path: metadata.name, value: auth-service-secrets }
+    asserts:
+      - equal: { path: 'spec.dataFrom[0].extract.key', value: cse/production/auth-service }
+      - equal: { path: spec.target.name, value: auth-service-secrets }
+
+  - it: creates no secret for the web app
+    template: externalsecret.yaml
+    asserts:
+      - hasDocuments: { count: 10 }
+
+  - it: denies ingress by default and allows only listed callers
+    template: networkpolicy.yaml
+    documentSelector: { path: metadata.name, value: inventory-service-ingress }
+    asserts:
+      - lengthEqual: { path: 'spec.ingress[0].from', count: 3 }
+      - contains:
+          path: 'spec.ingress[0].from'
+          content:
+            podSelector:
+              matchLabels:
+                { app.kubernetes.io/name: cart-service, app.kubernetes.io/instance: RELEASE-NAME }
+      - notContains:
+          path: 'spec.ingress[0].from'
+          content:
+            podSelector:
+              matchLabels: { app.kubernetes.io/name: web, app.kubernetes.io/instance: RELEASE-NAME }
+
+  - it: admits the load balancer to public components only
+    template: networkpolicy.yaml
+    documentSelector: { path: metadata.name, value: web-ingress }
+    asserts:
+      - contains:
+          path: spec.ingress[0].from
+          content: { ipBlock: { cidr: 10.20.0.0/16 } }
+
+  - it: puts WAF and TLS in front of both hosts
+    template: ingress.yaml
+    asserts:
+      - isNotEmpty:
+          path: metadata.annotations["alb.ingress.kubernetes.io/wafv2-acl-arn"]
+      - equal:
+          path: metadata.annotations["alb.ingress.kubernetes.io/ssl-redirect"]
+          value: '443'
+      - equal: { path: 'spec.rules[0].host', value: www.csekeyboards.com }
+      - equal: { path: 'spec.rules[1].http.paths[0].backend.service.name', value: api-gateway }
+
+  - it: refuses an ingress without a WAF
+    template: ingress.yaml
+    set: { global.ingress.wafAclArn: '' }
+    asserts:
+      - failedTemplate:
+          errorMessage: global.ingress.wafAclArn is required (AWS WAF)
+
+  - it: keeps a replica up during node drains in production
+    template: pdb.yaml
+    documentSelector: { path: metadata.name, value: order-service }
+    asserts:
+      - equal: { path: spec.maxUnavailable, value: 1 }
+
+  - it: uses IRSA for AWS access where needed
+    template: serviceaccount.yaml
+    documentSelector: { path: metadata.name, value: product-service }
+    asserts:
+      - equal:
+          path: metadata.annotations["eks.amazonaws.com/role-arn"]
+          value: arn:aws:iam::123456789012:role/cse-product-service
+      - equal: { path: automountServiceAccountToken, value: false }

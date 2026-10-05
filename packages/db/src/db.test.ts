@@ -4,8 +4,9 @@ import { join } from 'node:path';
 import { NotificationRequestedV1 } from '@market/events';
 import { runWithContext } from '@market/logger';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { enqueueEvent, isUniqueViolation, outboxEvents } from './index.js';
-import { createTestDatabase } from './testing.js';
+import { sql } from 'drizzle-orm';
+import { enqueueEvent, isUniqueViolation, outboxEvents, runMigrations } from './index.js';
+import { createPostgresTestDatabase, createTestDatabase } from './testing.js';
 
 /** Minimal drizzle migration folder creating just the outbox table. */
 function migrationsWithOutbox(): string {
@@ -90,5 +91,32 @@ describe('isUniqueViolation', () => {
     expect(isUniqueViolation(new Error('wrapped', { cause: { code: '23505' } }))).toBe(true);
     expect(isUniqueViolation({ code: '23503' })).toBe(false);
     expect(isUniqueViolation(undefined)).toBe(false);
+  });
+});
+
+/** Real PostgreSQL only (needs several connections). TEST_DATABASE_URL is set in CI. */
+describe.skipIf(!process.env.TEST_DATABASE_URL)('runMigrations on PostgreSQL', () => {
+  it('lets several replicas start at once: one applies, the others find it done', async () => {
+    const empty = mkdtempSync(join(tmpdir(), 'mig-empty-'));
+    mkdirSync(join(empty, 'meta'));
+    writeFileSync(
+      join(empty, 'meta', '_journal.json'),
+      JSON.stringify({ version: '7', dialect: 'postgresql', entries: [] }),
+    );
+    const target = await createPostgresTestDatabase({
+      adminUrl: process.env.TEST_DATABASE_URL ?? '',
+      schema: { outboxEvents },
+      migrationsFolder: empty,
+    });
+    try {
+      const folder = migrationsWithOutbox();
+      await Promise.all(Array.from({ length: 6 }, () => runMigrations(target.url, folder)));
+      const applied = await target.db.execute(
+        sql`SELECT count(*)::int AS n FROM drizzle.__drizzle_migrations`,
+      );
+      expect((applied as { rows: { n: number }[] }).rows[0]?.n).toBe(1);
+    } finally {
+      await target.close();
+    }
   });
 });

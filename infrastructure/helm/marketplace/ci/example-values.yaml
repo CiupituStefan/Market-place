@@ -1,0 +1,22 @@
+# Stand-ins for the Terraform outputs, used by `helm lint`, the template tests and schema
+# validation. Not real resources.
+global:
+  image:
+    registry: 123456789012.dkr.ecr.eu-central-1.amazonaws.com
+    tag: 3f9c2e1
+  ingress:
+    certificateArn: arn:aws:acm:eu-central-1:123456789012:certificate/00000000-0000-0000-0000-000000000000
+    wafAclArn: arn:aws:wafv2:eu-central-1:123456789012:regional/webacl/cse/00000000-0000-0000-0000-000000000000
+    loadBalancerCidrs: [10.20.0.0/16]
+  env:
+    KAFKA_BROKERS: b-1.cse.kafka.eu-central-1.amazonaws.com:9096,b-2.cse.kafka.eu-central-1.amazonaws.com:9096
+components:
+  product-service:
+    iamRoleArn: arn:aws:iam::123456789012:role/cse-product-service
+    env:
+      S3_BUCKET: cse-product-images
+      ASSET_BASE_URL: https://cdn.csekeyboards.com
+  notification-service:
+    iamRoleArn: arn:aws:iam::123456789012:role/cse-notification-service
+    env:
+      EMAIL_FROM: CSE Keyboards <hello@csekeyboards.com>

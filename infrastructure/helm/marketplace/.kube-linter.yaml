@@ -1,0 +1,6 @@
+# kube-linter: the default checks, minus one false positive.
+checks:
+  exclude:
+    # Replicas are spread over zones and nodes with topologySpreadConstraints, which
+    # kube-linter does not recognise as an alternative to pod anti-affinity.
+    - no-anti-affinity

@@ -1,0 +1,51 @@
+{{- /*
+One internet-facing Application Load Balancer (AWS Load Balancer Controller) for both hosts,
+HTTPS only (HTTP redirects), modern TLS policy, AWS WAF in front, pods as IP targets.
+*/}}
+{{- $ing := .Values.global.ingress }}
+{{- if $ing.enabled }}
+{{- $web := required "global.domains.web is required" .Values.global.domains.web }}
+{{- $api := required "global.domains.api is required" .Values.global.domains.api }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: marketplace
+  labels:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: cse-keyboards
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/group.name: {{ $ing.groupName }}
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS13-1-2-2021-06
+    alb.ingress.kubernetes.io/certificate-arn: {{ required "global.ingress.certificateArn is required (ACM)" $ing.certificateArn | quote }}
+    alb.ingress.kubernetes.io/wafv2-acl-arn: {{ required "global.ingress.wafAclArn is required (AWS WAF)" $ing.wafAclArn | quote }}
+    alb.ingress.kubernetes.io/load-balancer-attributes: routing.http.drop_invalid_header_fields.enabled=true,idle_timeout.timeout_seconds=60
+    alb.ingress.kubernetes.io/target-group-attributes: deregistration_delay.timeout_seconds={{ .Values.global.preStopSleepSeconds }}
+spec:
+  ingressClassName: {{ $ing.className }}
+  rules:
+    - host: {{ $web }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web
+                port:
+                  name: http
+    - host: {{ $api }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway
+                port:
+                  name: http
+{{- end }}

@@ -1,0 +1,24 @@
+{{- range $name, $c := .Values.components }}
+{{- $ctx := dict "name" $name "root" $ }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "marketplace.labels" $ctx | nindent 4 }}
+  {{- if $c.public }}
+  annotations:
+    # ALB target group health check (IP targets).
+    alb.ingress.kubernetes.io/healthcheck-path: {{ (($c.healthPaths).ready) | default "/health/ready" }}
+  {{- end }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "marketplace.selectorLabels" $ctx | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ $c.port }}
+      targetPort: http
+      protocol: TCP
+{{- end }}

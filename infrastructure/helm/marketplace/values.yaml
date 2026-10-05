@@ -1,0 +1,257 @@
+# Defaults shared by every environment. Environment files (values-staging.yaml,
+# values-production.yaml) override them; the image tag is set at deploy time:
+#   helm upgrade --install marketplace . -f values-staging.yaml --set global.image.tag=$GIT_SHA
+#
+# No secret values live here or anywhere in Git: each component reads its secrets from a
+# Kubernetes Secret `<component>-secrets`, synced from AWS Secrets Manager by External Secrets.
+
+global:
+  environment: staging
+
+  image:
+    # ECR registry, e.g. 123456789012.dkr.ecr.eu-central-1.amazonaws.com (required).
+    registry: ''
+    repositoryPrefix: cse
+    # Git SHA of the build (required; `latest` is refused).
+    tag: ''
+    pullPolicy: IfNotPresent
+
+  domains:
+    web: '' # e.g. shop.example.com
+    api: '' # e.g. api.example.com
+
+  # Non-secret settings every service gets (secrets come from <component>-secrets).
+  env:
+    NODE_ENV: production
+    LOG_LEVEL: info
+    JWT_ISSUER: cse-auth
+    MIGRATE_ON_START: 'false'
+    AUTH_JWKS_URL: http://auth-service:4001/.well-known/jwks.json
+    # Amazon MSK: TLS + SASL/SCRAM (credentials in each component's secret).
+    KAFKA_BROKERS: ''
+    KAFKA_SSL: 'true'
+    KAFKA_SASL_MECHANISM: SCRAM-SHA-512
+    # Each service creates the topics it uses (and their dead-letter topics) if missing;
+    # its MSK user is granted CreateTopic on those topics only.
+    KAFKA_CREATE_TOPICS: 'true'
+    KAFKA_REPLICATION_FACTOR: '3'
+    KAFKA_TOPIC_PARTITIONS: '6'
+
+  externalSecrets:
+    enabled: true
+    # A (Cluster)SecretStore for AWS Secrets Manager, installed with the cluster (Terraform).
+    storeRef:
+      name: aws-secrets-manager
+      kind: ClusterSecretStore
+    # Secrets Manager entries are JSON objects at <prefix>/<component>.
+    keyPrefix: cse/staging
+    refreshInterval: 1h
+
+  ingress:
+    enabled: true
+    className: alb
+    # ACM certificate covering both domains, and the WAF web ACL (Terraform outputs).
+    certificateArn: ''
+    wafAclArn: ''
+    groupName: cse
+    # Source CIDRs of the load balancer (the VPC), allowed through the network policies.
+    loadBalancerCidrs: []
+
+  networkPolicy:
+    enabled: true
+
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
+
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: [ALL]
+
+  # Spread replicas over zones and nodes (best effort).
+  topologySpread: true
+
+  # Seconds the pod keeps serving after removal from the load balancer starts.
+  preStopSleepSeconds: 10
+
+# Per component. `allowFrom` lists the components allowed to call it (network policies);
+# `database: true` adds the migration init container (DATABASE_MIGRATION_URL from the secret).
+components:
+  web:
+    port: 3000
+    healthPaths: { live: /api/health, ready: /api/health }
+    replicas: 2
+    secrets: false
+    database: false
+    # The web app talks to the gateway only: no service-wide settings (Kafka, JWT...).
+    sharedEnv: false
+    public: web
+    allowFrom: []
+    writablePaths: [/tmp, /app/apps/web/.next/cache]
+    resources:
+      requests: { cpu: 200m, memory: 256Mi }
+      limits: { memory: 512Mi }
+    autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 10, targetCPUUtilization: 70 }
+    env:
+      API_INTERNAL_URL: http://api-gateway:4000
+
+  api-gateway:
+    port: 4000
+    replicas: 2
+    database: false
+    public: api
+    allowFrom: [web]
+    resources:
+      requests: { cpu: 200m, memory: 192Mi }
+      limits: { memory: 384Mi }
+    autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 10, targetCPUUtilization: 70 }
+    env:
+      # ALB in front: trust one proxy hop for client IPs (rate limiting).
+      TRUST_PROXY: '1'
+      DOCS_ENABLED: 'false'
+      AUTH_SERVICE_URL: http://auth-service:4001
+      PRODUCT_SERVICE_URL: http://product-service:4002
+      INVENTORY_SERVICE_URL: http://inventory-service:4003
+      CART_SERVICE_URL: http://cart-service:4004
+      ORDER_SERVICE_URL: http://order-service:4005
+      PAYMENT_SERVICE_URL: http://payment-service:4006
+      NOTIFICATION_SERVICE_URL: http://notification-service:4007
+      REVIEW_SERVICE_URL: http://review-service:4008
+      ADMIN_SERVICE_URL: http://admin-service:4009
+
+  auth-service:
+    port: 4001
+    replicas: 2
+    database: true
+    # JWKS is fetched by every service that verifies tokens.
+    allowFrom:
+      [
+        api-gateway,
+        product-service,
+        inventory-service,
+        cart-service,
+        order-service,
+        payment-service,
+        notification-service,
+        review-service,
+        admin-service,
+      ]
+    resources:
+      requests: { cpu: 200m, memory: 192Mi }
+      limits: { memory: 384Mi }
+    autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 6, targetCPUUtilization: 70 }
+    env: {}
+
+  product-service:
+    port: 4002
+    replicas: 2
+    database: true
+    allowFrom: [api-gateway, inventory-service, cart-service, review-service]
+    # IRSA role allowing s3:PutObject/GetObject/DeleteObject on the image bucket.
+    iamRoleArn: ''
+    resources:
+      requests: { cpu: 150m, memory: 192Mi }
+      limits: { memory: 384Mi }
+    autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 8, targetCPUUtilization: 70 }
+    env:
+      S3_BUCKET: ''
+      S3_REGION: eu-central-1
+      ASSET_BASE_URL: ''
+
+  inventory-service:
+    port: 4003
+    replicas: 2
+    database: true
+    allowFrom: [api-gateway, cart-service, order-service]
+    resources:
+      requests: { cpu: 100m, memory: 160Mi }
+      limits: { memory: 320Mi }
+    autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 6, targetCPUUtilization: 70 }
+    env:
+      PRODUCT_SERVICE_URL: http://product-service:4002
+
+  cart-service:
+    port: 4004
+    replicas: 2
+    database: true
+    allowFrom: [api-gateway, order-service]
+    resources:
+      requests: { cpu: 100m, memory: 160Mi }
+      limits: { memory: 320Mi }
+    autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 8, targetCPUUtilization: 70 }
+    env:
+      PRODUCT_SERVICE_URL: http://product-service:4002
+      INVENTORY_SERVICE_URL: http://inventory-service:4003
+
+  order-service:
+    port: 4005
+    replicas: 2
+    database: true
+    allowFrom: [api-gateway, payment-service]
+    resources:
+      requests: { cpu: 150m, memory: 192Mi }
+      limits: { memory: 384Mi }
+    autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 8, targetCPUUtilization: 70 }
+    env:
+      CART_SERVICE_URL: http://cart-service:4004
+      INVENTORY_SERVICE_URL: http://inventory-service:4003
+
+  payment-service:
+    port: 4006
+    replicas: 2
+    database: true
+    allowFrom: [api-gateway]
+    resources:
+      requests: { cpu: 100m, memory: 192Mi }
+      limits: { memory: 384Mi }
+    autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 6, targetCPUUtilization: 70 }
+    env:
+      ORDER_SERVICE_URL: http://order-service:4005
+      PAYMENT_PROVIDER: stripe
+
+  notification-service:
+    port: 4007
+    replicas: 2
+    database: true
+    allowFrom: [api-gateway]
+    # IRSA role allowing ses:SendEmail from the verified domain.
+    iamRoleArn: ''
+    resources:
+      requests: { cpu: 100m, memory: 160Mi }
+      limits: { memory: 320Mi }
+    autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 4, targetCPUUtilization: 70 }
+    env:
+      EMAIL_PROVIDER: ses
+      SES_REGION: eu-central-1
+      EMAIL_FROM: ''
+
+  review-service:
+    port: 4008
+    replicas: 2
+    database: true
+    allowFrom: [api-gateway]
+    resources:
+      requests: { cpu: 100m, memory: 160Mi }
+      limits: { memory: 320Mi }
+    autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 4, targetCPUUtilization: 70 }
+    env:
+      PRODUCT_SERVICE_URL: http://product-service:4002
+
+  admin-service:
+    port: 4009
+    replicas: 1
+    database: true
+    allowFrom: [api-gateway]
+    resources:
+      requests: { cpu: 100m, memory: 160Mi }
+      limits: { memory: 320Mi }
+    autoscaling: { enabled: false }
+    env:
+      ANALYTICS_TIME_ZONE: Europe/Bucharest
+      ANALYTICS_CURRENCY: EUR

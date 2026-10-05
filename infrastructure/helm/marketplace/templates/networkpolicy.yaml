@@ -1,0 +1,55 @@
+{{- /*
+Default deny for incoming traffic in the release, then one allow-list per component:
+the load balancer reaches web and api-gateway only; services accept calls from the
+components listed in their `allowFrom`. Egress stays open: RDS, MSK, ElastiCache, S3, SES and
+Stripe live outside the cluster (their security groups and IAM restrict access).
+*/}}
+{{- if .Values.global.networkPolicy.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  labels:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: cse-keyboards
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes: [Ingress]
+{{- range $name, $c := .Values.components }}
+{{- $ctx := dict "name" $name "root" $ }}
+{{- if or $c.allowFrom $c.public }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $name }}-ingress
+  labels:
+    {{- include "marketplace.labels" $ctx | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "marketplace.selectorLabels" $ctx | nindent 6 }}
+  policyTypes: [Ingress]
+  ingress:
+    - ports:
+        - port: http
+          protocol: TCP
+      from:
+        {{- range $caller := $c.allowFrom }}
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ $caller }}
+              app.kubernetes.io/instance: {{ $.Release.Name }}
+        {{- end }}
+        {{- if $c.public }}
+        {{- range $cidr := $.Values.global.ingress.loadBalancerCidrs }}
+        - ipBlock:
+            cidr: {{ $cidr }}
+        {{- end }}
+        {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

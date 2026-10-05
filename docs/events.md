@@ -89,8 +89,9 @@ consequences that may happen a moment later.
 ## Operations
 
 - Topics: one per bounded context (below), plus `<topic>.dlq`. `KAFKA_TOPIC_PARTITIONS` (6) and
-  `KAFKA_REPLICATION_FACTOR` (1 locally, 3 on MSK). Services create missing topics at startup outside
-  production (`KAFKA_CREATE_TOPICS`); in AWS topics are provisioned with the cluster (Phase 16).
+  `KAFKA_REPLICATION_FACTOR` (1 locally, 3 on MSK). Each service creates the topics it publishes to
+  or consumes, if missing, at startup (`KAFKA_CREATE_TOPICS`, on in the Helm chart); on MSK its
+  SCRAM user is granted CreateTopic on exactly those topics.
 - Without `KAFKA_BROKERS` (local development) messaging is off and events wait in the outbox;
   production refuses to start without it.
 - MSK: `KAFKA_SSL=true`, SASL/SCRAM via `KAFKA_SASL_*` (credentials from Secrets Manager).

@@ -1,0 +1,21 @@
+{{- range $name, $c := .Values.components }}
+{{- $min := ternary (($c.autoscaling).minReplicas | default 1) ($c.replicas | default 1) (($c.autoscaling).enabled | default false) }}
+{{- if ge (int $min) 2 }}
+{{- $ctx := dict "name" $name "root" $ }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "marketplace.labels" $ctx | nindent 4 }}
+spec:
+  # Node drains and cluster upgrades keep at least one replica serving.
+  maxUnavailable: 1
+  # A pod that is already unhealthy must not block a drain.
+  unhealthyPodEvictionPolicy: AlwaysAllow
+  selector:
+    matchLabels:
+      {{- include "marketplace.selectorLabels" $ctx | nindent 6 }}
+{{- end }}
+{{- end }}

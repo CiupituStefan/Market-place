@@ -1,0 +1,115 @@
+suite: deployments
+templates:
+  - deployment.yaml
+  - configmap.yaml
+values:
+  - ../values-production.yaml
+  - ../ci/example-values.yaml
+tests:
+  - it: tags images with the Git SHA from the ECR registry
+    template: deployment.yaml
+    documentSelector: { path: metadata.name, value: order-service }
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: 123456789012.dkr.ecr.eu-central-1.amazonaws.com/cse/order-service:3f9c2e1
+
+  # The values schema rejects `latest` before rendering; the template check is the second
+  # line of defence (any capitalisation, or --skip-schema-validation).
+  - it: refuses latest
+    template: deployment.yaml
+    set: { global.image.tag: Latest }
+    asserts:
+      - failedTemplate:
+          errorMessage: global.image.tag must be an immutable Git SHA, never latest
+
+  - it: refuses a missing tag
+    template: deployment.yaml
+    set: { global.image.tag: '' }
+    asserts:
+      - failedTemplate:
+          errorMessage: global.image.tag is required (the Git SHA of the build)
+
+  - it: migrates with the schema owner's credentials before serving
+    template: deployment.yaml
+    documentSelector: { path: metadata.name, value: order-service }
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].command
+          value: [node, dist/db/migrate-cli.js]
+      - contains:
+          path: spec.template.spec.initContainers[0].env
+          content:
+            name: DATABASE_URL
+            valueFrom:
+              secretKeyRef: { name: order-service-secrets, key: DATABASE_MIGRATION_URL }
+
+  - it: runs the web app without migrations or secrets
+    template: deployment.yaml
+    documentSelector: { path: metadata.name, value: web }
+    asserts:
+      - notExists: { path: spec.template.spec.initContainers }
+      - lengthEqual: { path: 'spec.template.spec.containers[0].envFrom', count: 1 }
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.path
+          value: /api/health
+
+  - it: hardens every pod
+    template: deployment.yaml
+    documentSelector: { path: metadata.name, value: payment-service }
+    asserts:
+      - equal: { path: spec.template.spec.automountServiceAccountToken, value: false }
+      - equal: { path: spec.template.spec.securityContext.runAsNonRoot, value: true }
+      - equal:
+          { path: spec.template.spec.securityContext.seccompProfile.type, value: RuntimeDefault }
+      - equal:
+          {
+            path: 'spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem',
+            value: true,
+          }
+      - equal:
+          {
+            path: 'spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation',
+            value: false,
+          }
+      - equal:
+          {
+            path: 'spec.template.spec.containers[0].securityContext.capabilities.drop',
+            value: [ALL],
+          }
+      - equal: { path: spec.strategy.rollingUpdate.maxUnavailable, value: 0 }
+      - equal:
+          {
+            path: 'spec.template.spec.containers[0].livenessProbe.httpGet.path',
+            value: /health/live,
+          }
+      - equal:
+          {
+            path: 'spec.template.spec.containers[0].readinessProbe.httpGet.path',
+            value: /health/ready,
+          }
+      - equal:
+          path: spec.template.spec.containers[0].envFrom[1].secretRef.name
+          value: payment-service-secrets
+
+  - it: lets the HPA own the replica count
+    template: deployment.yaml
+    documentSelector: { path: metadata.name, value: api-gateway }
+    asserts:
+      - notExists: { path: spec.replicas }
+
+  - it: derives public URLs from the domains and keeps secrets out of ConfigMaps
+    template: configmap.yaml
+    documentSelector: { path: metadata.name, value: api-gateway-config }
+    asserts:
+      - equal: { path: data.CORS_ORIGINS, value: https://www.csekeyboards.com }
+      - equal: { path: data.DOCS_ENABLED, value: 'false' }
+      - notExists: { path: data.REDIS_URL }
+      - notExists: { path: data.DATABASE_URL }
+
+  - it: gives the web app only what it needs
+    template: configmap.yaml
+    documentSelector: { path: metadata.name, value: web-config }
+    asserts:
+      - equal: { path: data.API_INTERNAL_URL, value: http://api-gateway:4000 }
+      - notExists: { path: data.KAFKA_BROKERS }

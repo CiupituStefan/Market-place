@@ -1,0 +1,10 @@
+apiVersion: v2
+name: marketplace
+description: CSE Keyboards — storefront, API gateway and microservices on EKS
+type: application
+# Chart version follows chart changes; the application version is the image tag (Git SHA),
+# set per deployment with --set global.image.tag=<sha>.
+version: 0.1.0
+appVersion: '0.0.0'
+kubeVersion: '>=1.30.0-0'
+home: https://github.com/ciupitustefan/market-place

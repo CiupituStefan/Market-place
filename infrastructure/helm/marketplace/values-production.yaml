@@ -1,0 +1,19 @@
+# Production: at least two replicas of everything customer-facing, spread over zones.
+# Account-specific values come from Terraform outputs at deploy time (see staging).
+global:
+  environment: production
+  domains:
+    web: www.csekeyboards.com
+    api: api.csekeyboards.com
+  externalSecrets:
+    keyPrefix: cse/production
+  env:
+    LOG_LEVEL: info
+
+components:
+  web:
+    autoscaling: { enabled: true, minReplicas: 3, maxReplicas: 20, targetCPUUtilization: 65 }
+  api-gateway:
+    autoscaling: { enabled: true, minReplicas: 3, maxReplicas: 20, targetCPUUtilization: 65 }
+  admin-service:
+    replicas: 2

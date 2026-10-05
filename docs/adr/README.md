@@ -20,6 +20,7 @@ ADRs are immutable once accepted; a changed decision gets a new ADR that superse
 | [ADR-015](ADR-015-notifications.md)                    | Notifications from domain events, queued delivery log, SES                | Accepted |
 | [ADR-016](ADR-016-admin-dashboard.md)                  | Admin dashboard: owning services for operations, event-built analytics    | Accepted |
 | [ADR-017](ADR-017-containers-and-local-environment.md) | Container images and the Docker Compose development environment           | Accepted |
+| [ADR-018](ADR-018-kubernetes-deployment.md)            | One Helm chart, migrations in init containers, External Secrets           | Accepted |
 
 Planned: ADR-005 Kubernetes, ADR-006 AWS —
 written in the phase that implements each decision.

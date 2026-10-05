@@ -1,0 +1,9 @@
+CSE Keyboards {{ .Values.global.image.tag }} deployed to {{ .Values.global.environment }} ({{ .Release.Namespace }}).
+
+  Storefront: https://{{ .Values.global.domains.web }}
+  API:        https://{{ .Values.global.domains.api }}
+
+Watch the rollout:
+  kubectl -n {{ .Release.Namespace }} rollout status deployment --timeout=10m
+Roll back:
+  helm -n {{ .Release.Namespace }} rollback {{ .Release.Name }}

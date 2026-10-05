@@ -48,11 +48,26 @@ export function connectPostgres<TSchema extends Record<string, unknown>>(
 }
 
 /** Applies committed SQL migrations (run by the pre-deploy Job, or at boot in development). */
+/** Arbitrary constant: one migration run per database at a time. */
+const MIGRATION_LOCK_ID = 7_042_031;
+
+/**
+ * Applies pending migrations. Safe to start from several replicas at once (Kubernetes init
+ * containers during a rollout): a session advisory lock serialises them, and the ones that
+ * wait find nothing left to apply.
+ */
 export async function runMigrations(url: string, migrationsFolder: string): Promise<void> {
   const pool = new pg.Pool({ connectionString: url, max: 1 });
+  const client = await pool.connect();
   try {
-    await migrate(drizzle(pool), { migrationsFolder });
+    await client.query('SELECT pg_advisory_lock($1)', [MIGRATION_LOCK_ID]);
+    try {
+      await migrate(drizzle(client), { migrationsFolder });
+    } finally {
+      await client.query('SELECT pg_advisory_unlock($1)', [MIGRATION_LOCK_ID]);
+    }
   } finally {
+    client.release();
     await pool.end();
   }
 }

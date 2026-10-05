@@ -1,0 +1,129 @@
+{{- range $name, $c := .Values.components }}
+{{- $ctx := dict "name" $name "root" $ }}
+{{- $g := $.Values.global }}
+{{- $secrets := eq (include "marketplace.enabled" $c.secrets) "true" }}
+{{- $live := (($c.healthPaths).live) | default "/health/live" }}
+{{- $ready := (($c.healthPaths).ready) | default "/health/ready" }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "marketplace.labels" $ctx | nindent 4 }}
+spec:
+  {{- if not ($c.autoscaling).enabled }}
+  replicas: {{ $c.replicas | default 1 }}
+  {{- end }}
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      {{- include "marketplace.selectorLabels" $ctx | nindent 6 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      # Never below the desired capacity during a rollout.
+      maxUnavailable: 0
+      maxSurge: 25%
+  template:
+    metadata:
+      labels:
+        {{- include "marketplace.labels" $ctx | nindent 8 }}
+      annotations:
+        # Roll the pods when their configuration changes.
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") $ | sha256sum }}
+    spec:
+      serviceAccountName: {{ $name }}
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: {{ add $g.preStopSleepSeconds 30 }}
+      securityContext:
+        {{- toYaml $g.podSecurityContext | nindent 8 }}
+      {{- if $g.topologySpread }}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              {{- include "marketplace.selectorLabels" $ctx | nindent 14 }}
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              {{- include "marketplace.selectorLabels" $ctx | nindent 14 }}
+      {{- end }}
+      {{- if $c.database }}
+      initContainers:
+        # Applies pending migrations before the new version serves traffic, with the schema
+        # owner's credentials (the app itself only reads and writes data). Replicas starting
+        # together are serialised by an advisory lock; migrations must stay compatible with
+        # the previous version (expand first, contract in a later release).
+        - name: migrate
+          image: {{ include "marketplace.image" $ctx }}
+          imagePullPolicy: {{ $g.image.pullPolicy }}
+          command: [node, dist/db/migrate-cli.js]
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "marketplace.secretName" $ctx }}
+                  key: DATABASE_MIGRATION_URL
+          securityContext:
+            {{- toYaml $g.containerSecurityContext | nindent 12 }}
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 256Mi }
+      {{- end }}
+      containers:
+        - name: {{ $name }}
+          image: {{ include "marketplace.image" $ctx }}
+          imagePullPolicy: {{ $g.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ $c.port }}
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ $name }}-config
+            {{- if $secrets }}
+            - secretRef:
+                name: {{ include "marketplace.secretName" $ctx }}
+            {{- end }}
+          startupProbe:
+            httpGet: { path: {{ $live }}, port: http }
+            periodSeconds: 2
+            failureThreshold: 60
+          livenessProbe:
+            httpGet: { path: {{ $live }}, port: http }
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet: { path: {{ $ready }}, port: http }
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          lifecycle:
+            # Keep serving while the load balancer and kube-proxy stop routing to this pod.
+            preStop:
+              sleep:
+                seconds: {{ $g.preStopSleepSeconds }}
+          resources:
+            {{- toYaml $c.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml $g.containerSecurityContext | nindent 12 }}
+          volumeMounts:
+            {{- range $i, $path := ($c.writablePaths | default (list "/tmp")) }}
+            - name: writable-{{ $i }}
+              mountPath: {{ $path }}
+            {{- end }}
+      volumes:
+        {{- range $i, $path := ($c.writablePaths | default (list "/tmp")) }}
+        - name: writable-{{ $i }}
+          emptyDir:
+            sizeLimit: 256Mi
+        {{- end }}
+{{- end }}

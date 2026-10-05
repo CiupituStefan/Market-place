@@ -1,0 +1,36 @@
+# Staging: production-like, smaller. Account-specific values (ECR registry, certificate and
+# WAF ARNs, IRSA roles, MSK brokers, bucket) come from Terraform outputs at deploy time.
+global:
+  environment: staging
+  domains:
+    web: staging.csekeyboards.com
+    api: api.staging.csekeyboards.com
+  externalSecrets:
+    keyPrefix: cse/staging
+  env:
+    LOG_LEVEL: debug
+
+components:
+  web:
+    autoscaling: { enabled: true, minReplicas: 1, maxReplicas: 3, targetCPUUtilization: 70 }
+  api-gateway:
+    autoscaling: { enabled: true, minReplicas: 1, maxReplicas: 3, targetCPUUtilization: 70 }
+    env:
+      # API docs are useful on staging (still behind WAF); never in production.
+      DOCS_ENABLED: 'true'
+  auth-service:
+    autoscaling: { enabled: true, minReplicas: 1, maxReplicas: 2, targetCPUUtilization: 70 }
+  product-service:
+    autoscaling: { enabled: true, minReplicas: 1, maxReplicas: 2, targetCPUUtilization: 70 }
+  inventory-service:
+    autoscaling: { enabled: true, minReplicas: 1, maxReplicas: 2, targetCPUUtilization: 70 }
+  cart-service:
+    autoscaling: { enabled: true, minReplicas: 1, maxReplicas: 2, targetCPUUtilization: 70 }
+  order-service:
+    autoscaling: { enabled: true, minReplicas: 1, maxReplicas: 2, targetCPUUtilization: 70 }
+  payment-service:
+    autoscaling: { enabled: true, minReplicas: 1, maxReplicas: 2, targetCPUUtilization: 70 }
+  notification-service:
+    autoscaling: { enabled: true, minReplicas: 1, maxReplicas: 2, targetCPUUtilization: 70 }
+  review-service:
+    autoscaling: { enabled: true, minReplicas: 1, maxReplicas: 2, targetCPUUtilization: 70 }
