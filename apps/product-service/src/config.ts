@@ -1,11 +1,13 @@
 import { baseServiceEnv, booleanString, loadEnv, postgresEnv, SERVICES } from '@market/config';
 import { CURRENCIES } from '@market/types';
+import { messagingEnv } from '@market/messaging';
 import { z } from 'zod';
 
 export const SERVICE_NAME = 'product-service';
 
 export const ConfigSchema = baseServiceEnv
   .extend(postgresEnv.shape)
+  .extend(messagingEnv.shape)
   .extend({
     PORT: z.coerce.number().int().min(1).max(65_535).default(SERVICES[SERVICE_NAME].port),
     MIGRATE_ON_START: booleanString.optional(),

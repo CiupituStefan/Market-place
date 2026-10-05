@@ -43,6 +43,15 @@ export interface CookieInstruction {
   clearGuestToken?: boolean;
 }
 
+/** Removes every line and the coupon. Idempotent; takes the caller's transaction. */
+export async function emptyCart(db: Database, cartId: string): Promise<void> {
+  await db.delete(cartItems).where(eq(cartItems.cartId, cartId));
+  await db
+    .update(carts)
+    .set({ couponCode: null, updatedAt: new Date() })
+    .where(eq(carts.id, cartId));
+}
+
 export function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
@@ -231,13 +240,7 @@ export class CartService {
   }
 
   async clear(cartId: string): Promise<void> {
-    await this.db.transaction(async (tx) => {
-      await tx.delete(cartItems).where(eq(cartItems.cartId, cartId));
-      await tx
-        .update(carts)
-        .set({ couponCode: null, updatedAt: new Date() })
-        .where(eq(carts.id, cartId));
-    });
+    await this.db.transaction((tx) => emptyCart(tx, cartId));
   }
 
   /** For order-service: the authoritative priced cart of a shopper. */

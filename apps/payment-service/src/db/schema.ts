@@ -1,4 +1,4 @@
-import { outboxEvents } from '@market/db';
+import { inboxEvents, outboxEvents } from '@market/db';
 import { sql } from 'drizzle-orm';
 import {
   check,
@@ -17,7 +17,7 @@ import {
  * only Stripe identifiers, amounts and statuses (PCI scope stays with Stripe).
  */
 
-export { outboxEvents };
+export { inboxEvents, outboxEvents };
 
 export const paymentStatus = pgEnum('payment_status', [
   'REQUIRES_PAYMENT',

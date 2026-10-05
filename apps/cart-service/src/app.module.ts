@@ -1,4 +1,10 @@
-import { AuthModule, HealthModule, type JwtVerifier } from '@market/nest-common';
+import {
+  AuthModule,
+  HealthModule,
+  type JwtVerifier,
+  backgroundTasks,
+  type BackgroundTaskFactory,
+} from '@market/nest-common';
 import { Module, type DynamicModule, type OnApplicationShutdown } from '@nestjs/common';
 import { sql } from 'drizzle-orm';
 import { CartController } from './cart/cart.controller.js';
@@ -22,6 +28,8 @@ export interface AppDependencies {
   verifier: JwtVerifier;
   catalog: CatalogGateway;
   inventory: InventoryGateway;
+  /** Kafka relay and consumers (absent in tests that drive handlers directly). */
+  messaging?: BackgroundTaskFactory;
   onShutdown?: () => Promise<void>;
 }
 
@@ -68,6 +76,7 @@ export class AppModule {
         CartService,
         WishlistService,
         DiscountService,
+        ...(deps.messaging ? [backgroundTasks(deps.messaging)] : []),
       ],
       exports: [APP_CONFIG, DATABASE],
     };

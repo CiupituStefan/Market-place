@@ -8,6 +8,20 @@
       "when": 1791171159701,
       "tag": "0000_inventory",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791211990915,
+      "tag": "0001_outbox_sequence",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791212765634,
+      "tag": "0002_inbox",
+      "breakpoints": true
     }
   ]
 }

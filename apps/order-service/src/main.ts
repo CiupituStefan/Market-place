@@ -1,6 +1,8 @@
 import 'reflect-metadata';
 import { connectPostgres, runMigrations } from '@market/db';
+import { Topics } from '@market/events';
 import { createLogger } from '@market/logger';
+import { startMessaging } from '@market/messaging';
 import { JwtVerifier, runMain, startService } from '@market/nest-common';
 import { AppModule } from './app.module.js';
 import { HttpCartGateway, HttpInventoryGateway } from './clients/clients.js';
@@ -27,6 +29,15 @@ runMain(SERVICE_NAME, async () => {
       verifier: JwtVerifier.fromJwksUrl(config.AUTH_JWKS_URL, { issuer: config.JWT_ISSUER }),
       cart: new HttpCartGateway(config.CART_SERVICE_URL),
       inventory: new HttpInventoryGateway(config.INVENTORY_SERVICE_URL),
+      messaging: () =>
+        startMessaging({
+          serviceName: SERVICE_NAME,
+          config,
+          db: postgres.db,
+          logger,
+          publishes: [Topics.ORDER],
+          consumers: [],
+        }),
       onShutdown: postgres.close,
     }),
     config,

@@ -102,7 +102,13 @@ describe('order-service: lifecycle', () => {
         order: { status: 'PAID', paymentDueAt: null },
       });
       expect(h.inventory.forOrder(order.id)?.status).toBe('CONFIRMED');
-      expect(h.cart.cleared).toContain(cart.id);
+      // The cart is emptied by cart-service when it consumes OrderPaid (which carries the cart id).
+      const [paidEvent] = (
+        await h.db.select().from(outboxEvents).where(eq(outboxEvents.messageKey, order.id))
+      )
+        .map((row) => row.envelope as { eventType: string; payload: { cartId: string | null } })
+        .filter((e) => e.eventType === 'OrderPaid');
+      expect(paidEvent?.payload.cartId).toBe(cart.id);
 
       expect((await pay(order, paymentId).expect(200)).body.outcome).toBe('ALREADY_PAID');
       expect(await eventTypes(order.id)).toEqual(['OrderCreated', 'OrderPaid']);

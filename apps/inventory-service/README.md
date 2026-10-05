@@ -52,7 +52,8 @@ Internal (`/api/v1/internal/...`, not routable through the gateway): `reservatio
 
 `InventoryReserved`, `InventoryReleased`, `InventoryReservationExpired`, `InventoryDecremented`, and
 `InventoryStockChanged` for every level change (product-service projects it into catalog
-availability).
+availability). Consumes `ProductCreated` / `ProductUpdated` (`inventory-service.catalog`): every
+catalog variant gets a stock record at zero, exactly once.
 
 ## Commands
 

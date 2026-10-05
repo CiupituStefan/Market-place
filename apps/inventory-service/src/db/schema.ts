@@ -18,7 +18,7 @@ import {
  *   0 <= reserved <= on_hand
  */
 
-export { outboxEvents } from '@market/db';
+export { inboxEvents, outboxEvents } from '@market/db';
 
 export const inventoryItems = pgTable(
   'inventory',

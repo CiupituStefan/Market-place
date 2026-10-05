@@ -1,8 +1,10 @@
 import 'reflect-metadata';
 import { connectPostgres, runMigrations } from '@market/db';
 import { createLogger } from '@market/logger';
+import { startMessaging } from '@market/messaging';
 import { JwtVerifier, runMain, startService } from '@market/nest-common';
 import { AppModule } from './app.module.js';
+import { cartConsumers } from './events/consumers.js';
 import { HttpCatalogGateway, HttpInventoryGateway } from './clients/clients.js';
 import { loadConfig, SERVICE_NAME } from './config.js';
 import { MIGRATIONS_FOLDER, schema } from './db/database.js';
@@ -27,6 +29,15 @@ runMain(SERVICE_NAME, async () => {
       verifier: JwtVerifier.fromJwksUrl(config.AUTH_JWKS_URL, { issuer: config.JWT_ISSUER }),
       catalog: new HttpCatalogGateway(config.PRODUCT_SERVICE_URL),
       inventory: new HttpInventoryGateway(config.INVENTORY_SERVICE_URL),
+      messaging: () =>
+        startMessaging({
+          serviceName: SERVICE_NAME,
+          config,
+          db: postgres.db,
+          logger,
+          publishes: [], // cart-service has no outbox: it only consumes
+          consumers: cartConsumers(),
+        }),
       onShutdown: postgres.close,
     }),
     config,

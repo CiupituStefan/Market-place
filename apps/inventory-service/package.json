@@ -21,6 +21,7 @@
     "@market/db": "workspace:*",
     "@market/events": "workspace:*",
     "@market/logger": "workspace:*",
+    "@market/messaging": "workspace:*",
     "@market/nest-common": "workspace:*",
     "@market/types": "workspace:*",
     "@nestjs/common": "^12.1.2",

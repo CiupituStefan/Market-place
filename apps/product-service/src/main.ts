@@ -1,8 +1,12 @@
 import 'reflect-metadata';
 import { connectPostgres, runMigrations } from '@market/db';
 import { JwtVerifier, runMain, startService } from '@market/nest-common';
+import { Topics } from '@market/events';
 import { createLogger } from '@market/logger';
+import { startMessaging } from '@market/messaging';
 import { AppModule } from './app.module.js';
+import { CatalogWriterService } from './catalog/catalog-writer.service.js';
+import { productConsumers } from './events/consumers.js';
 import { loadConfig, SERVICE_NAME } from './config.js';
 import { MIGRATIONS_FOLDER, schema } from './db/database.js';
 import { S3ObjectStorage } from './images/object-storage.js';
@@ -35,6 +39,15 @@ runMain(SERVICE_NAME, async () => {
       db: postgres.db,
       verifier: JwtVerifier.fromJwksUrl(config.AUTH_JWKS_URL, { issuer: config.JWT_ISSUER }),
       storage,
+      messaging: (moduleRef) =>
+        startMessaging({
+          serviceName: SERVICE_NAME,
+          config,
+          db: postgres.db,
+          logger,
+          publishes: [Topics.PRODUCT],
+          consumers: productConsumers(moduleRef.get(CatalogWriterService, { strict: false })),
+        }),
       onShutdown: postgres.close,
     }),
     config,

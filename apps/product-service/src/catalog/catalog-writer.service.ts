@@ -286,6 +286,37 @@ export class CatalogWriterService {
 
   // ── helpers ────────────────────────────────────────────────────────────────
 
+  /**
+   * Projects inventory-service's stock level onto a variant (InventoryStockChanged,
+   * inside the consumer's inbox transaction). A pre-order variant stays PREORDER
+   * while nothing is in stock. No ProductUpdated is emitted: stock levels are not
+   * catalog changes, and inventory-service already announced them.
+   * Returns whether anything changed.
+   */
+  async applyStockLevel(
+    tx: Database,
+    variantId: string,
+    availability: 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK',
+  ): Promise<boolean> {
+    const [variant] = await tx
+      .select()
+      .from(productVariants)
+      .where(eq(productVariants.id, variantId))
+      .for('update');
+    if (!variant) return false; // removed from the catalog meanwhile
+    const next =
+      variant.availability === 'PREORDER' && availability === 'OUT_OF_STOCK'
+        ? 'PREORDER'
+        : availability;
+    if (next === variant.availability) return false;
+    await tx
+      .update(productVariants)
+      .set({ availability: next })
+      .where(eq(productVariants.id, variantId));
+    await this.refreshDerived(tx, variant.productId);
+    return true;
+  }
+
   private async lockProduct(tx: Database, productId: string): Promise<ProductRow> {
     const [row] = await tx.select().from(products).where(eq(products.id, productId)).for('update');
     if (!row) throw notFound();

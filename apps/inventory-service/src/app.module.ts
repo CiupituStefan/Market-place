@@ -1,4 +1,10 @@
-import { AuthModule, HealthModule, type JwtVerifier } from '@market/nest-common';
+import {
+  AuthModule,
+  HealthModule,
+  type JwtVerifier,
+  backgroundTasks,
+  type BackgroundTaskFactory,
+} from '@market/nest-common';
 import { Module, type DynamicModule, type OnApplicationShutdown } from '@nestjs/common';
 import { sql } from 'drizzle-orm';
 import { APP_CONFIG, SERVICE_NAME, type AppConfig } from './config.js';
@@ -12,6 +18,8 @@ import { StockService } from './stock/stock.service.js';
 export interface AppDependencies {
   db: Database;
   verifier: JwtVerifier;
+  /** Kafka relay and consumers (absent in tests that drive handlers directly). */
+  messaging?: BackgroundTaskFactory;
   onShutdown?: () => Promise<void>;
 }
 
@@ -54,6 +62,7 @@ export class AppModule {
         StockService,
         ReservationService,
         ExpiryWorker,
+        ...(deps.messaging ? [backgroundTasks(deps.messaging)] : []),
       ],
       exports: [APP_CONFIG, DATABASE],
     };

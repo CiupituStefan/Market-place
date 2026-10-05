@@ -15,7 +15,6 @@ export interface Redemption {
 /** cart-service: the authoritative priced cart and discount-code claims. */
 export interface CartGateway {
   priced(identity: CartIdentity): Promise<Cart>;
-  clear(cartId: string): Promise<void>;
   redeem(input: {
     code: string;
     orderId: string;
@@ -68,10 +67,6 @@ export class HttpCartGateway implements CartGateway {
       body: identity,
       schema: CartSchema,
     });
-  }
-
-  async clear(cartId: string): Promise<void> {
-    await this.call(`/internal/carts/${cartId}/clear`, { method: 'POST', schema: z.unknown() });
   }
 
   redeem(input: Parameters<CartGateway['redeem']>[0]): Promise<Redemption> {

@@ -44,6 +44,8 @@ export const OrderPaidV1 = defineEvent({
     paymentId: z.uuid(),
     /** Null when the order only contains built-to-order items. */
     reservationId: z.uuid().nullable(),
+    /** cart-service cart the order came from; emptied when this event is consumed. */
+    cartId: z.uuid().nullable(),
     total: MoneySchema,
     paidAt: z.iso.datetime(),
   }),

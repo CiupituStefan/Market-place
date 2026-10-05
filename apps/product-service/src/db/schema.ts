@@ -23,7 +23,7 @@ import {
  * stock lives in inventory-service, availability here is a projection of it.
  */
 
-export { outboxEvents } from '@market/db';
+export { inboxEvents, outboxEvents } from '@market/db';
 
 const tsvector = customType<{ data: string }>({ dataType: () => 'tsvector' });
 

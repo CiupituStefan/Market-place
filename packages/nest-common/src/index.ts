@@ -7,3 +7,4 @@ export * from './openapi.js';
 export * from './request-context.js';
 export * from './service-client.js';
 export * from './validation.js';
+export * from './background-tasks.js';

@@ -49,7 +49,7 @@ Every change goes through `assertTransition` (`src/orders/status.ts`), is writte
 - **Sweeper** (every `SWEEP_INTERVAL_MS`, safe on several replicas): cancels unpaid orders after
   `PAYMENT_WINDOW_SECONDS` + `PAYMENT_GRACE_SECONDS` (stock and discount use given back) and
   compensates stuck checkouts.
-- The cart is emptied once the order is paid (best effort; Phase 10 moves it to `OrderPaid`).
+- The cart is emptied by cart-service when it consumes `OrderPaid` (which carries the cart id).
 
 ## API
 
@@ -76,9 +76,9 @@ sequence: `CSE-100001`, …
 
 ## Events
 
-Publishes `OrderCreated`, `OrderPaid`, `OrderCancelled`, `OrderShipped`, `OrderDelivered` (outbox;
-relay in Phase 10). Will consume `PaymentSucceeded` / `PaymentFailed` / `PaymentRefunded` once
-Kafka is wired; until then payment-service calls the internal API.
+Publishes `OrderCreated`, `OrderPaid`, `OrderCancelled`, `OrderShipped`, `OrderDelivered` through
+the outbox relay. Payment status arrives synchronously from payment-service's verified webhook
+handling (internal API), so it can answer `REFUND_REQUIRED` in the same request.
 
 ## Commands
 

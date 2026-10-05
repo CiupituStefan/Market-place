@@ -163,9 +163,16 @@ export class StockService {
    * Ensures a stock record exists for each catalog variant (fed by ProductCreated /
    * ProductUpdated). New variants start at zero; SKU renames are applied.
    */
-  async syncVariants(variants: { variantId: string; sku: string }[]): Promise<number> {
+  /**
+   * Creates stock records for catalog variants (and keeps their SKU in sync).
+   * Pass a transaction to run inside a consumer's inbox transaction.
+   */
+  async syncVariants(
+    variants: { variantId: string; sku: string }[],
+    db: Database = this.db,
+  ): Promise<number> {
     if (variants.length === 0) return 0;
-    const rows = await this.db
+    const rows = await db
       .insert(inventoryItems)
       .values(
         variants.map((v) => ({ ...v, lowStockThreshold: this.config.DEFAULT_LOW_STOCK_THRESHOLD })),

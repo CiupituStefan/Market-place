@@ -1,10 +1,16 @@
 import { randomUUID } from 'node:crypto';
+import { createEvent, OrderCancelledV1 } from '@market/events';
+import { createLogger } from '@market/logger';
+import { EventProcessor, InMemoryPublisher } from '@market/messaging';
 import type { Payment, PaymentSession } from '@market/types';
 import { eq } from 'drizzle-orm';
 import Stripe from 'stripe';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { DATABASE } from '../src/db/database.js';
 import { outboxEvents, payments } from '../src/db/schema.js';
+import { paymentConsumers } from '../src/events/consumers.js';
+import { PaymentService } from '../src/payments/payment.service.js';
 import { createHarness, orderOf, WEBHOOK_SECRET, type Harness } from './harness.js';
 
 describe('payment-service', () => {
@@ -325,6 +331,71 @@ describe('payment-service', () => {
         .set('Authorization', staff)
         .expect(200);
       expect((res.body as Payment[]).map((p) => p.id)).toEqual([paymentId]);
+    });
+  });
+
+  describe('OrderCancelled (Kafka)', () => {
+    const cancelled = (orderId: string, refundRequired: boolean) => {
+      const envelope = createEvent(
+        OrderCancelledV1,
+        {
+          orderId,
+          orderNumber: 'CSE-1',
+          reservationId: null,
+          reason: 'CUSTOMER_REQUEST',
+          refundRequired,
+        },
+        { producer: 'order-service', aggregateId: orderId, correlationId: 'test' },
+      );
+      return {
+        topic: OrderCancelledV1.topic,
+        partition: 0,
+        offset: '1',
+        key: orderId,
+        value: JSON.stringify(envelope),
+        headers: {},
+      };
+    };
+    const processor = () =>
+      new EventProcessor(
+        h.app.get(DATABASE),
+        new InMemoryPublisher(),
+        paymentConsumers(h.app.get(PaymentService))[0]!,
+        {
+          maxAttempts: 1,
+          retryDelayMs: 1,
+          logger: createLogger({ service: 'test', level: 'silent' }),
+        },
+      );
+
+    it('cancels the open payment intent, once, so the order can no longer be paid', async () => {
+      const { session, order } = await buyer();
+      const { clientSecret, paymentId } = await session();
+      const message = cancelled(order.id, false);
+      expect(await processor().process(message)).toBe('processed');
+      expect(await processor().process(message)).toBe('duplicate');
+      const [row] = await h.db.select().from(payments).where(eq(payments.id, paymentId));
+      expect(row?.status).toBe('CANCELED');
+      await confirm(clientSecret, 'succeed').expect(409);
+    });
+
+    it('refunds a captured payment when the cancellation requires it, never twice', async () => {
+      const { session, order } = await buyer(60_00);
+      const { clientSecret, paymentId } = await session();
+      h.orders.outcome = 'REFUND_REQUIRED';
+      try {
+        await confirm(clientSecret, 'succeed').expect(200); // webhook path refunds
+      } finally {
+        h.orders.outcome = 'PAID';
+      }
+      expect(await processor().process(cancelled(order.id, true))).toBe('processed'); // event path
+      const payment = (
+        await request(h.http)
+          .get(`/api/v1/payments/manage/${paymentId}`)
+          .set('Authorization', staff)
+      ).body as Payment;
+      expect(payment.refunds).toHaveLength(1);
+      expect(payment).toMatchObject({ status: 'REFUNDED', refunded: { amount: 60_00 } });
     });
   });
 });

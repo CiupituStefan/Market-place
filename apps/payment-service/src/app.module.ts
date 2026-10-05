@@ -1,4 +1,10 @@
-import { AuthModule, HealthModule, type JwtVerifier } from '@market/nest-common';
+import {
+  AuthModule,
+  backgroundTasks,
+  HealthModule,
+  type BackgroundTaskFactory,
+  type JwtVerifier,
+} from '@market/nest-common';
 import { Module, type DynamicModule, type OnApplicationShutdown } from '@nestjs/common';
 import { sql } from 'drizzle-orm';
 import { ORDERS, type OrdersGateway } from './clients/orders.js';
@@ -15,6 +21,8 @@ export interface AppDependencies {
   verifier: JwtVerifier;
   provider: PaymentProvider;
   orders: OrdersGateway;
+  /** Kafka relay and consumers (absent in tests that drive handlers directly). */
+  messaging?: BackgroundTaskFactory;
   onShutdown?: () => Promise<void>;
 }
 
@@ -62,6 +70,7 @@ export class AppModule {
           useValue: new InfrastructureLifecycle(deps.onShutdown),
         },
         PaymentService,
+        ...(deps.messaging ? [backgroundTasks(deps.messaging)] : []),
       ],
       exports: [APP_CONFIG, DATABASE],
     };

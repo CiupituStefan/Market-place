@@ -1,0 +1,7 @@
+{
+  "extends": "@market/tsconfig/library.json",
+  "compilerOptions": {
+    "rootDir": "."
+  },
+  "include": ["src", "test", "*.config.ts"]
+}

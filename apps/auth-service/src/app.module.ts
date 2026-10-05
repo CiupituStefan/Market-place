@@ -1,4 +1,10 @@
-import { AuthModule, HealthModule, JwtVerifier } from '@market/nest-common';
+import {
+  AuthModule,
+  HealthModule,
+  JwtVerifier,
+  backgroundTasks,
+  type BackgroundTaskFactory,
+} from '@market/nest-common';
 import { Module, type DynamicModule, type OnApplicationShutdown } from '@nestjs/common';
 import { sql } from 'drizzle-orm';
 import { AccountRecoveryService } from './auth/account-recovery.service.js';
@@ -16,6 +22,8 @@ import { UsersService } from './users/users.service.js';
 export interface AppDependencies {
   db: Database;
   keys: SigningKeys;
+  /** Kafka relay (absent in tests). */
+  messaging?: BackgroundTaskFactory;
   /** Releases infrastructure (connection pool) on graceful shutdown. */
   onShutdown?: () => Promise<void>;
 }
@@ -68,6 +76,7 @@ export class AppModule {
           provide: InfrastructureLifecycle,
           useValue: new InfrastructureLifecycle(deps.onShutdown),
         },
+        ...(deps.messaging ? [backgroundTasks(deps.messaging)] : []),
       ],
       exports: [APP_CONFIG, DATABASE],
     };

@@ -101,3 +101,18 @@ payment-service needs a `payments` database. Without Stripe keys run it with
 `PAYMENT_PROVIDER=mock STRIPE_WEBHOOK_SECRET=whsec_local_development_only`: the order page then
 shows a labelled test form instead of Stripe's card form. With Stripe test keys, see
 [payments](payments.md#local-development).
+
+## Kafka locally
+
+Messaging is optional in development: without `KAFKA_BROKERS` events wait in each service's
+outbox. To run the event flows (stock → catalog availability, new variants → stock records,
+paid order → empty cart, cancelled order → cancelled PaymentIntent), start a single-node Kafka
+(KRaft) and set `KAFKA_BROKERS=localhost:9092` for the services; they create their topics at
+startup. Docker Compose provides Kafka and Kafka UI from Phase 14. Without Docker:
+
+```bash
+# Java 17+; https://kafka.apache.org/downloads
+bin/kafka-storage.sh format --standalone -t "$(bin/kafka-storage.sh random-uuid)" -c config/server.properties
+bin/kafka-server-start.sh config/server.properties
+KAFKA_BROKERS=localhost:9092 pnpm --filter @market/messaging test   # includes the real-broker suite
+```

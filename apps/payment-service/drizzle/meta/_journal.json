@@ -8,6 +8,20 @@
       "when": 1791207441936,
       "tag": "0000_payments",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791211993218,
+      "tag": "0001_outbox_sequence",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791212288136,
+      "tag": "0002_inbox",
+      "breakpoints": true
     }
   ]
 }

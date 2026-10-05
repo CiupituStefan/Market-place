@@ -1,7 +1,7 @@
 import { createEvent, type EventDefinition, type PayloadOf } from '@market/events';
 import { getRequestContext } from '@market/logger';
 import { sql } from 'drizzle-orm';
-import { index, integer, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { bigint, index, integer, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import type { Database } from './postgres.js';
 
 /**
@@ -14,6 +14,8 @@ export const outboxEvents = pgTable(
   {
     /** Equals the envelope's eventId. */
     id: uuid('id').primaryKey(),
+    /** Publication order. Rows written in one transaction share created_at; this does not. */
+    sequence: bigint('sequence', { mode: 'number' }).notNull().generatedAlwaysAsIdentity(),
     topic: text('topic').notNull(),
     /** Kafka message key (aggregate id) for per-entity ordering. */
     messageKey: text('message_key').notNull(),
@@ -24,7 +26,7 @@ export const outboxEvents = pgTable(
   },
   (table) => [
     index('outbox_events_unpublished_idx')
-      .on(table.createdAt)
+      .on(table.sequence)
       .where(sql`${table.publishedAt} IS NULL`),
   ],
 );

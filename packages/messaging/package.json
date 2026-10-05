@@ -1,0 +1,44 @@
+{
+  "name": "@market/messaging",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Kafka plumbing: outbox relay, idempotent consumers with retries and dead-letter topics.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "clean": "rm -rf dist .turbo coverage"
+  },
+  "dependencies": {
+    "@market/config": "workspace:*",
+    "@market/db": "workspace:*",
+    "@market/events": "workspace:*",
+    "@market/logger": "workspace:*",
+    "@platformatic/kafka": "^2.13.0",
+    "drizzle-orm": "^0.45.3",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "@market/eslint-config": "workspace:*",
+    "@market/tsconfig": "workspace:*",
+    "@market/types": "workspace:*",
+    "@types/node": "^22.19.0",
+    "drizzle-kit": "^0.31.11",
+    "eslint": "^10.12.0",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.3"
+  }
+}

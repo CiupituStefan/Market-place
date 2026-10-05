@@ -60,8 +60,8 @@ configuration line; unique per cart; `CHECK quantity BETWEEN 1 AND 10`), `discou
 
 ## Events
 
-None yet. Phase 10 adds: consume `OrderCreated`/`OrderCancelled` as an alternative to the internal
-redeem/release calls, and `ProductUpdated` for price-change awareness.
+Consumes `OrderPaid` (`cart-service.orders`): empties the cart the order came from, exactly once
+(inbox table in the same transaction). Discount claims stay synchronous (part of the checkout saga).
 
 ## Commands
 

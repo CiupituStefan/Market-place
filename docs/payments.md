@@ -89,7 +89,8 @@ Keys never live in Git: locally in an untracked `.env`, in Kubernetes from AWS S
 
 ## Known follow-ups
 
-- Cancelling an order does not cancel its PaymentIntent yet (Phase 10 consumes `OrderCancelled`).
-  Until then a payment for a cancelled order is refunded automatically when it arrives.
+- Cancelling an order cancels its open PaymentIntent (payment-service consumes `OrderCancelled`).
+  If the shopper paid in the same moment, the payment is refunded automatically when its webhook
+  arrives.
 - The Content-Security-Policy (Phase 20) must allow `js.stripe.com` (script, frame) and
   `api.stripe.com` (connect), plus `hooks.stripe.com` frames for 3-D Secure.

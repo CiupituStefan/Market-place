@@ -1,6 +1,8 @@
 import 'reflect-metadata';
 import { runMain, startService } from '@market/nest-common';
+import { Topics } from '@market/events';
 import { createLogger } from '@market/logger';
+import { startMessaging } from '@market/messaging';
 import { AppModule, JWKS_PATH } from './app.module.js';
 import { loadConfig, SERVICE_NAME } from './config.js';
 import { connectPostgres, runMigrations } from '@market/db';
@@ -37,7 +39,21 @@ runMain(SERVICE_NAME, async () => {
 
   await startService({
     serviceName: SERVICE_NAME,
-    module: AppModule.register(config, { db: postgres.db, keys, onShutdown: postgres.close }),
+    module: AppModule.register(config, {
+      db: postgres.db,
+      keys,
+      // Relay only: verification and reset emails go out as NotificationRequested.
+      messaging: () =>
+        startMessaging({
+          serviceName: SERVICE_NAME,
+          config,
+          db: postgres.db,
+          logger,
+          publishes: [Topics.NOTIFICATION],
+          consumers: [],
+        }),
+      onShutdown: postgres.close,
+    }),
     config,
     openApi: { title: SERVICE_NAME, description: 'Accounts, sessions and roles' },
     configure: { bodyLimit: '64kb', excludeFromPrefix: [JWKS_PATH] },

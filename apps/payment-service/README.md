@@ -19,6 +19,9 @@ amounts and statuses only — never card data. Full design: [docs/payments.md](.
   refund (`order_notified_at`).
 - Events through the outbox: `PaymentCreated`, `PaymentSucceeded`, `PaymentFailed`,
   `PaymentRefunded`.
+- Consumes `OrderCancelled` (`payment-service.orders`): cancels the order's open PaymentIntent
+  (unless the shopper's payment already went through, which is then refunded by the webhook path)
+  and refunds captured payments when `refundRequired`.
 
 ## Providers
 

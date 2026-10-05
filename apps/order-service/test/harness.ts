@@ -112,7 +112,6 @@ export function cartOf(
 export class FakeCart implements CartGateway {
   /** Keyed by user id or guest token. */
   readonly carts = new Map<string, Cart>();
-  readonly cleared: string[] = [];
   readonly redemptions = new Map<string, string>();
   readonly released: string[] = [];
   redeemError: DomainError | null = null;
@@ -130,11 +129,6 @@ export class FakeCart implements CartGateway {
       );
     const cart = this.carts.get(identity.userId ?? identity.guestToken ?? '');
     return Promise.resolve(cart ?? { ...cartOf([]), id: null });
-  }
-
-  clear(cartId: string): Promise<void> {
-    this.cleared.push(cartId);
-    return Promise.resolve();
   }
 
   redeem(input: { code: string; orderId: string }): Promise<Redemption> {

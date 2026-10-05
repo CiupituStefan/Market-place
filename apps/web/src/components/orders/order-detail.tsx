@@ -29,8 +29,17 @@ export function OrderDetail({ orderId, backHref }: { orderId: string; backHref: 
   const queryClient = useQueryClient();
   const settled = submitted && order.data !== undefined && order.data.status !== 'PENDING_PAYMENT';
   useEffect(() => {
-    // order-service empties the cart once the payment is confirmed: refresh the header count.
-    if (settled) void queryClient.invalidateQueries({ queryKey: CART_QUERY_KEY });
+    if (!settled) return;
+    // cart-service empties the cart when it consumes OrderPaid (asynchronous, usually well under
+    // a second): refresh the header count now and once more shortly after.
+    void queryClient.invalidateQueries({ queryKey: CART_QUERY_KEY });
+    const again = setTimeout(
+      () => void queryClient.invalidateQueries({ queryKey: CART_QUERY_KEY }),
+      2_000,
+    );
+    return () => {
+      clearTimeout(again);
+    };
   }, [settled, queryClient]);
 
   if (order.isPending) {

@@ -21,7 +21,7 @@
     "test": {
       "dependsOn": ["^build"],
       "outputs": [],
-      "env": ["REDIS_URL", "TEST_DATABASE_URL"]
+      "env": ["REDIS_URL", "TEST_DATABASE_URL", "KAFKA_BROKERS"]
     },
     "dev": {
       "dependsOn": ["^build"],

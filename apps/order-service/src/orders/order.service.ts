@@ -213,6 +213,7 @@ export class OrderService {
           orderNumber: paid.number,
           paymentId: payment.paymentId,
           reservationId: paid.reservationId,
+          cartId: paid.cartId,
           total: money(paid.total, currency),
           paidAt: (paid.paidAt ?? new Date()).toISOString(),
         },
@@ -221,12 +222,6 @@ export class OrderService {
       return { row: paid, outcome: 'PAID' as const };
     });
 
-    if (result.outcome === 'PAID' && result.row.cartId) {
-      // Best effort: a cart left full is an annoyance, not an error (Phase 10 moves this to OrderPaid).
-      await this.cart.clear(result.row.cartId).catch((error: unknown) => {
-        this.logger.warn(`cart ${result.row.cartId ?? ''} not cleared: ${String(error)}`);
-      });
-    }
     if (result.outcome === 'REFUND_REQUIRED') {
       this.logger.warn(
         `order ${result.row.number}: payment received but cannot be fulfilled; refund required`,

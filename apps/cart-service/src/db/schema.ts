@@ -1,3 +1,4 @@
+export { inboxEvents } from '@market/db';
 import type { ConfigurationSelection } from '@market/types';
 import { sql } from 'drizzle-orm';
 import {

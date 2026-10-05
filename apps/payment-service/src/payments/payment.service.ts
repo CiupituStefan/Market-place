@@ -291,6 +291,41 @@ export class PaymentService {
     await this.settleRefund(refund.id, event.refund.status as RefundStatus);
   }
 
+  // ── order events (Kafka) ───────────────────────────────────────────────────
+
+  /**
+   * OrderCancelled: an unpaid order must not be payable any more, so its open
+   * PaymentIntent is cancelled at Stripe. If the shopper's payment already went
+   * through, the intent is left alone: its webhook reaches order-service, which
+   * answers REFUND_REQUIRED, and the payment is refunded. When the event itself
+   * says a refund is required, captured payments are refunded here too (the same
+   * idempotency key as the webhook path, so never twice). Idempotent.
+   */
+  async onOrderCancelled(orderId: string, refundRequired: boolean): Promise<void> {
+    const rows = await this.db.select().from(payments).where(eq(payments.orderId, orderId));
+    for (const payment of rows) {
+      if ((OPEN as readonly string[]).includes(payment.status) && payment.providerPaymentId) {
+        const intent = await this.provider.retrieveIntent(payment.providerPaymentId);
+        if (intent.status === 'succeeded' || intent.status === 'processing') continue;
+        if (intent.status !== 'canceled')
+          await this.provider.cancelIntent(payment.providerPaymentId);
+        await this.db
+          .update(payments)
+          .set({ status: 'CANCELED', updatedAt: new Date() })
+          .where(and(eq(payments.id, payment.id), inArray(payments.status, [...OPEN])));
+        this.logger.log(`payment ${payment.id} cancelled with its order ${payment.orderNumber}`);
+      }
+      if (refundRequired && (REFUNDABLE as readonly string[]).includes(payment.status)) {
+        await this.refund(
+          payment.id,
+          { reason: 'order_unfulfillable' },
+          'system',
+          `refund:auto:${payment.id}`,
+        );
+      }
+    }
+  }
+
   // ── refunds ────────────────────────────────────────────────────────────────
 
   /**

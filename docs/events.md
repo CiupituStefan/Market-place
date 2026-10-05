@@ -1,6 +1,6 @@
 # Events
 
-Asynchronous communication between services uses Kafka (wired in Phase 10). Every event is
+Asynchronous communication between services uses Kafka. Every event is
 defined once, in `packages/events`, with a Zod schema and a version.
 
 ## Envelope
@@ -24,11 +24,69 @@ defined once, in `packages/events`, with a Zod schema and a version.
 - Keyed by aggregate id: all events of one order/product/payment are ordered within a partition.
 - Versioning: a breaking change adds `…V2` next to `…V1`; consumers support both during a migration.
 
-## Reliable publishing: transactional outbox
+## Reliable publishing: transactional outbox + relay
 
 Services never publish directly. They insert the envelope into their own `outbox_events` table in the
-same transaction as the state change (`enqueueEvent` from `@market/db`). A relay (Phase 10) publishes
-unpublished rows and stamps `published_at`. Consumers deduplicate by `eventId` (inbox table).
+same transaction as the state change (`enqueueEvent` from `@market/db`): the event exists if and only
+if the change committed. The **outbox relay** (`@market/messaging`) then publishes it:
+
+- rows go out in `sequence` order (an identity column: rows written in one transaction share
+  `created_at`), in batches; a failed batch is retried as a whole before anything after it, so
+  events of one aggregate reach their partition in commit order;
+- every replica runs the relay loop, but a transaction-scoped advisory lock lets exactly one
+  publish at a time (concurrent batches could reorder events);
+- the producer is idempotent with `acks=all`;
+- published rows are deleted after `OUTBOX_RETENTION_DAYS` (7); failed attempts are counted on the
+  row (`attempts`) for alerting.
+
+Delivery is **at least once**: a crash between Kafka's ack and marking the rows published re-sends
+them. Consumers are idempotent.
+
+## Consuming: inbox, retries, dead-letter topics
+
+Each consumer is a Kafka consumer group named `<service>.<source>` (e.g. `payment-service.orders`).
+Offsets are committed manually, after a message is handled, one message at a time (per-partition
+order is kept; a crash re-delivers rather than loses).
+
+| Situation                                                                 | What happens                                                                                                               |
+| ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Invalid JSON / envelope / payload, unknown version                        | sent to `<topic>.dlq` immediately (`dlq-reason: invalid-event`)                                                            |
+| Valid event this consumer has no handler for                              | ignored (topics carry several event types)                                                                                 |
+| Already in `inbox_events` for this consumer                               | acknowledged without effect (duplicate delivery)                                                                           |
+| Handler fails                                                             | retried in place with exponential backoff (the partition waits, order is kept)                                             |
+| Still failing after `CONSUMER_MAX_ATTEMPTS` (5), or `PermanentEventError` | sent to `<topic>.dlq` with `dlq-error`, attempts and the original topic/partition/offset in headers; consumption continues |
+
+Two handler kinds:
+
+- `on(Event, handler)` — database-only effects. The inbox row and the handler's writes commit in one
+  transaction: **exactly-once** effects even though Kafka delivers at least once.
+- `onIdempotent(Event, handler)` — effects outside the database (Stripe, other services) or handlers
+  that manage their own transactions. Runs outside the inbox transaction; must be idempotent itself.
+
+Dead letters keep the original value and key, so once the cause is fixed they can be re-published
+to the source topic unchanged (their `eventId` was never recorded, so they are processed normally).
+
+## Consumers today
+
+| Consumer group              | Events                         | Effect                                                         | Kind         |
+| --------------------------- | ------------------------------ | -------------------------------------------------------------- | ------------ |
+| `product-service.inventory` | InventoryStockChanged          | variant availability + product roll-up (PREORDER kept at zero) | exactly once |
+| `inventory-service.catalog` | ProductCreated, ProductUpdated | stock record for every variant (at zero), SKU kept in sync     | exactly once |
+| `cart-service.orders`       | OrderPaid                      | empties the cart the order came from                           | exactly once |
+| `payment-service.orders`    | OrderCancelled                 | cancels the open PaymentIntent; refunds if `refundRequired`    | idempotent   |
+
+Checkout itself (cart → order → reservation → discount → payment) stays synchronous and orchestrated
+([ADR-014](adr/ADR-014-checkout-saga.md)): the shopper needs an answer now. Events carry the
+consequences that may happen a moment later.
+
+## Operations
+
+- Topics: one per bounded context (below), plus `<topic>.dlq`. `KAFKA_TOPIC_PARTITIONS` (6) and
+  `KAFKA_REPLICATION_FACTOR` (1 locally, 3 on MSK). Services create missing topics at startup outside
+  production (`KAFKA_CREATE_TOPICS`); in AWS topics are provisioned with the cluster (Phase 16).
+- Without `KAFKA_BROKERS` (local development) messaging is off and events wait in the outbox;
+  production refuses to start without it.
+- MSK: `KAFKA_SSL=true`, SASL/SCRAM via `KAFKA_SASL_*` (credentials from Secrets Manager).
 
 ## Catalog
 
@@ -53,5 +111,7 @@ unpublished rows and stamps `published_at`. Consumers deduplicate by `eventId` (
 - `OrderCancelled.reason` is one of `CUSTOMER_REQUEST`, `PAYMENT_TIMEOUT`, `PAYMENT_FAILED`,
   `OUT_OF_STOCK`, `ADMIN`; `refundRequired: true` tells payment-service a captured payment must be
   refunded (late payment after cancellation, or stock gone after the hold expired).
-- The V1 order contracts were reshaped in Phase 8 before anything was ever published; from Phase 10
-  on, changes follow the versioning rule above.
+- `OrderPaid.cartId` (added in Phase 10, still before first publication) lets cart-service empty
+  the cart without a synchronous call.
+- The V1 order contracts were reshaped before anything was ever published; from now on, changes
+  follow the versioning rule above.
