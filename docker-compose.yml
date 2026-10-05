@@ -1,0 +1,352 @@
+# Local development environment: `docker compose up --build`, then open
+#   http://localhost:3000        storefront (admin: http://localhost:3000/admin)
+#   http://localhost:4000/docs   API gateway (OpenAPI)
+#   http://localhost:8080        Kafka UI
+#   http://localhost:8025        Mailpit (every email the shop sends)
+#   http://localhost:9001        object storage console
+# Infrastructure ports are bound to 127.0.0.1 only. Every password below is a
+# local-development value; real environments get theirs from Secrets Manager.
+name: cse-keyboards
+
+x-service: &service
+  restart: unless-stopped
+  depends_on: &service-deps
+    postgres: { condition: service_healthy }
+    kafka: { condition: service_healthy }
+  environment: &service-env
+    NODE_ENV: development
+    LOG_LEVEL: ${LOG_LEVEL:-info}
+    KAFKA_BROKERS: kafka:9092
+    AUTH_JWKS_URL: http://auth-service:4001/.well-known/jwks.json
+    MIGRATE_ON_START: 'true'
+
+x-build: &build
+  context: .
+  dockerfile: infrastructure/docker/service.Dockerfile
+  secrets: [extra_ca]
+
+services:
+  # ── infrastructure ────────────────────────────────────────────────────────
+  postgres:
+    image: public.ecr.aws/docker/library/postgres:16.15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres-dev-password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infrastructure/docker/postgres/init-databases.sh:/docker-entrypoint-initdb.d/10-databases.sh:ro
+    ports: ['127.0.0.1:5432:5432']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d admin']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: public.ecr.aws/docker/library/redis:7.4-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--save', '', '--appendonly', 'no']
+    ports: ['127.0.0.1:6379:6379']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  kafka:
+    image: apache/kafka:4.3.1
+    restart: unless-stopped
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      # Containers use kafka:9092; tools on the host use localhost:9094.
+      KAFKA_LISTENERS: INTERNAL://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      # Services create their topics (KAFKA_CREATE_TOPICS); no accidental ones.
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'false'
+      KAFKA_HEAP_OPTS: -Xmx512m -Xms256m
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    ports: ['127.0.0.1:9094:9094']
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          '/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1',
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 15s
+
+  kafka-ui:
+    image: ghcr.io/kafbat/kafka-ui:v1.5.0
+    restart: unless-stopped
+    depends_on:
+      kafka: { condition: service_healthy }
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    ports: ['127.0.0.1:8080:8080']
+
+  mailpit:
+    image: ghcr.io/axllent/mailpit:v1.31.4
+    restart: unless-stopped
+    ports: ['127.0.0.1:8025:8025']
+
+  object-storage:
+    # S3-compatible store for product images (S3 + CloudFront in AWS).
+    image: rustfs/rustfs:1.0.1
+    restart: unless-stopped
+    environment:
+      RUSTFS_ACCESS_KEY: localdev
+      RUSTFS_SECRET_KEY: localdev-storage-secret
+      RUSTFS_CONSOLE_ENABLE: 'true'
+    volumes:
+      - storage-data:/data
+    ports: ['127.0.0.1:9000:9000', '127.0.0.1:9001:9001']
+
+  # ── services ──────────────────────────────────────────────────────────────
+  auth-service:
+    <<: *service
+    build: { <<: *build, args: { SERVICE: auth-service, PORT: 4001 } }
+    image: cse/auth-service:local
+    environment:
+      <<: *service-env
+      PORT: 4001
+      DATABASE_URL: postgresql://auth:auth-dev-password@postgres:5432/auth
+      WEB_URL: http://localhost:3000
+      DEV_LOG_EMAIL_LINKS: 'false'
+    healthcheck: &ready
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:'+process.env.PORT+'/health/ready').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+
+  product-service:
+    <<: *service
+    build: { <<: *build, args: { SERVICE: product-service, PORT: 4002 } }
+    image: cse/product-service:local
+    environment: &product-env
+      <<: *service-env
+      PORT: 4002
+      DATABASE_URL: postgresql://products:products-dev-password@postgres:5432/products
+      S3_BUCKET: cse-product-images
+      S3_REGION: us-east-1
+      S3_ENDPOINT: http://object-storage:9000
+      S3_PUBLIC_ENDPOINT: http://localhost:9000
+      ASSET_BASE_URL: http://localhost:9000/cse-product-images
+      AWS_ACCESS_KEY_ID: localdev
+      AWS_SECRET_ACCESS_KEY: localdev-storage-secret
+    healthcheck: *ready
+
+  inventory-service:
+    <<: *service
+    build: { <<: *build, args: { SERVICE: inventory-service, PORT: 4003 } }
+    image: cse/inventory-service:local
+    environment:
+      <<: *service-env
+      PORT: 4003
+      DATABASE_URL: postgresql://inventory:inventory-dev-password@postgres:5432/inventory
+      PRODUCT_SERVICE_URL: http://product-service:4002
+    healthcheck: *ready
+
+  cart-service:
+    <<: *service
+    build: { <<: *build, args: { SERVICE: cart-service, PORT: 4004 } }
+    image: cse/cart-service:local
+    environment:
+      <<: *service-env
+      PORT: 4004
+      DATABASE_URL: postgresql://cart:cart-dev-password@postgres:5432/cart
+      PRODUCT_SERVICE_URL: http://product-service:4002
+      INVENTORY_SERVICE_URL: http://inventory-service:4003
+    healthcheck: *ready
+
+  order-service:
+    <<: *service
+    build: { <<: *build, args: { SERVICE: order-service, PORT: 4005 } }
+    image: cse/order-service:local
+    environment:
+      <<: *service-env
+      PORT: 4005
+      DATABASE_URL: postgresql://orders:orders-dev-password@postgres:5432/orders
+      CART_SERVICE_URL: http://cart-service:4004
+      INVENTORY_SERVICE_URL: http://inventory-service:4003
+    healthcheck: *ready
+
+  payment-service:
+    <<: *service
+    build: { <<: *build, args: { SERVICE: payment-service, PORT: 4006 } }
+    image: cse/payment-service:local
+    environment:
+      <<: *service-env
+      PORT: 4006
+      DATABASE_URL: postgresql://payments:payments-dev-password@postgres:5432/payments
+      ORDER_SERVICE_URL: http://order-service:4005
+      # `mock` pays with a button and signs its own webhooks. For Stripe test mode put
+      # PAYMENT_PROVIDER=stripe and your sk_test/pk_test/whsec values in .env.
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-mock}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-whsec_local_development_only}
+    healthcheck: *ready
+
+  notification-service:
+    <<: *service
+    build: { <<: *build, args: { SERVICE: notification-service, PORT: 4007 } }
+    image: cse/notification-service:local
+    environment:
+      <<: *service-env
+      PORT: 4007
+      DATABASE_URL: postgresql://notifications:notifications-dev-password@postgres:5432/notifications
+      WEB_URL: http://localhost:3000
+      PUBLIC_API_URL: http://localhost:4000
+      EMAIL_PROVIDER: smtp
+      SMTP_URL: smtp://mailpit:1025
+      DISPATCH_INTERVAL_MS: 1000
+    healthcheck: *ready
+
+  review-service:
+    <<: *service
+    build: { <<: *build, args: { SERVICE: review-service, PORT: 4008 } }
+    image: cse/review-service:local
+    environment:
+      <<: *service-env
+      PORT: 4008
+      DATABASE_URL: postgresql://reviews:reviews-dev-password@postgres:5432/reviews
+      PRODUCT_SERVICE_URL: http://product-service:4002
+    healthcheck: *ready
+
+  admin-service:
+    <<: *service
+    build: { <<: *build, args: { SERVICE: admin-service, PORT: 4009 } }
+    image: cse/admin-service:local
+    environment:
+      <<: *service-env
+      PORT: 4009
+      DATABASE_URL: postgresql://admin:admin-dev-password@postgres:5432/admin
+    healthcheck: *ready
+
+  api-gateway:
+    <<: *service
+    build: { <<: *build, args: { SERVICE: api-gateway, PORT: 4000 } }
+    image: cse/api-gateway:local
+    depends_on:
+      redis: { condition: service_healthy }
+      auth-service: { condition: service_healthy }
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      PORT: 4000
+      REDIS_URL: redis://redis:6379
+      CORS_ORIGINS: http://localhost:3000
+      AUTH_JWKS_URL: http://auth-service:4001/.well-known/jwks.json
+      AUTH_SERVICE_URL: http://auth-service:4001
+      PRODUCT_SERVICE_URL: http://product-service:4002
+      INVENTORY_SERVICE_URL: http://inventory-service:4003
+      CART_SERVICE_URL: http://cart-service:4004
+      ORDER_SERVICE_URL: http://order-service:4005
+      PAYMENT_SERVICE_URL: http://payment-service:4006
+      NOTIFICATION_SERVICE_URL: http://notification-service:4007
+      REVIEW_SERVICE_URL: http://review-service:4008
+      ADMIN_SERVICE_URL: http://admin-service:4009
+    ports: ['4000:4000']
+    healthcheck: *ready
+
+  web:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: infrastructure/docker/web.Dockerfile
+      secrets: [extra_ca]
+      args:
+        NEXT_PUBLIC_SITE_URL: http://localhost:3000
+        NEXT_PUBLIC_API_URL: http://localhost:4000
+        NEXT_PUBLIC_ASSET_BASE_URL: http://localhost:9000/cse-product-images
+    image: cse/web:local
+    depends_on:
+      api-gateway: { condition: service_healthy }
+    environment:
+      API_INTERNAL_URL: http://api-gateway:4000
+    ports: ['3000:3000']
+
+  # ── one-shot setup (idempotent; runs on every `up`, exits when done) ───────
+  storage-init:
+    image: cse/product-service:local
+    depends_on:
+      product-service: { condition: service_healthy }
+    environment:
+      <<: *product-env
+      STORAGE_CORS_ORIGINS: http://localhost:3000
+    command: ['node', 'dist/images/storage-init-cli.js']
+    restart: 'no'
+
+  seed-admin:
+    image: cse/auth-service:local
+    depends_on:
+      auth-service: { condition: service_healthy }
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://auth:auth-dev-password@postgres:5432/auth
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@csekeyboards.test}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin passphrase for local dev}
+    command: ['node', 'dist/scripts/seed-admin.js']
+    restart: 'no'
+
+  seed-catalog:
+    image: cse/product-service:local
+    depends_on:
+      product-service: { condition: service_healthy }
+    environment: *product-env
+    command: ['node', 'dist/seed/seed-cli.js']
+    restart: 'no'
+
+  seed-inventory:
+    image: cse/inventory-service:local
+    depends_on:
+      seed-catalog: { condition: service_completed_successfully }
+      inventory-service: { condition: service_healthy }
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://inventory:inventory-dev-password@postgres:5432/inventory
+      PRODUCT_SERVICE_URL: http://product-service:4002
+    command: ['node', 'dist/seed/seed-cli.js']
+    restart: 'no'
+
+  seed-discounts:
+    image: cse/cart-service:local
+    depends_on:
+      cart-service: { condition: service_healthy }
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://cart:cart-dev-password@postgres:5432/cart
+    command: ['node', 'dist/seed-cli.js']
+    restart: 'no'
+
+volumes:
+  postgres-data:
+  kafka-data:
+  storage-data:
+
+secrets:
+  # Optional CA of a TLS-inspecting proxy, used only while building (see
+  # infrastructure/docker/README.md). Points at an empty file by default.
+  extra_ca:
+    file: ${EXTRA_CA_FILE:-./infrastructure/docker/no-extra-ca}

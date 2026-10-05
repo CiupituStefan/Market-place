@@ -13,9 +13,9 @@ import {
 } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { configureApp } from './bootstrap.js';
+import { configureApp, runMain } from './bootstrap.js';
 import { HealthModule } from './health/health.module.js';
 import { HealthService } from './health/health.service.js';
 import { memoryLogger } from './test-utils.js';
@@ -230,5 +230,27 @@ describe('nest-common (integration)', () => {
       app.get(HealthService).beforeApplicationShutdown();
       await request(app.getHttpServer()).get('/health/ready').expect(503);
     });
+  });
+});
+
+describe('runMain', () => {
+  it('exits non-zero when startup fails, even with open handles', async () => {
+    vi.useFakeTimers();
+    const exit = vi.fn();
+    runMain('test-service', () => Promise.reject(new Error('broker unreachable')), exit);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(exit).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(100);
+    expect(exit).toHaveBeenCalledWith(1);
+    vi.useRealTimers();
+  });
+
+  it('does not exit when startup succeeds', async () => {
+    const exit = vi.fn();
+    vi.useFakeTimers();
+    runMain('test-service', () => Promise.resolve(), exit);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(exit).not.toHaveBeenCalled();
+    vi.useRealTimers();
   });
 });

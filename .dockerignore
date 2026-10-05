@@ -1,0 +1,21 @@
+# Keep the build context small and secret-free: dependencies and build output are
+# rebuilt inside the image; local env files never leave the machine.
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+**/coverage
+**/*.tsbuildinfo
+**/.env
+**/.env.*
+!**/.env.example
+**/*.pem
+**/*.key
+.git
+.github
+infrastructure/terraform
+infrastructure/helm
+docs
+**/playwright-report
+**/test-results
+**/.DS_Store

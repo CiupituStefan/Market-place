@@ -4,7 +4,7 @@ A production-oriented e-commerce platform for mechanical and custom keyboards, k
 stabilizers, cables, desk mats and accessories. Built as TypeScript microservices (NestJS) with a
 Next.js storefront, PostgreSQL, Redis, Kafka and Stripe, deployed to Kubernetes on AWS.
 
-> **Status: Phases 1–13 of 21 — admin dashboard: catalog, inventory, orders and refunds, customers, reviews, discounts, emails and analytics.** Phase 14 (Docker Compose) is next.
+> **Status: Phases 1–14 of 21 — hardened container images and a one-command Docker Compose environment.** Phase 15 (Kubernetes + Helm) is next.
 > See the [roadmap](#roadmap).
 
 ## Architecture at a glance
@@ -75,9 +75,21 @@ data it owns and the events it publishes/consumes.
 
 - Node.js **22.12+** (`.nvmrc`)
 - pnpm **10+** (`corepack enable` picks the version from `package.json`)
-- Docker (from Phase 14, for PostgreSQL / Redis / Kafka)
+- Docker with Compose v2 (the full local environment)
 
 ## Getting started
+
+The whole system (storefront, gateway, ten services, PostgreSQL, Redis, Kafka, Kafka UI,
+Mailpit, S3-compatible storage) with one command:
+
+```bash
+docker compose up --build
+# storefront http://localhost:3000 · admin http://localhost:3000/admin
+#   (admin@csekeyboards.test / "admin passphrase for local dev")
+# API docs http://localhost:4000/docs · Kafka UI http://localhost:8080 · emails http://localhost:8025
+```
+
+Working on the code with hot reload:
 
 ```bash
 corepack enable
@@ -139,7 +151,7 @@ Kubernetes (Helm) · Terraform · AWS (EKS, RDS, ElastiCache, MSK, ECR, WAF) · 
 | 11  | Notification service                           | ✅     |
 | 12  | Review service                                 | ✅     |
 | 13  | Admin dashboard                                | ✅     |
-| 14  | Docker Compose                                 |        |
+| 14  | Docker Compose                                 | ✅     |
 | 15  | Kubernetes + Helm                              |        |
 | 16  | Terraform + AWS                                |        |
 | 17  | GitHub Actions CI                              |        |

@@ -29,6 +29,7 @@ runMain(SERVICE_NAME, async () => {
     ? new S3ObjectStorage(config.S3_BUCKET, {
         region: config.S3_REGION,
         endpoint: config.S3_ENDPOINT,
+        publicEndpoint: config.S3_PUBLIC_ENDPOINT,
       })
     : null;
   if (!storage) logger.warn('S3_BUCKET not set: image uploads are disabled');

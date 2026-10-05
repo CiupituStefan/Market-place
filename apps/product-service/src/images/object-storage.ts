@@ -9,7 +9,7 @@ export interface PresignedUpload {
   expiresAt: string;
 }
 
-/** Object storage seen by the catalog. S3 in production, MinIO locally, a fake in tests. */
+/** Object storage seen by the catalog. S3 in production, an S3-compatible store in Docker Compose, a fake in tests. */
 export interface ObjectStorage {
   presignUpload(key: string, contentType: string, maxBytes: number): Promise<PresignedUpload>;
   exists(key: string): Promise<boolean>;
@@ -22,16 +22,28 @@ const UPLOAD_TTL_SECONDS = 300;
 
 export class S3ObjectStorage implements ObjectStorage {
   private readonly client: S3Client;
+  /** Signs upload forms for the address the browser can reach. */
+  private readonly presigner: S3Client;
 
   constructor(
     private readonly bucket: string,
-    options: { region: string; endpoint?: string | undefined },
+    options: {
+      region: string;
+      endpoint?: string | undefined;
+      publicEndpoint?: string | undefined;
+    },
   ) {
     // Credentials come from the default provider chain (IRSA on EKS), never from config.
-    this.client = new S3Client({
-      region: options.region,
-      ...(options.endpoint ? { endpoint: options.endpoint, forcePathStyle: true } : {}),
-    });
+    const clientFor = (endpoint: string | undefined) =>
+      new S3Client({
+        region: options.region,
+        ...(endpoint ? { endpoint, forcePathStyle: true } : {}),
+      });
+    this.client = clientFor(options.endpoint);
+    this.presigner =
+      options.publicEndpoint && options.publicEndpoint !== options.endpoint
+        ? clientFor(options.publicEndpoint)
+        : this.client;
   }
 
   async presignUpload(
@@ -40,7 +52,7 @@ export class S3ObjectStorage implements ObjectStorage {
     maxBytes: number,
   ): Promise<PresignedUpload> {
     // A POST policy (unlike a presigned PUT) lets S3 enforce size and type itself.
-    const { url, fields } = await createPresignedPost(this.client, {
+    const { url, fields } = await createPresignedPost(this.presigner, {
       Bucket: this.bucket,
       Key: key,
       Conditions: [

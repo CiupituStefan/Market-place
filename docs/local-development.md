@@ -1,64 +1,55 @@
 # Local development
 
-> Phase 1 covers the Node.js toolchain only. Docker Compose with PostgreSQL, Redis, Kafka and
-> Kafka UI arrives in Phase 14.
-
-## Setup
+## Everything with Docker Compose
 
 ```bash
-nvm use            # Node 22 (reads .nvmrc)
-corepack enable    # pnpm version pinned in package.json#packageManager
-pnpm install
-pnpm build
+docker compose up --build        # first run builds 11 images (a few minutes)
+docker compose up -d             # later runs
+docker compose logs -f order-service
+docker compose down              # stop; add -v to also delete databases, Kafka and stored images
 ```
 
-## PostgreSQL (until Docker Compose in Phase 14)
+| URL                         | What                                                                       |
+| --------------------------- | -------------------------------------------------------------------------- |
+| http://localhost:3000       | storefront                                                                 |
+| http://localhost:3000/admin | back office — `admin@csekeyboards.test` / `admin passphrase for local dev` |
+| http://localhost:4000/docs  | API gateway, OpenAPI for every service                                     |
+| http://localhost:8080       | Kafka UI (topics, consumer groups, dead-letter topics)                     |
+| http://localhost:8025       | Mailpit: every email the shop sends                                        |
+| http://localhost:9001       | object storage console (`localdev` / `localdev-storage-secret`)            |
 
-auth-service needs a PostgreSQL 16 database:
+On every `up`, one-shot jobs prepare the image bucket and load the demo admin, catalog, stock and
+discount codes (`WELCOME10`, `SWITCHUP15`, `LAUNCH20`); they are idempotent. Payments use the mock
+provider (a "Pay (test)" button that goes through the real webhook path). For Stripe test mode
+put `PAYMENT_PROVIDER=stripe` and your `STRIPE_*` test keys in a `.env` file next to
+`docker-compose.yml` (git-ignored) — see [payments](payments.md#local-development).
+
+Infrastructure ports are bound to `127.0.0.1` only: PostgreSQL `5432` (`postgres` /
+`postgres-dev-password`; each service has its own database and role, `<db>-dev-password`), Redis
+`6379`, Kafka `9094`, object storage `9000`.
+
+Images and the Dockerfiles are described in [infrastructure/docker](../infrastructure/docker/README.md);
+the reasoning in [ADR-017](adr/ADR-017-containers-and-local-environment.md).
+
+## Hot reload on the host, infrastructure in Docker
 
 ```bash
-createuser auth --pwprompt         # e.g. auth-dev-password
-createdb auth --owner auth
-export DATABASE_URL=postgresql://auth:auth-dev-password@localhost:5432/auth
-pnpm --filter @market/auth-service dev     # applies migrations on start in development
-ADMIN_EMAIL=you@example.com ADMIN_PASSWORD='a long passphrase' \
-  pnpm --filter @market/auth-service build && pnpm --filter @market/auth-service seed:admin
+nvm use && corepack enable && pnpm install && pnpm build
+docker compose up -d postgres redis kafka mailpit object-storage kafka-ui
 ```
 
-product-service needs its own database (database-per-service) and a demo catalog:
+Then run the services you are working on with `pnpm --filter @market/<service> dev`, pointing
+them at the containers (or stop the same service in Compose and run it from source):
 
 ```bash
-createuser products --pwprompt && createdb products --owner products
-export DATABASE_URL=postgresql://products:products-dev-password@localhost:5432/products
-pnpm --filter @market/product-service build && pnpm --filter @market/product-service seed
-pnpm --filter @market/product-service dev
-```
-
-inventory-service and cart-service follow the same pattern (seed inventory after the catalog):
-
-```bash
-createuser inventory --pwprompt && createdb inventory --owner inventory
-createuser cart --pwprompt && createdb cart --owner cart
-DATABASE_URL=postgresql://inventory:inventory-dev-password@localhost:5432/inventory \
-  pnpm --filter @market/inventory-service seed          # reads variants from product-service
-DATABASE_URL=postgresql://cart:cart-dev-password@localhost:5432/cart \
-  pnpm --filter @market/cart-service seed               # demo codes WELCOME10, SWITCHUP15, LAUNCH20
-```
-
-order-service needs an `orders` database and reaches cart-service and inventory-service
-(`CART_SERVICE_URL`, `INVENTORY_SERVICE_URL`); it applies its migrations on start in development:
-
-```bash
-createuser orders --pwprompt && createdb orders --owner orders
 DATABASE_URL=postgresql://orders:orders-dev-password@localhost:5432/orders \
+KAFKA_BROKERS=localhost:9094 \
   pnpm --filter @market/order-service dev
 ```
 
-The storefront reads the catalog through the gateway (`API_INTERNAL_URL`, default
-`http://localhost:4000`), so run `api-gateway` too.
-
-Verification and password-reset links are printed in the auth-service log in development
-(`DEV_LOG_EMAIL_LINKS`), until notification-service sends real emails.
+Each service's `.env.example` lists its variables; copy it to `.env` to keep overrides
+(git-ignored). Services validate their environment at startup and refuse to boot on invalid
+values, listing every problem at once (values are never printed).
 
 ## Daily workflow
 
@@ -73,11 +64,17 @@ pnpm check                                      # what CI runs, before pushing
 Shared packages are consumed from their `dist/` output. When you change one while a service is
 running in watch mode, run that package's `dev` script too so the service picks up the rebuild.
 
-## Configuration
+## Tests
 
-Each service validates its environment at startup (`src/config.ts`) and refuses to boot on
-invalid values, listing every problem at once (values are never printed). Copy a service's
-`.env.example` to `.env` to override defaults locally; `.env` files are git-ignored.
+- Unit tests: `src/**/*.test.ts`, next to the code.
+- Integration tests: `test/**/*.test.ts`, booting the Nest app in-process (PGlite for the
+  database) and calling it with Supertest.
+- Real-infrastructure suites run when their variables are set, e.g. with Compose running:
+
+```bash
+TEST_DATABASE_URL=postgresql://postgres:postgres-dev-password@localhost:5432/postgres \
+REDIS_URL=redis://localhost:6379 KAFKA_BROKERS=localhost:9094 pnpm test
+```
 
 ## Adding a service
 
@@ -86,33 +83,6 @@ invalid values, listing every problem at once (values are never printed). Copy a
 # 2. generate the skeleton
 scripts/scaffold-service.sh shipping-service "Carrier integrations and label printing."
 pnpm install
-```
-
-## Tests
-
-- Unit tests: `src/**/*.test.ts`, next to the code.
-- Integration tests: `test/**/*.test.ts`, booting the Nest app in-process and calling it with
-  Supertest.
-- NestJS tests run through SWC so decorator metadata (needed for DI) is emitted.
-
-## Payments locally
-
-payment-service needs a `payments` database. Without Stripe keys run it with
-`PAYMENT_PROVIDER=mock STRIPE_WEBHOOK_SECRET=whsec_local_development_only`: the order page then
-shows a labelled test form instead of Stripe's card form. With Stripe test keys, see
-[payments](payments.md#local-development).
-
-## Kafka locally
-
-Messaging is optional in development: without `KAFKA_BROKERS` events wait in each service's
-outbox. To run the event flows (stock → catalog availability, new variants → stock records,
-paid order → empty cart, cancelled order → cancelled PaymentIntent), start a single-node Kafka
-(KRaft) and set `KAFKA_BROKERS=localhost:9092` for the services; they create their topics at
-startup. Docker Compose provides Kafka and Kafka UI from Phase 14. Without Docker:
-
-```bash
-# Java 17+; https://kafka.apache.org/downloads
-bin/kafka-storage.sh format --standalone -t "$(bin/kafka-storage.sh random-uuid)" -c config/server.properties
-bin/kafka-server-start.sh config/server.properties
-KAFKA_BROKERS=localhost:9092 pnpm --filter @market/messaging test   # includes the real-broker suite
+# 3. add it to docker-compose.yml (build args SERVICE/PORT) and its database to
+#    infrastructure/docker/postgres/init-databases.sh
 ```

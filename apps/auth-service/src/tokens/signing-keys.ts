@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { JWT_AUDIENCE, type AccessTokenClaims } from '@market/types';
 import {
   createLocalJWKSet,
@@ -53,7 +54,10 @@ export class SigningKeys {
       privateKey = pair.privateKey;
       publicJwk = await exportJWK(pair.publicKey);
     }
-    const keys: JWK[] = [{ ...publicJwk, kid: options.keyId, alg: ALG, use: 'sig' }];
+    // A fresh development key gets a fresh id: verifiers caching the JWKS by kid then
+    // fetch the new key instead of rejecting tokens until their cache expires.
+    const keyId = ephemeral ? `${options.keyId}-dev-${randomUUID().slice(0, 8)}` : options.keyId;
+    const keys: JWK[] = [{ ...publicJwk, kid: keyId, alg: ALG, use: 'sig' }];
     if (options.previousPublicKeyPem) {
       const previous = await exportJWK(
         await importSPKI(pem(options.previousPublicKeyPem), ALG, { extractable: true }),
@@ -65,7 +69,7 @@ export class SigningKeys {
         use: 'sig',
       });
     }
-    return new SigningKeys(privateKey, options.keyId, { keys }, options.issuer, ephemeral);
+    return new SigningKeys(privateKey, keyId, { keys }, options.issuer, ephemeral);
   }
 
   async signAccessToken(claims: AccessTokenClaims, ttlSeconds: number): Promise<string> {

@@ -21,6 +21,14 @@ const RENDER_SLIDES: Slide[] = [
   { kind: 'render', view: 'detail', label: 'Detail' },
 ];
 
+/** The selected variant's own photos, otherwise the product's (an empty list is not "none"). */
+export function galleryImages(
+  product: { images: ProductImage[] },
+  variant: { images: ProductImage[] } | null | undefined,
+): ProductImage[] {
+  return variant?.images.length ? variant.images : product.images;
+}
+
 export function ProductGallery({ name, images, preview }: ProductGalleryProps) {
   const slides: Slide[] =
     images.length > 0

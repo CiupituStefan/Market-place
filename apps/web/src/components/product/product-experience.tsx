@@ -24,7 +24,7 @@ import {
 } from '@/lib/catalog/variants';
 import { cn } from '@/lib/utils';
 import { Price } from './price';
-import { ProductGallery } from './product-gallery';
+import { galleryImages, ProductGallery } from './product-gallery';
 import { Rating } from './rating';
 import { VariantPicker } from './variant-picker';
 
@@ -75,7 +75,7 @@ export function ProductExperience({ product, initialSelection }: ProductExperien
       <div className="lg:sticky lg:top-28 lg:self-start">
         <ProductGallery
           name={product.name}
-          images={variant?.images ?? product.images}
+          images={galleryImages(product, variant)}
           preview={variant?.preview ?? product.preview}
         />
       </div>

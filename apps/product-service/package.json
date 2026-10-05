@@ -14,7 +14,8 @@
     "clean": "rm -rf dist .turbo coverage",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node dist/db/migrate-cli.js",
-    "seed": "node dist/seed/seed-cli.js"
+    "seed": "node dist/seed/seed-cli.js",
+    "storage:init": "node dist/images/storage-init-cli.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1146.0",

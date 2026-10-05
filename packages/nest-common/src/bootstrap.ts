@@ -96,10 +96,22 @@ export async function startService(
 }
 
 /** Standard process entry: logs fatal startup errors (e.g. invalid config) and exits non-zero. */
-export function runMain(serviceName: string, main: () => Promise<unknown>): void {
-  main().catch((error: unknown) => {
-    const logger = createLogger({ service: serviceName });
-    logger.fatal({ err: error }, `failed to start ${serviceName}`);
-    process.exitCode = 1;
-  });
+export function runMain(
+  serviceName: string,
+  main: () => Promise<unknown>,
+  exit: (code: number) => void = (code) => process.exit(code),
+): void {
+  main().then(
+    () => undefined,
+    (error: unknown) => {
+      const logger = createLogger({ service: serviceName });
+      logger.fatal({ err: error }, `failed to start ${serviceName}`);
+      // Exit for real: open handles (database pool, broker sockets) would otherwise keep a
+      // half-started process alive that never serves traffic and is never restarted.
+      // A short delay lets the log line reach stdout first.
+      setTimeout(() => {
+        exit(1);
+      }, 100);
+    },
+  );
 }

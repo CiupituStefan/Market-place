@@ -3,10 +3,33 @@ import type { NextConfig } from 'next';
 const isProduction = process.env.NODE_ENV === 'production';
 
 /**
- * Product images live in S3 and are served through CloudFront. The CDN host is
- * configured per environment; nothing else may be used as an image source.
+ * Product images live in S3 and are served through CloudFront (locally: the S3-compatible
+ * store in Docker Compose). The asset base URL is configured per environment; nothing else
+ * may be used as an image source.
  */
-const assetHost = process.env.NEXT_PUBLIC_ASSET_HOST;
+function assetPattern():
+  NonNullable<NonNullable<NextConfig['images']>['remotePatterns']>[number] | null {
+  const raw = process.env.NEXT_PUBLIC_ASSET_BASE_URL;
+  if (!raw) return null;
+  const url = new URL(raw);
+  // Plain http only for a store on this machine (Docker Compose); real hosts need TLS.
+  const local = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+  if (url.protocol !== 'https:' && !local) {
+    throw new Error('NEXT_PUBLIC_ASSET_BASE_URL must use https outside localhost');
+  }
+  return {
+    protocol: url.protocol === 'https:' ? 'https' : 'http',
+    hostname: url.hostname,
+    port: url.port,
+    pathname: `${url.pathname.replace(/\/$/, '')}/**`,
+  };
+}
+const asset = assetPattern();
+/**
+ * A store on localhost (Docker Compose) is reachable by the browser but not by the
+ * image optimiser running inside the web container, so local images are served as is.
+ */
+const localAssets = asset?.hostname === 'localhost' || asset?.hostname === '127.0.0.1';
 
 const securityHeaders = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
@@ -31,7 +54,8 @@ const nextConfig: NextConfig = {
   transpilePackages: ['@market/types'],
   images: {
     formats: ['image/avif', 'image/webp'],
-    remotePatterns: assetHost ? [{ protocol: 'https', hostname: assetHost }] : [],
+    remotePatterns: asset ? [asset] : [],
+    unoptimized: localAssets,
   },
   headers() {
     return Promise.resolve([{ source: '/:path*', headers: securityHeaders }]);

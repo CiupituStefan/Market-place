@@ -410,8 +410,9 @@ describe('infrastructure endpoints', () => {
       kty: 'OKP',
       crv: 'Ed25519',
       alg: 'EdDSA',
-      kid: 'test-key',
     });
+    // No key configured in tests: a generated key gets a unique id per start.
+    expect(res.body.keys[0].kid).toMatch(/^test-key-dev-[0-9a-f]{8}$/);
     expect(res.body.keys[0]).not.toHaveProperty('d');
   });
 

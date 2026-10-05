@@ -20,8 +20,13 @@ export const ConfigSchema = baseServiceEnv
     /** Product images: uploaded straight to S3 with pre-signed POSTs, served via CloudFront. */
     S3_BUCKET: z.string().min(1).optional(),
     S3_REGION: z.string().min(1).default('eu-central-1'),
-    /** S3-compatible endpoint for local development (MinIO). Unset on AWS. */
+    /** S3-compatible endpoint for local development (Docker Compose). Unset on AWS. */
     S3_ENDPOINT: z.url().optional(),
+    /**
+     * Endpoint the browser uploads to, when it differs from the one this service uses
+     * (in Docker Compose: http://localhost:9000 vs http://object-storage:9000).
+     */
+    S3_PUBLIC_ENDPOINT: z.url().optional(),
     /** Public base URL of the CDN in front of the bucket, e.g. https://cdn.csekeyboards.com */
     ASSET_BASE_URL: z.url().optional(),
     IMAGE_MAX_BYTES: z.coerce

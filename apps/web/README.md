@@ -43,7 +43,7 @@ src/
   product-service API (filters, facets, search, sorting). Phase 5 swaps it for HTTP calls with the
   same signatures. The fixtures are validated against the API schemas in tests.
 - **Product imagery**: product photography will be served from S3 through CloudFront via
-  `next/image` (`NEXT_PUBLIC_ASSET_HOST`). Until then, `ProductArt` renders original procedural
+  `next/image` (`NEXT_PUBLIC_ASSET_BASE_URL`). Until then, `ProductArt` renders original procedural
   SVGs (real keyboard layouts), which the configurator also uses for live previews.
 
 ## SEO
