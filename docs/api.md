@@ -56,18 +56,18 @@ Every error, from every service and from the gateway itself, has the same shape:
 - 5xx responses always say `"Internal server error"`: stack traces and internal messages are
   logged with the `requestId`, never returned.
 
-| HTTP | Typical codes                                             |
-| ---- | --------------------------------------------------------- |
-| 400  | `VALIDATION_FAILED`, `WEBHOOK_SIGNATURE_INVALID`          |
-| 401  | `UNAUTHENTICATED`, `INVALID_CREDENTIALS`, `TOKEN_EXPIRED` |
-| 403  | `FORBIDDEN` (incl. blocked cross-site requests)           |
-| 404  | `NOT_FOUND`, `PRODUCT_NOT_FOUND`, `ORDER_NOT_FOUND`       |
-| 409  | `CONFLICT`, `INSUFFICIENT_STOCK`, `PRICE_CHANGED`         |
-| 413  | `PAYLOAD_TOO_LARGE`                                       |
-| 422  | `COUPON_INVALID`, `INVALID_CONFIGURATION`                 |
-| 429  | `RATE_LIMITED` (+ `Retry-After`)                          |
-| 503  | `SERVICE_UNAVAILABLE`                                     |
-| 504  | `UPSTREAM_TIMEOUT`                                        |
+| HTTP | Typical codes                                                                     |
+| ---- | --------------------------------------------------------------------------------- |
+| 400  | `VALIDATION_FAILED`, `WEBHOOK_SIGNATURE_INVALID`                                  |
+| 401  | `UNAUTHENTICATED`, `INVALID_CREDENTIALS`, `TOKEN_EXPIRED`                         |
+| 403  | `FORBIDDEN` (incl. blocked cross-site requests)                                   |
+| 404  | `NOT_FOUND`, `PRODUCT_NOT_FOUND`, `ORDER_NOT_FOUND`                               |
+| 409  | `CONFLICT`, `INSUFFICIENT_STOCK`, `PRICE_CHANGED`                                 |
+| 413  | `PAYLOAD_TOO_LARGE`                                                               |
+| 422  | `COUPON_INVALID`, `INVALID_CONFIGURATION`, `CART_EMPTY`, `IDEMPOTENCY_KEY_REUSED` |
+| 429  | `RATE_LIMITED` (+ `Retry-After`)                                                  |
+| 503  | `SERVICE_UNAVAILABLE`                                                             |
+| 504  | `UPSTREAM_TIMEOUT`                                                                |
 
 ## Headers
 
@@ -75,6 +75,8 @@ Every error, from every service and from the gateway itself, has the same shape:
 | --------------------------------- | --------- | ---------------------------------------------------- |
 | `x-request-id`                    | both      | Correlation ID; send one or the gateway generates it |
 | `Idempotency-Key`                 | request   | Deduplicates unsafe commands (orders, payments)      |
+| `Idempotent-Replayed`             | response  | `true` when the response replays an earlier request  |
+| `x-order-token`                   | request   | Guest access to the one order it was issued for      |
 | `RateLimit-Limit/Remaining/Reset` | response  | Current rate-limit window                            |
 | `Retry-After`                     | response  | Seconds to wait after a 429                          |
 
@@ -83,3 +85,18 @@ Every error, from every service and from the gateway itself, has the same shape:
 Request bodies and queries are validated with Zod schemas (`ZodValidationPipe` from
 `@market/nest-common`). The same schema generates the OpenAPI definition (`openApiSchema()`), so
 documentation cannot drift from validation.
+
+## Idempotency (placing orders)
+
+`POST /api/v1/orders` requires `Idempotency-Key` (8–128 of `A-Z a-z 0-9 - _`; the web app sends a
+UUID generated once per checkout attempt).
+
+| Situation                                         | Response                                      |
+| ------------------------------------------------- | --------------------------------------------- |
+| First request                                     | `201` + the order                             |
+| Same key, same body, after success                | `200` + the same order, `Idempotent-Replayed` |
+| Same key while the first request is still running | `409 CONFLICT`                                |
+| Same key, different body                          | `422 IDEMPOTENCY_KEY_REUSED`                  |
+| First request failed (stock, price change, …)     | the key is released; retrying it runs again   |
+
+Keys are scoped per user (or per visitor cart) so two shoppers cannot collide.

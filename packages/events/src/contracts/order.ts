@@ -1,10 +1,13 @@
-import { MoneySchema } from '@market/types';
+import { CancelReasonSchema, MoneySchema, ShippingCountrySchema } from '@market/types';
 import { z } from 'zod';
 import { defineEvent } from '../define.js';
 import { Topics } from '../topics.js';
 
+/** A catalog variant, or a configurator build (built to order, no variant id). */
 const OrderLine = z.object({
-  variantId: z.uuid(),
+  kind: z.enum(['variant', 'configuration']),
+  variantId: z.uuid().nullable(),
+  configurationId: z.string().nullable(),
   sku: z.string().min(1),
   name: z.string().min(1),
   quantity: z.int().positive(),
@@ -21,6 +24,8 @@ export const OrderCreatedV1 = defineEvent({
     userId: z.uuid().nullable(),
     email: z.email(),
     lines: z.array(OrderLine).min(1),
+    shippingCountry: ShippingCountrySchema,
+    couponCode: z.string().nullable(),
     subtotal: MoneySchema,
     discount: MoneySchema,
     shipping: MoneySchema,
@@ -37,7 +42,8 @@ export const OrderPaidV1 = defineEvent({
     orderId: z.uuid(),
     orderNumber: z.string().min(1),
     paymentId: z.uuid(),
-    reservationId: z.uuid(),
+    /** Null when the order only contains built-to-order items. */
+    reservationId: z.uuid().nullable(),
     total: MoneySchema,
     paidAt: z.iso.datetime(),
   }),
@@ -49,8 +55,11 @@ export const OrderCancelledV1 = defineEvent({
   topic: Topics.ORDER,
   payload: z.object({
     orderId: z.uuid(),
+    orderNumber: z.string().min(1),
     reservationId: z.uuid().nullable(),
-    reason: z.enum(['PAYMENT_FAILED', 'CUSTOMER_REQUEST', 'RESERVATION_EXPIRED', 'ADMIN']),
+    reason: CancelReasonSchema,
+    /** A payment was captured for this order and must be refunded (payment-service). */
+    refundRequired: z.boolean(),
   }),
 });
 

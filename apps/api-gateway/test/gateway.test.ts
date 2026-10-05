@@ -261,6 +261,17 @@ describe('api-gateway (integration)', () => {
       expect(res.headers['access-control-allow-credentials']).toBe('true');
     });
 
+    it('allows the checkout headers the storefront sends', async () => {
+      const res = await request(http)
+        .options('/api/v1/orders')
+        .set('origin', SITE)
+        .set('access-control-request-method', 'POST')
+        .set('access-control-request-headers', 'content-type,idempotency-key,x-order-token')
+        .expect(204);
+      const allowed = String(res.headers['access-control-allow-headers']).split(',');
+      expect(allowed).toEqual(expect.arrayContaining(['idempotency-key', 'x-order-token']));
+    });
+
     it('does not grant CORS to other origins', async () => {
       const res = await request(http).get('/api/v1/products').set('origin', 'https://evil.example');
       expect(res.headers['access-control-allow-origin']).toBeUndefined();

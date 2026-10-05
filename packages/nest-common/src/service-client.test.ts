@@ -46,6 +46,10 @@ beforeAll(async () => {
             reply(200, { value: 1 });
           }, 500);
           break;
+        case '/api/v1/empty':
+          res.writeHead(204);
+          res.end();
+          break;
         case '/api/v1/broken':
           reply(500, { error: 'boom' });
           break;
@@ -83,6 +87,12 @@ describe('createServiceClient', () => {
     const error = await call()('/stock', { schema: z.unknown() }).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(DomainError);
     expect(error).toMatchObject({ code: 'INSUFFICIENT_STOCK', message: 'Only 1 left' });
+  });
+
+  it('accepts empty 204 responses', async () => {
+    await expect(
+      call()('/empty', { method: 'POST', schema: z.undefined() }),
+    ).resolves.toBeUndefined();
   });
 
   it('maps timeouts, 5xx, schema drift and unreachable hosts to SERVICE_UNAVAILABLE', async () => {

@@ -23,6 +23,18 @@ Security controls by layer. Items marked _(Phase N)_ land in that phase.
   visitor cart.
 - Cart bodies are strict schemas: prices, totals or discounts sent by a client are rejected (400).
 
+## Orders
+
+- Orders are snapshots built server-side from cart-service's priced cart; the request carries only
+  contact details, addresses and the total the shopper saw (`expectedTotal`, used to detect a change,
+  never to set a price).
+- Guests reach their order through the httpOnly cart cookie that placed it, or a random 256-bit
+  order token returned once (both stored hashed); unknown orders and orders of other users both
+  answer `404`, so ids cannot be probed.
+- Payment status changes only through order-service's internal API, called by payment-service from
+  verified Stripe webhooks; `/internal` routes are unreachable through the gateway.
+- `POST /api/v1/orders` has its own tight rate limit (20/min per client).
+
 ## Authorization (RBAC)
 
 - Roles: `USER`, `STAFF`, `ADMIN`. Every service verifies the JWT and roles itself

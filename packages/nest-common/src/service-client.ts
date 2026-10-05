@@ -56,7 +56,15 @@ export function createServiceClient(options: ServiceClientOptions) {
     }
 
     if (response.ok) {
-      const parsed = request.schema.safeParse(await response.json());
+      // 204 / empty bodies parse as undefined (use z.unknown() or z.undefined()).
+      const text = await response.text();
+      let json: unknown;
+      try {
+        json = text === '' ? undefined : JSON.parse(text);
+      } catch {
+        json = Symbol('invalid');
+      }
+      const parsed = request.schema.safeParse(json);
       if (!parsed.success)
         throw new DomainError(
           ErrorCode.SERVICE_UNAVAILABLE,

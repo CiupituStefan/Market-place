@@ -40,6 +40,7 @@ export const ErrorCode = {
   PAYMENT_FAILED: 'PAYMENT_FAILED',
   REFUND_EXCEEDS_PAYMENT: 'REFUND_EXCEEDS_PAYMENT',
   WEBHOOK_SIGNATURE_INVALID: 'WEBHOOK_SIGNATURE_INVALID',
+  IDEMPOTENCY_KEY_REUSED: 'IDEMPOTENCY_KEY_REUSED',
 } as const;
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
 
@@ -74,6 +75,7 @@ const ERROR_STATUS: Record<ErrorCode, number> = {
   PAYMENT_FAILED: 402,
   REFUND_EXCEEDS_PAYMENT: 422,
   WEBHOOK_SIGNATURE_INVALID: 400,
+  IDEMPOTENCY_KEY_REUSED: 422,
 };
 
 export function httpStatusFor(code: ErrorCode): number {

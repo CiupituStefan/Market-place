@@ -31,3 +31,14 @@ export function discountPercent(price: Money, compareAt: Money | null | undefine
 export function pluralize(count: number, singular: string, plural = `${singular}s`): string {
   return `${count} ${count === 1 ? singular : plural}`;
 }
+
+const dateTime = new Intl.DateTimeFormat('en-IE', { dateStyle: 'medium', timeStyle: 'short' });
+const dateOnly = new Intl.DateTimeFormat('en-IE', { dateStyle: 'medium' });
+
+export function formatDateTime(iso: string): string {
+  return dateTime.format(new Date(iso));
+}
+
+export function formatDate(iso: string): string {
+  return dateOnly.format(new Date(iso));
+}

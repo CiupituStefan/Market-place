@@ -31,6 +31,13 @@ export const DEFAULT_POLICIES: readonly RateLimitPolicy[] = [
     matches: (method, path) => method === 'POST' && path.startsWith('/api/v1/payments/'),
   },
   {
+    // Each attempt reserves stock and may claim a discount code: keep it tight.
+    name: 'checkout',
+    limit: 20,
+    windowMs: MINUTE,
+    matches: (method, path) => method === 'POST' && /^\/api\/v1\/orders\/?$/.test(path),
+  },
+  {
     name: 'writes',
     limit: 120,
     windowMs: MINUTE,

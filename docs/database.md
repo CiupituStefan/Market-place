@@ -12,7 +12,7 @@ APIs and events (ADR-001).
 | product-service   | `products`      | products, product_variants, categories, product_images, product_attributes (Phase 5) |
 | inventory-service | `inventory`     | inventory, inventory_reservations, stock_movements (Phase 6)                         |
 | cart-service      | `cart`          | carts, cart_items, discount_codes, discount_redemptions, wishlist_items (Phase 7)    |
-| order-service     | `orders`        | orders, order_items, order_status_history, shipping_addresses (Phase 8)              |
+| order-service     | `orders`        | orders (address snapshots), order_items, order_status_history, idempotency_keys      |
 | payment-service   | `payments`      | payments, refunds, payment_events (Phase 9)                                          |
 | notification-svc  | `notifications` | notification_preferences, notification_logs (Phase 11)                               |
 | review-service    | `reviews`       | reviews, review_votes (Phase 12)                                                     |

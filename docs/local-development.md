@@ -45,6 +45,15 @@ DATABASE_URL=postgresql://cart:cart-dev-password@localhost:5432/cart \
   pnpm --filter @market/cart-service seed               # demo codes WELCOME10, SWITCHUP15, LAUNCH20
 ```
 
+order-service needs an `orders` database and reaches cart-service and inventory-service
+(`CART_SERVICE_URL`, `INVENTORY_SERVICE_URL`); it applies its migrations on start in development:
+
+```bash
+createuser orders --pwprompt && createdb orders --owner orders
+DATABASE_URL=postgresql://orders:orders-dev-password@localhost:5432/orders \
+  pnpm --filter @market/order-service dev
+```
+
 The storefront reads the catalog through the gateway (`API_INTERNAL_URL`, default
 `http://localhost:4000`), so run `api-gateway` too.
 

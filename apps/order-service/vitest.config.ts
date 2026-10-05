@@ -7,6 +7,9 @@ export default defineConfig({
   test: {
     include: ['src/**/*.test.ts', 'test/**/*.test.ts'],
     environment: 'node',
+    // PGlite and real-Postgres concurrency tests need more than vitest's defaults.
+    testTimeout: 60_000,
+    hookTimeout: 60_000,
     setupFiles: ['reflect-metadata'],
   },
 });

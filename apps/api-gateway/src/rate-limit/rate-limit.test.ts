@@ -34,6 +34,9 @@ describe('policies', () => {
     ['POST', '/api/v1/auth/logout', 'writes'],
     ['POST', '/api/v1/payments/create-intent', 'payments'],
     ['DELETE', '/api/v1/cart/items/1', 'writes'],
+    ['POST', '/api/v1/orders', 'checkout'],
+    ['POST', '/api/v1/orders/1/cancel', 'writes'],
+    ['GET', '/api/v1/orders', 'reads'],
     ['GET', '/api/v1/auth/login', 'reads'],
     ['GET', '/api/v1/products', 'reads'],
   ])('%s %s -> %s', (method, path, name) => {

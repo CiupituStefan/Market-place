@@ -32,15 +32,26 @@ unpublished rows and stamps `published_at`. Consumers deduplicate by `eventId` (
 
 ## Catalog
 
-| Topic                     | Event                                                                 | Producer          | Main consumers                         |
-| ------------------------- | --------------------------------------------------------------------- | ----------------- | -------------------------------------- |
-| `catalog.product.events`  | ProductCreated, ProductUpdated                                        | product-service   | inventory (stock records), search      |
-| `inventory.stock.events`  | InventoryReserved                                                     | inventory-service | order, admin                           |
-|                           | InventoryReleased                                                     | inventory-service | order, admin                           |
-|                           | InventoryReservationExpired                                           | inventory-service | order (cancel unpaid order)            |
-|                           | InventoryDecremented                                                  | inventory-service | admin (alerts)                         |
-|                           | InventoryStockChanged                                                 | inventory-service | product-service (availability)         |
-| `orders.order.events`     | OrderCreated, OrderPaid, OrderCancelled, OrderShipped, OrderDelivered | order-service     | inventory, notification, review, admin |
-| `payments.payment.events` | PaymentCreated, PaymentSucceeded, PaymentFailed, PaymentRefunded      | payment-service   | order, notification, admin             |
-| `reviews.review.events`   | ReviewCreated                                                         | review-service    | product-service (ratings)              |
-| `notifications.requests`  | NotificationRequested                                                 | any service       | notification-service                   |
+| Topic                     | Event                                                                 | Producer          | Main consumers                       |
+| ------------------------- | --------------------------------------------------------------------- | ----------------- | ------------------------------------ |
+| `catalog.product.events`  | ProductCreated, ProductUpdated                                        | product-service   | inventory (stock records), search    |
+| `inventory.stock.events`  | InventoryReserved                                                     | inventory-service | order, admin                         |
+|                           | InventoryReleased                                                     | inventory-service | order, admin                         |
+|                           | InventoryReservationExpired                                           | inventory-service | order (cancel unpaid order)          |
+|                           | InventoryDecremented                                                  | inventory-service | admin (alerts)                       |
+|                           | InventoryStockChanged                                                 | inventory-service | product-service (availability)       |
+| `orders.order.events`     | OrderCreated, OrderPaid, OrderCancelled, OrderShipped, OrderDelivered | order-service     | notification, review, payment, admin |
+| `payments.payment.events` | PaymentCreated, PaymentSucceeded, PaymentFailed, PaymentRefunded      | payment-service   | order, notification, admin           |
+| `reviews.review.events`   | ReviewCreated                                                         | review-service    | product-service (ratings)            |
+| `notifications.requests`  | NotificationRequested                                                 | any service       | notification-service                 |
+
+## Order events (Phase 8)
+
+- `OrderCreated` is written when an order reaches `PENDING_PAYMENT` (stock held, discount claimed);
+  lines carry `kind` (`variant` | `configuration`), so configurator builds have no `variantId`.
+- `OrderPaid.reservationId` is null for orders that only contain built-to-order items.
+- `OrderCancelled.reason` is one of `CUSTOMER_REQUEST`, `PAYMENT_TIMEOUT`, `PAYMENT_FAILED`,
+  `OUT_OF_STOCK`, `ADMIN`; `refundRequired: true` tells payment-service a captured payment must be
+  refunded (late payment after cancellation, or stock gone after the hold expired).
+- The V1 order contracts were reshaped in Phase 8 before anything was ever published; from Phase 10
+  on, changes follow the versioning rule above.

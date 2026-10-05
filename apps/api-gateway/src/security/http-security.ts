@@ -1,4 +1,4 @@
-import { REQUEST_ID_HEADER } from '@market/types';
+import { IDEMPOTENCY_KEY_HEADER, ORDER_TOKEN_HEADER, REQUEST_ID_HEADER } from '@market/types';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import type { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
@@ -32,9 +32,16 @@ export function applyHttpSecurity(app: NestExpressApplication, config: AppConfig
     },
     credentials: true,
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'],
-    allowedHeaders: ['content-type', 'authorization', REQUEST_ID_HEADER, 'idempotency-key'],
+    allowedHeaders: [
+      'content-type',
+      'authorization',
+      REQUEST_ID_HEADER,
+      IDEMPOTENCY_KEY_HEADER,
+      ORDER_TOKEN_HEADER,
+    ],
     exposedHeaders: [
       REQUEST_ID_HEADER,
+      'idempotent-replayed',
       'retry-after',
       'ratelimit-limit',
       'ratelimit-remaining',
