@@ -3,12 +3,16 @@
 Each ADR records one significant decision: its context, the decision, and its consequences.
 ADRs are immutable once accepted; a changed decision gets a new ADR that supersedes the old one.
 
-| ADR                                 | Title                                   | Status   |
-| ----------------------------------- | --------------------------------------- | -------- |
-| [ADR-001](ADR-001-microservices.md) | Microservices with database-per-service | Accepted |
-| [ADR-007](ADR-007-monorepo.md)      | pnpm + Turborepo monorepo, ESM, TS 6.0  | Accepted |
+| ADR                                  | Title                                                | Status   |
+| ------------------------------------ | ---------------------------------------------------- | -------- |
+| [ADR-001](ADR-001-microservices.md)  | Microservices with database-per-service              | Accepted |
+| [ADR-002](ADR-002-postgresql.md)     | PostgreSQL + Drizzle, one database per service       | Accepted |
+| [ADR-007](ADR-007-monorepo.md)       | pnpm + Turborepo monorepo, ESM, TS 6.0               | Accepted |
+| [ADR-008](ADR-008-frontend.md)       | Storefront architecture (Next.js)                    | Accepted |
+| [ADR-009](ADR-009-api-gateway.md)    | Custom NestJS API gateway behind the ALB             | Accepted |
+| [ADR-010](ADR-010-authentication.md) | Cookie sessions, EdDSA JWTs, rotating refresh tokens | Accepted |
 
-Planned: ADR-002 PostgreSQL, ADR-003 Kafka, ADR-004 Stripe, ADR-005 Kubernetes, ADR-006 AWS —
+Planned: ADR-003 Kafka, ADR-004 Stripe, ADR-005 Kubernetes, ADR-006 AWS —
 written in the phase that implements each decision.
 
 ## Template

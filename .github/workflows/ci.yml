@@ -18,6 +18,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
+      # Real PostgreSQL to prove the committed migrations apply cleanly.
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: auth
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: auth
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U auth" --health-interval 5s --health-timeout 3s --health-retries 10
       # Real Redis for the gateway's rate-limit store integration tests.
       redis:
         image: redis:7-alpine
@@ -42,3 +52,14 @@ jobs:
           TURBO_TELEMETRY_DISABLED: '1'
           NEXT_TELEMETRY_DISABLED: '1'
           REDIS_URL: redis://localhost:6379
+
+      - name: Apply database migrations to PostgreSQL
+        run: pnpm --filter @market/auth-service db:migrate
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://auth:ci-only-password@localhost:5432/auth
+
+      - name: Fail if the schema has migrations that were not generated
+        run: |
+          pnpm --filter @market/auth-service exec drizzle-kit generate --name ci-check
+          git diff --exit-code -- apps/auth-service/drizzle || (echo "Run pnpm db:generate and commit the migration" && exit 1)

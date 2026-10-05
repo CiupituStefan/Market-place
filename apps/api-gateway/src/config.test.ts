@@ -31,3 +31,11 @@ describe('api-gateway config', () => {
     expect(() => loadConfig({ AUTH_SERVICE_URL: 'ftp://auth' })).toThrow(ConfigError);
   });
 });
+
+describe('JWKS location', () => {
+  it('defaults to the auth-service upstream', () => {
+    expect(loadConfig({ AUTH_SERVICE_URL: 'http://auth-service:4001' }).AUTH_JWKS_URL).toBe(
+      'http://auth-service:4001/.well-known/jwks.json',
+    );
+  });
+});

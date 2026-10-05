@@ -73,3 +73,42 @@ describe('api client', () => {
     expect(userMessage(error)).toBe('Something went wrong on our side. Please try again.');
   });
 });
+
+describe('session refresh', () => {
+  it('retries once after a successful refresh', async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        Response.json(
+          { error: { code: 'TOKEN_EXPIRED', message: 'expired', requestId: 'r' } },
+          { status: 401 },
+        ),
+      )
+      .mockResolvedValueOnce(Response.json({ ok: true }));
+    vi.stubGlobal('fetch', fetchMock);
+    const onUnauthorized = vi.fn().mockResolvedValue(true);
+    const client = createApiClient('http://gateway.test', { onUnauthorized });
+    await expect(client('/cart', { schema: z.object({ ok: z.boolean() }) })).resolves.toEqual({
+      ok: true,
+    });
+    expect(onUnauthorized).toHaveBeenCalledWith('/cart');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('gives up when the refresh fails and never loops', async () => {
+    const unauthorized = () =>
+      Response.json(
+        { error: { code: 'UNAUTHENTICATED', message: 'no', requestId: 'r' } },
+        { status: 401 },
+      );
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockImplementation(() => Promise.resolve(unauthorized()));
+    vi.stubGlobal('fetch', fetchMock);
+    const onUnauthorized = vi.fn().mockResolvedValue(true);
+    const client = createApiClient('http://gateway.test', { onUnauthorized });
+    await expect(client('/cart', { schema: z.unknown() })).rejects.toMatchObject({ status: 401 });
+    expect(onUnauthorized).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});

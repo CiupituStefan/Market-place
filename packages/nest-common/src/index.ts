@@ -1,3 +1,4 @@
+export * from './auth/index.js';
 export * from './bootstrap.js';
 export * from './exception.filter.js';
 export * from './health/index.js';

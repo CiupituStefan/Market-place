@@ -12,6 +12,22 @@ pnpm install
 pnpm build
 ```
 
+## PostgreSQL (until Docker Compose in Phase 14)
+
+auth-service needs a PostgreSQL 16 database:
+
+```bash
+createuser auth --pwprompt         # e.g. auth-dev-password
+createdb auth --owner auth
+export DATABASE_URL=postgresql://auth:auth-dev-password@localhost:5432/auth
+pnpm --filter @market/auth-service dev     # applies migrations on start in development
+ADMIN_EMAIL=you@example.com ADMIN_PASSWORD='a long passphrase' \
+  pnpm --filter @market/auth-service build && pnpm --filter @market/auth-service seed:admin
+```
+
+Verification and password-reset links are printed in the auth-service log in development
+(`DEV_LOG_EMAIL_LINKS`), until notification-service sends real emails.
+
 ## Daily workflow
 
 ```bash

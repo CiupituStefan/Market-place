@@ -2,7 +2,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useState, type SubmitEvent } from 'react';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,6 @@ import { fieldErrors, LoginSchema, safeRedirect, type FieldErrors } from '@/lib/
 import { FormField } from './form-field';
 
 export function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -20,9 +19,11 @@ export function LoginForm() {
   const login = useMutation({
     mutationFn: (input: z.infer<typeof LoginSchema>) =>
       api('/auth/login', { method: 'POST', body: input, schema: z.unknown() }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['session'] });
-      router.push(safeRedirect(searchParams.get('next')));
+    onSuccess: () => {
+      queryClient.clear();
+      // Full navigation: the identity changed, so no client-cached route (e.g. a
+      // redirect-to-login prefetched while anonymous) may be reused.
+      window.location.assign(safeRedirect(searchParams.get('next')));
     },
   });
 

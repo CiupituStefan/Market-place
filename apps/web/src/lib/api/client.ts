@@ -28,14 +28,23 @@ export function buildUrl(
   return url.toString();
 }
 
+export interface ApiClientOptions {
+  /**
+   * Called once when a request fails with 401; resolve `true` if the session was
+   * renewed and the request should be retried.
+   */
+  onUnauthorized?: (path: string) => Promise<boolean>;
+}
+
 /**
  * Typed JSON client for the API gateway. Cookies carry the session (httpOnly),
  * so no token ever touches JavaScript-accessible storage.
  */
-export function createApiClient(baseUrl: string) {
+export function createApiClient(baseUrl: string, clientOptions: ApiClientOptions = {}) {
   return async function request<S extends z.ZodType>(
     path: string,
     options: RequestOptions<S>,
+    retried = false,
   ): Promise<z.infer<S>> {
     const headers: Record<string, string> = { accept: 'application/json', ...options.headers };
     if (options.body !== undefined) headers['content-type'] = 'application/json';
@@ -55,6 +64,9 @@ export function createApiClient(baseUrl: string) {
 
     const response = await fetch(buildUrl(baseUrl, path, options.query), init);
 
+    if (response.status === 401 && !retried && clientOptions.onUnauthorized) {
+      if (await clientOptions.onUnauthorized(path)) return request(path, options, true);
+    }
     if (!response.ok) throw await toApiError(response);
     if (response.status === 204) return options.schema.parse(undefined);
     return options.schema.parse(await response.json());

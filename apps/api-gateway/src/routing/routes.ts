@@ -1,3 +1,4 @@
+import type { Role } from '@market/types';
 import type { UpstreamService } from '../config.js';
 
 export interface RouteDefinition {
@@ -14,6 +15,11 @@ export interface RouteDefinition {
    * upstream authenticates the request itself (Stripe signature).
    */
   machine?: boolean;
+  /**
+   * Roles required at the edge. Services enforce authorization themselves too; this
+   * rejects anonymous traffic to the back office before it reaches any service.
+   */
+  roles?: Role[];
 }
 
 /**
@@ -42,7 +48,7 @@ export const ROUTES: readonly RouteDefinition[] = [
   { prefix: '/api/v1/newsletter', service: 'notification-service' },
   { prefix: '/api/v1/notifications', service: 'notification-service' },
   { prefix: '/api/v1/reviews', service: 'review-service' },
-  { prefix: '/api/v1/admin', service: 'admin-service' },
+  { prefix: '/api/v1/admin', service: 'admin-service', roles: ['STAFF', 'ADMIN'] },
 ];
 
 const byLengthDesc = [...ROUTES].sort((a, b) => b.prefix.length - a.prefix.length);

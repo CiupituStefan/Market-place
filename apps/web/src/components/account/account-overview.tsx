@@ -2,6 +2,7 @@
 
 import { HeartIcon, MapPinIcon, PackageIcon } from 'lucide-react';
 import Link from 'next/link';
+import { SignOutButton } from '@/components/auth/sign-out-button';
 import { RequireSession } from './require-session';
 
 const links = [
@@ -25,9 +26,15 @@ export function AccountOverview() {
     <RequireSession>
       {(user) => (
         <div className="grid gap-8">
-          <p className="text-muted-foreground">
-            Signed in as <span className="font-medium text-foreground">{user.email}</span>
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <p className="text-muted-foreground">
+              Signed in as <span className="font-medium text-foreground">{user.email}</span>
+              {!user.emailVerified && (
+                <span className="ml-2 text-sm text-destructive">· email not confirmed</span>
+              )}
+            </p>
+            <SignOutButton />
+          </div>
           <ul className="grid gap-4 md:grid-cols-3">
             {links.map(({ href, icon: Icon, title, body }) => (
               <li key={title}>

@@ -4,12 +4,13 @@ import { ApiExcludeController } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { RateLimitGuard } from '../rate-limit/rate-limit.guard.js';
 import { resolveRoute } from '../routing/routes.js';
+import { EdgeAuthGuard } from '../security/edge-auth.guard.js';
 import { OriginGuard } from '../security/origin.guard.js';
 import { ProxyService } from './proxy.service.js';
 
 @ApiExcludeController()
 @Controller()
-@UseGuards(RateLimitGuard, OriginGuard)
+@UseGuards(RateLimitGuard, OriginGuard, EdgeAuthGuard)
 export class ProxyController {
   constructor(private readonly proxy: ProxyService) {}
 

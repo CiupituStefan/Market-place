@@ -27,6 +27,8 @@ export interface ConfigureAppOptions {
   trustProxy?: number;
   /** JSON body size limit for services that parse bodies. */
   bodyLimit?: string;
+  /** Extra GET paths served outside /api/v1 (e.g. `.well-known/jwks.json`). */
+  excludeFromPrefix?: string[];
 }
 
 /**
@@ -44,6 +46,7 @@ export function configureApp(app: INestApplication, options: ConfigureAppOptions
       exclude: [
         { path: 'health/live', method: RequestMethod.GET },
         { path: 'health/ready', method: RequestMethod.GET },
+        ...(options.excludeFromPrefix ?? []).map((path) => ({ path, method: RequestMethod.GET })),
       ],
     });
   }

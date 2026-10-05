@@ -66,11 +66,16 @@ export const ConfigSchema = baseServiceEnv
       .max(50 * 1024 * 1024)
       .default(1024 * 1024),
     DOCS_ENABLED: booleanString.optional(),
+    /** Where to fetch auth-service's public keys; defaults to the auth-service upstream. */
+    AUTH_JWKS_URL: z.url({ protocol: /^https?$/ }).optional(),
+    JWT_ISSUER: z.string().min(1).default('cse-auth'),
   })
   .extend(UpstreamUrls.shape)
   .transform((env) => ({
     ...env,
     DOCS_ENABLED: env.DOCS_ENABLED ?? env.NODE_ENV !== 'production',
+    AUTH_JWKS_URL:
+      env.AUTH_JWKS_URL ?? new URL('/.well-known/jwks.json', env.AUTH_SERVICE_URL).toString(),
   }));
 
 export type AppConfig = z.infer<typeof ConfigSchema>;

@@ -33,17 +33,17 @@ export function SiteHeader() {
         <div className="ml-auto flex items-center md:ml-2">
           <ThemeToggle />
           <Button variant="ghost" size="icon" asChild className="hidden sm:inline-flex">
-            <Link href="/wishlist" aria-label="Wishlist">
+            <Link href="/wishlist" aria-label="Wishlist" prefetch={false}>
               <HeartIcon />
             </Link>
           </Button>
           <Button variant="ghost" size="icon" asChild>
-            <Link href="/account" aria-label="Account">
+            <Link href="/account" aria-label="Account" prefetch={false}>
               <UserIcon />
             </Link>
           </Button>
           <Button variant="ghost" size="icon" asChild>
-            <Link href="/cart" aria-label="Cart">
+            <Link href="/cart" aria-label="Cart" prefetch={false}>
               <ShoppingBagIcon />
             </Link>
           </Button>

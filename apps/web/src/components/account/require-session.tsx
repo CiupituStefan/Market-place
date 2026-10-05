@@ -49,7 +49,9 @@ export function RequireSession({ children }: { children: (user: SessionUser) => 
         action={
           <div className="flex gap-3">
             <Button asChild>
-              <Link href={`/login?next=${encodeURIComponent(pathname)}`}>Sign in</Link>
+              <Link href={`/login?next=${encodeURIComponent(pathname)}`} prefetch={false}>
+                Sign in
+              </Link>
             </Button>
             <Button variant="outline" asChild>
               <Link href="/register">Create account</Link>

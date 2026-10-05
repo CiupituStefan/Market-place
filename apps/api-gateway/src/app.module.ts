@@ -1,4 +1,4 @@
-import { HealthModule, type HealthCheck } from '@market/nest-common';
+import { AuthModule, HealthModule, JwtVerifier, type HealthCheck } from '@market/nest-common';
 import { Logger, Module, type DynamicModule, type Provider } from '@nestjs/common';
 import type { Redis } from 'ioredis';
 import { APP_CONFIG, SERVICE_NAME, type AppConfig } from './config.js';
@@ -11,12 +11,14 @@ import { FallbackRateLimitStore, RedisRateLimitStore } from './rate-limit/redis-
 import { MemoryRateLimitStore, type RateLimitStore } from './rate-limit/store.js';
 import { RATE_LIMIT_POLICIES, RATE_LIMIT_STORE } from './rate-limit/tokens.js';
 import { REDIS, RedisModule } from './redis/redis.module.js';
+import { EdgeAuthGuard } from './security/edge-auth.guard.js';
 import { OriginGuard } from './security/origin.guard.js';
 
 export interface GatewayModuleOverrides {
   /** Test seams: inject a store or tighter policies. */
   rateLimitStore?: RateLimitStore;
   rateLimitPolicies?: readonly RateLimitPolicy[];
+  jwtVerifier?: JwtVerifier;
 }
 
 @Module({})
@@ -41,6 +43,10 @@ export class AppModule {
       module: AppModule,
       global: true,
       imports: [
+        AuthModule.forRoot(
+          overrides.jwtVerifier ??
+            JwtVerifier.fromJwksUrl(config.AUTH_JWKS_URL, { issuer: config.JWT_ISSUER }),
+        ),
         RedisModule,
         HealthModule.register({
           serviceName: SERVICE_NAME,
@@ -70,6 +76,7 @@ export class AppModule {
         ProxyService,
         RateLimitGuard,
         OriginGuard,
+        EdgeAuthGuard,
       ],
       exports: [APP_CONFIG],
     };

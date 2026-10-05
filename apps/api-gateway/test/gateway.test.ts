@@ -1,5 +1,8 @@
 import { Writable } from 'node:stream';
 import { createLogger } from '@market/logger';
+import { JwtVerifier } from '@market/nest-common';
+import { JWT_AUDIENCE } from '@market/types';
+import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT, type CryptoKey } from 'jose';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
@@ -26,8 +29,27 @@ describe('api-gateway (integration)', () => {
   let upstream: Awaited<ReturnType<typeof startFakeUpstream>>;
   let http: ReturnType<NestExpressApplication['getHttpServer']>;
 
+  let signingKey: CryptoKey;
+  const accessToken = (roles: string[]) =>
+    new SignJWT({ sid: '5a2d8c3e-1b4f-4e6a-8c7d-2f9e0a1b3c4d', roles, email_verified: true })
+      .setProtectedHeader({ alg: 'EdDSA', kid: 'k1' })
+      .setSubject('0b7c1f0e-4f2a-4d8e-9a43-3c1f6f1c9a10')
+      .setIssuer('cse-auth')
+      .setAudience(JWT_AUDIENCE)
+      .setIssuedAt()
+      .setExpirationTime('5m')
+      .sign(signingKey);
+
   beforeAll(async () => {
     upstream = await startFakeUpstream();
+    const pair = await generateKeyPair('EdDSA', { crv: 'Ed25519' });
+    signingKey = pair.privateKey;
+    const jwtVerifier = new JwtVerifier(
+      createLocalJWKSet({
+        keys: [{ ...(await exportJWK(pair.publicKey)), kid: 'k1', alg: 'EdDSA' }],
+      }),
+      { issuer: 'cse-auth' },
+    );
     const config = loadConfig({
       NODE_ENV: 'test',
       CORS_ORIGINS: SITE,
@@ -39,12 +61,14 @@ describe('api-gateway (integration)', () => {
       CART_SERVICE_URL: upstream.url,
       ORDER_SERVICE_URL: upstream.url,
       PAYMENT_SERVICE_URL: upstream.url,
+      ADMIN_SERVICE_URL: upstream.url,
       // Nothing listens on port 1: simulates a service that is down.
       REVIEW_SERVICE_URL: 'http://127.0.0.1:1',
     });
     const moduleRef = await Test.createTestingModule({
       imports: [
         AppModule.register(config, {
+          jwtVerifier,
           rateLimitStore: new MemoryRateLimitStore(),
           rateLimitPolicies: [
             {
@@ -252,6 +276,42 @@ describe('api-gateway (integration)', () => {
       const limited = await request(http).get('/api/v1/categories').expect(429);
       expect(limited.body.error.code).toBe('RATE_LIMITED');
       expect(Number(limited.headers['retry-after'])).toBeGreaterThan(0);
+    });
+  });
+
+  describe('back-office routes', () => {
+    it('rejects anonymous requests at the edge', async () => {
+      const before = upstream.requests.length;
+      const res = await request(http).get('/api/v1/admin/orders').expect(401);
+      expect(res.body.error.code).toBe('UNAUTHENTICATED');
+      expect(upstream.requests.length).toBe(before);
+    });
+
+    it('rejects customers', async () => {
+      await request(http)
+        .get('/api/v1/admin/orders')
+        .set('cookie', `cse_at=${await accessToken(['USER'])}`)
+        .expect(403);
+    });
+
+    it('lets staff through, forwarding the session cookie for the service to verify', async () => {
+      const token = await accessToken(['USER', 'STAFF']);
+      const res = await request(http)
+        .get('/api/v1/admin/orders')
+        .set('cookie', `cse_at=${token}`)
+        .expect(200);
+      expect(res.body.headers.cookie).toBe(`cse_at=${token}`);
+    });
+
+    it('rejects forged tokens', async () => {
+      const forged = await new SignJWT({ roles: ['ADMIN'] })
+        .setProtectedHeader({ alg: 'HS256' })
+        .setSubject('x')
+        .sign(new TextEncoder().encode('guess'));
+      await request(http)
+        .get('/api/v1/admin/orders')
+        .set('authorization', `Bearer ${forged}`)
+        .expect(401);
     });
   });
 
