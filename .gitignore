@@ -42,3 +42,4 @@ test-results/
 
 # next.js generated
 next-env.d.ts
+dump.rdb

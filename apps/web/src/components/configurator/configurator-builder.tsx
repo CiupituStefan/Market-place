@@ -5,7 +5,8 @@ import { CheckIcon } from 'lucide-react';
 import { useState } from 'react';
 import { ProductArt } from '@/components/product/product-art';
 import { Button } from '@/components/ui/button';
-import { addConfigurationToCart, quoteConfiguration } from '@/lib/api/configurator';
+import { useAddConfigurationToCart } from '@/lib/api/cart';
+import { quoteConfiguration } from '@/lib/api/configurator';
 import { ApiError, userMessage } from '@/lib/api/errors';
 import type {
   ConfigurationQuote,
@@ -47,9 +48,8 @@ export function ConfiguratorBuilder({ configurator, initialQuote }: Configurator
     mutationFn: (next: ConfigurationSelection) => quoteConfiguration(configurator.slug, next),
     onSuccess: setQuote,
   });
-  const addToCart = useMutation({
-    mutationFn: () => addConfigurationToCart(configurator.slug, selection),
-  });
+  // The cart re-quotes the selection on the server; no price is sent.
+  const addToCart = useAddConfigurationToCart();
 
   function choose(group: ConfiguratorGroup, value: string) {
     const next = { ...selection, [group]: value };
@@ -177,7 +177,7 @@ export function ConfiguratorBuilder({ configurator, initialQuote }: Configurator
             className="mt-6 w-full"
             disabled={invalid || quoting.isPending || addToCart.isPending}
             onClick={() => {
-              addToCart.mutate();
+              addToCart.mutate({ configurator: configurator.slug, selection });
             }}
           >
             {addToCart.isSuccess ? (

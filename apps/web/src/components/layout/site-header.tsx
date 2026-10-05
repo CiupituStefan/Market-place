@@ -1,7 +1,8 @@
-import { HeartIcon, ShoppingBagIcon, UserIcon } from 'lucide-react';
+import { HeartIcon, UserIcon } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { mainNav } from '@/lib/site';
+import { CartLink } from './cart-link';
 import { Logo } from './logo';
 import { MobileNav } from './mobile-nav';
 import { SearchForm } from './search-form';
@@ -42,11 +43,7 @@ export function SiteHeader() {
               <UserIcon />
             </Link>
           </Button>
-          <Button variant="ghost" size="icon" asChild>
-            <Link href="/cart" aria-label="Cart" prefetch={false}>
-              <ShoppingBagIcon />
-            </Link>
-          </Button>
+          <CartLink />
         </div>
       </div>
     </header>

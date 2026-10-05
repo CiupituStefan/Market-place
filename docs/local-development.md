@@ -34,6 +34,17 @@ pnpm --filter @market/product-service build && pnpm --filter @market/product-ser
 pnpm --filter @market/product-service dev
 ```
 
+inventory-service and cart-service follow the same pattern (seed inventory after the catalog):
+
+```bash
+createuser inventory --pwprompt && createdb inventory --owner inventory
+createuser cart --pwprompt && createdb cart --owner cart
+DATABASE_URL=postgresql://inventory:inventory-dev-password@localhost:5432/inventory \
+  pnpm --filter @market/inventory-service seed          # reads variants from product-service
+DATABASE_URL=postgresql://cart:cart-dev-password@localhost:5432/cart \
+  pnpm --filter @market/cart-service seed               # demo codes WELCOME10, SWITCHUP15, LAUNCH20
+```
+
 The storefront reads the catalog through the gateway (`API_INTERNAL_URL`, default
 `http://localhost:4000`), so run `api-gateway` too.
 

@@ -1,12 +1,12 @@
 import { ZodValidationPipe } from '@market/nest-common';
-import type { Availability, Money, ProductStatus } from '@market/types';
+import type { Availability, Money, ProductPreview, ProductStatus } from '@market/types';
 import { Body, Controller, HttpCode, Inject, Post } from '@nestjs/common';
 import { ApiExcludeController } from '@nestjs/swagger';
-import { eq, inArray } from 'drizzle-orm';
+import { asc, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { money } from '../catalog/mappers.js';
 import { DATABASE, type Database } from '../db/database.js';
-import { products, productVariants } from '../db/schema.js';
+import { productImages, products, productVariants } from '../db/schema.js';
 
 const LookupSchema = z.object({ variantIds: z.array(z.uuid()).min(1).max(100) }).strict();
 
@@ -22,6 +22,9 @@ export interface VariantLookup {
   compareAtPrice: Money | null;
   availability: Availability;
   productStatus: ProductStatus;
+  preview: ProductPreview;
+  /** Variant image if any, else the product's first image (for cart and order lines). */
+  imageUrl: string | null;
 }
 
 /**
@@ -44,6 +47,13 @@ export class InternalController {
       .from(productVariants)
       .innerJoin(products, eq(products.id, productVariants.productId))
       .where(inArray(productVariants.id, body.variantIds));
+    const images = rows.length
+      ? await this.db
+          .select()
+          .from(productImages)
+          .where(inArray(productImages.productId, [...new Set(rows.map((row) => row.product.id))]))
+          .orderBy(asc(productImages.position))
+      : [];
     return rows.map(({ variant, product }) => ({
       variantId: variant.id,
       productId: product.id,
@@ -60,6 +70,12 @@ export class InternalController {
         variant.compareAtAmount === null ? null : money(variant.compareAtAmount, variant.currency),
       availability: variant.availability,
       productStatus: product.status,
+      preview: variant.preview,
+      imageUrl:
+        (
+          images.find((image) => image.variantId === variant.id) ??
+          images.find((image) => image.productId === product.id && image.variantId === null)
+        )?.url ?? null,
     }));
   }
 }

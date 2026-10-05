@@ -52,6 +52,16 @@ export async function createPostgresTestDatabase<TSchema extends Record<string, 
       await pool.end();
       const cleanup = new pg.Client({ connectionString: options.adminUrl });
       await cleanup.connect();
+      // pool.end() resolves before every backend has gone; terminating one that is
+      // still closing surfaces as an uncaught 57P01 in the test process. Wait first.
+      for (let attempt = 0; attempt < 50; attempt += 1) {
+        const { rows } = await cleanup.query<{ n: string }>(
+          'SELECT count(*) AS n FROM pg_stat_activity WHERE datname = $1',
+          [name],
+        );
+        if (rows[0]?.n === '0') break;
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
       await cleanup.query(`DROP DATABASE IF EXISTS ${name} WITH (FORCE)`);
       await cleanup.end();
     },

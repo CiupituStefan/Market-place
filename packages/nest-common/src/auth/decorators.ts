@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { ApiCookieAuth, ApiForbiddenResponse, ApiUnauthorizedResponse } from '@nestjs/swagger';
 import type { Request } from 'express';
-import { AuthGuard, getAuthUser, REQUIRED_ROLES } from './auth.guard.js';
+import { AuthGuard, getAuthUser, OptionalAuthGuard, REQUIRED_ROLES } from './auth.guard.js';
 
 /**
  * Requires a valid access token; with roles, requires at least one of them.
@@ -34,4 +34,15 @@ export const CurrentUser = createParamDecorator(
     if (!user) throw new DomainError(ErrorCode.UNAUTHENTICATED, 'Authentication required');
     return user;
   },
+);
+
+/** Identifies signed-in users when a session exists, without requiring one. */
+export function OptionallyAuthenticated(): MethodDecorator & ClassDecorator {
+  return applyDecorators(UseGuards(OptionalAuthGuard), ApiCookieAuth('access_token'));
+}
+
+/** The user if signed in, otherwise undefined. Use with @OptionallyAuthenticated. */
+export const MaybeUser = createParamDecorator(
+  (_data: unknown, context: ExecutionContext): AuthUser | undefined =>
+    getAuthUser(context.switchToHttp().getRequest<Request>()),
 );

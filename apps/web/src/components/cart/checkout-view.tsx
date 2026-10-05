@@ -49,6 +49,21 @@ export function CheckoutView() {
     );
   }
 
+  if (!cart.data.canCheckout) {
+    return (
+      <EmptyState
+        icon={ShoppingBagIcon}
+        title="Some items in your cart need attention"
+        description="An item is out of stock or no longer available. Review your cart to continue."
+        action={
+          <Button asChild>
+            <Link href="/cart">Review cart</Link>
+          </Button>
+        }
+      />
+    );
+  }
+
   return (
     <div className="grid gap-10 lg:grid-cols-[1fr_22rem]">
       <ol className="grid gap-4">

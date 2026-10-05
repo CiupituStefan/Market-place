@@ -188,6 +188,8 @@ describe('internal API', () => {
       optionsLabel: 'Carbon / Silk Linear',
       price: { amount: 18900, currency: 'EUR' },
       productStatus: 'PUBLISHED',
+      preview: expect.objectContaining({ kind: 'keyboard', layout: '75%' }),
+      imageUrl: null,
     });
   });
 });

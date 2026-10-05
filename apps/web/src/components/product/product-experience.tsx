@@ -1,6 +1,5 @@
 'use client';
 
-import { useMutation } from '@tanstack/react-query';
 import {
   CheckIcon,
   HeartIcon,
@@ -9,10 +8,11 @@ import {
   ShieldCheckIcon,
   TruckIcon,
 } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { addToCart, addToWishlist } from '@/lib/api/commerce';
+import { needsSignIn, useAddToCart, useAddToWishlist } from '@/lib/api/cart';
 import { userMessage } from '@/lib/api/errors';
 import type { Product } from '@/lib/catalog/schemas';
 import {
@@ -42,8 +42,8 @@ export function ProductExperience({ product, initialSelection }: ProductExperien
   const variant = findVariant(product, selection);
   const purchasable = variant !== undefined && variant.availability !== 'OUT_OF_STOCK';
 
-  const cart = useMutation({ mutationFn: addToCart });
-  const wishlist = useMutation({ mutationFn: addToWishlist });
+  const cart = useAddToCart();
+  const wishlist = useAddToWishlist();
 
   function onSelect(optionKey: string, value: string) {
     const next = selectValue(product, selection, optionKey, value);
@@ -203,9 +203,27 @@ export function ProductExperience({ product, initialSelection }: ProductExperien
           >
             Buy now
           </Button>
-          {(cart.isError || wishlist.isError) && (
+          {cart.isError && (
             <p role="alert" className="text-sm text-destructive">
-              {userMessage(cart.error ?? wishlist.error)}
+              {userMessage(cart.error)}
+            </p>
+          )}
+          {wishlist.isError && (
+            <p role="alert" className="text-sm text-destructive">
+              {needsSignIn(wishlist.error) ? (
+                <>
+                  <Link
+                    href={`/login?next=${encodeURIComponent(`/product/${product.slug}`)}`}
+                    prefetch={false}
+                    className="underline"
+                  >
+                    Sign in
+                  </Link>{' '}
+                  to save products to your wishlist.
+                </>
+              ) : (
+                userMessage(wishlist.error)
+              )}
             </p>
           )}
         </div>

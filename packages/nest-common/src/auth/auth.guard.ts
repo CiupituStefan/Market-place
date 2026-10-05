@@ -43,3 +43,20 @@ export class AuthGuard implements CanActivate {
     return true;
   }
 }
+
+/**
+ * For endpoints that serve both visitors and signed-in users (e.g. the cart).
+ * No token: anonymous. A token that is present must be valid; an expired one
+ * yields TOKEN_EXPIRED so the client refreshes instead of silently becoming a guest.
+ */
+@Injectable()
+export class OptionalAuthGuard implements CanActivate {
+  constructor(@Inject(JWT_VERIFIER) private readonly verifier: JwtVerifier) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const req = context.switchToHttp().getRequest<Request>();
+    const token = extractAccessToken(req.headers);
+    if (token) users.set(req, await this.verifier.verify(token));
+    return true;
+  }
+}

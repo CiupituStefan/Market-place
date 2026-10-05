@@ -3,7 +3,15 @@ import type { ReactNode } from 'react';
 import type { Cart } from '@/lib/api/cart';
 import { formatMoney } from '@/lib/format';
 
-export function OrderSummary({ cart, action }: { cart: Cart; action?: ReactNode }) {
+export function OrderSummary({
+  cart,
+  action,
+  extra,
+}: {
+  cart: Cart;
+  action?: ReactNode;
+  extra?: ReactNode;
+}) {
   const rows = [
     { label: 'Subtotal', value: formatMoney(cart.subtotal) },
     ...(cart.discount.amount > 0
@@ -16,9 +24,9 @@ export function OrderSummary({ cart, action }: { cart: Cart; action?: ReactNode 
       : []),
     {
       label: 'Shipping',
-      value: cart.shipping ? formatMoney(cart.shipping) : 'Calculated at checkout',
+      value: cart.shipping.amount === 0 ? 'Free' : formatMoney(cart.shipping),
     },
-    { label: 'VAT', value: formatMoney(cart.tax) },
+    { label: 'Incl. VAT', value: formatMoney(cart.tax) },
   ];
   return (
     <aside
@@ -38,6 +46,7 @@ export function OrderSummary({ cart, action }: { cart: Cart; action?: ReactNode 
           <dd className="tabular-nums">{formatMoney(cart.total)}</dd>
         </div>
       </dl>
+      {extra && <div className="mt-6">{extra}</div>}
       {action && <div className="mt-6">{action}</div>}
       <p className="mt-4 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
         <LockIcon className="size-3" aria-hidden="true" /> Secure checkout powered by Stripe

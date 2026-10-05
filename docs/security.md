@@ -14,6 +14,15 @@ Security controls by layer. Items marked _(Phase N)_ land in that phase.
   account exists.
 - Email links require an explicit click (scanners that prefetch links cannot consume them).
 
+## Visitor carts
+
+- The `cse_cart` cookie holds a random 256-bit token (`HttpOnly`, `SameSite=Lax`, `Secure` in
+  production); only its SHA-256 is stored. Malformed values are ignored, so the cookie cannot be
+  used to probe the database.
+- An invalid or expired session token on cart endpoints is a 401, never a silent switch to the
+  visitor cart.
+- Cart bodies are strict schemas: prices, totals or discounts sent by a client are rejected (400).
+
 ## Authorization (RBAC)
 
 - Roles: `USER`, `STAFF`, `ADMIN`. Every service verifies the JWT and roles itself

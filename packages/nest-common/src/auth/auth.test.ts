@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { configureApp } from '../bootstrap.js';
 import { memoryLogger } from '../test-utils.js';
 import { AuthModule } from './auth.module.js';
-import { Authenticated, CurrentUser } from './decorators.js';
+import { Authenticated, CurrentUser, MaybeUser, OptionallyAuthenticated } from './decorators.js';
 import { JwtVerifier } from './jwt-verifier.js';
 import { extractAccessToken, readCookie } from './token.js';
 
@@ -109,6 +109,12 @@ class SecureController {
     return user;
   }
 
+  @Get('maybe')
+  @OptionallyAuthenticated()
+  maybe(@MaybeUser() user: AuthUser | undefined) {
+    return { user: user?.id ?? null };
+  }
+
   @Get('staff')
   @Authenticated('STAFF', 'ADMIN')
   staff() {
@@ -143,6 +149,20 @@ describe('AuthGuard (integration)', () => {
       .set('cookie', `cse_at=${await token()}`)
       .expect(200);
     expect(res.body.id).toBe(USER_ID);
+  });
+
+  it('optional authentication serves guests and recognises users', async () => {
+    await request(app.getHttpServer()).get('/api/v1/secure/maybe').expect(200, { user: null });
+    await request(app.getHttpServer())
+      .get('/api/v1/secure/maybe')
+      .set('cookie', `cse_at=${await token()}`)
+      .expect(200, { user: USER_ID });
+    const expired = await token({ exp: Math.floor(Date.now() / 1000) - 60 });
+    const res = await request(app.getHttpServer())
+      .get('/api/v1/secure/maybe')
+      .set('cookie', `cse_at=${expired}`)
+      .expect(401);
+    expect(res.body.error.code).toBe('TOKEN_EXPIRED');
   });
 
   it('enforces roles', async () => {
