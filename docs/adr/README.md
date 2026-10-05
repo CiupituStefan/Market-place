@@ -7,6 +7,7 @@ ADRs are immutable once accepted; a changed decision gets a new ADR that superse
 | ----------------------------------------------- | ------------------------------------------------------------------------- | -------- |
 | [ADR-001](ADR-001-microservices.md)             | Microservices with database-per-service                                   | Accepted |
 | [ADR-002](ADR-002-postgresql.md)                | PostgreSQL + Drizzle, one database per service                            | Accepted |
+| [ADR-004](ADR-004-stripe-payments.md)           | Stripe PaymentIntents + Payment Element, webhook as source of truth       | Accepted |
 | [ADR-007](ADR-007-monorepo.md)                  | pnpm + Turborepo monorepo, ESM, TS 6.0                                    | Accepted |
 | [ADR-008](ADR-008-frontend.md)                  | Storefront architecture (Next.js)                                         | Accepted |
 | [ADR-009](ADR-009-api-gateway.md)               | Custom NestJS API gateway behind the ALB                                  | Accepted |
@@ -16,7 +17,7 @@ ADRs are immutable once accepted; a changed decision gets a new ADR that superse
 | [ADR-013](ADR-013-cart-pricing-and-identity.md) | Server-priced carts, hashed visitor tokens, coupons claimed at order time | Accepted |
 | [ADR-014](ADR-014-checkout-saga.md)             | Orchestrated checkout saga with persisted state and idempotent steps      | Accepted |
 
-Planned: ADR-003 Kafka, ADR-004 Stripe, ADR-005 Kubernetes, ADR-006 AWS —
+Planned: ADR-003 Kafka, ADR-005 Kubernetes, ADR-006 AWS —
 written in the phase that implements each decision.
 
 ## Template

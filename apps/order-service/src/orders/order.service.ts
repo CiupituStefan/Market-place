@@ -252,6 +252,42 @@ export class OrderService {
     return this.view(row);
   }
 
+  /**
+   * A refund settled at Stripe. A full refund of a live order ends it as REFUNDED;
+   * for a cancelled order flagged `refundRequired` it settles the flag. Partial
+   * refunds are recorded on the timeline only. Idempotent.
+   */
+  async refunded(
+    orderId: string,
+    refund: { paymentId: string; amount: number; full: boolean },
+  ): Promise<Order> {
+    const row = await this.db.transaction(async (tx) => {
+      const order = await lockOrder(tx, orderId);
+      if (order.status === 'REFUNDED') return order;
+      const amount = `${(refund.amount / 100).toFixed(2)} ${order.currency}`;
+      const text = refund.full
+        ? `Refunded ${amount}; fully refunded`
+        : `Partially refunded ${amount}`;
+      if (order.status === 'CANCELLED') {
+        if (!order.refundRequired) return order;
+        await note(tx, order, text, ACTOR_PAYMENTS);
+        if (!refund.full) return order;
+        const [settled] = await tx
+          .update(orders)
+          .set({ refundRequired: false, updatedAt: new Date() })
+          .where(eq(orders.id, orderId))
+          .returning();
+        return settled ?? order;
+      }
+      if (!refund.full) {
+        await note(tx, order, text, ACTOR_PAYMENTS);
+        return order;
+      }
+      return transition(tx, order, 'REFUNDED', { actor: ACTOR_PAYMENTS, note: text });
+    });
+    return this.view(row);
+  }
+
   // ── fulfilment (back office) ───────────────────────────────────────────────
 
   async advance(

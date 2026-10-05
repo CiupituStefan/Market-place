@@ -61,6 +61,8 @@ export interface StartServiceOptions {
   openApi?: Omit<OpenApiOptions, 'ui'>;
   /** Express body parsing; the gateway disables it to stream bodies untouched. */
   bodyParser?: boolean;
+  /** Keep the exact request bytes on `req.rawBody` (webhook signature verification). */
+  rawBody?: boolean;
   configure?: Omit<ConfigureAppOptions, 'logger'>;
   /** Extra setup (middleware, CORS...) before listening. */
   beforeListen?: (app: NestExpressApplication, logger: Logger) => void | Promise<void>;
@@ -79,6 +81,7 @@ export async function startService(
   const app = await NestFactory.create<NestExpressApplication>(options.module, {
     logger: new PinoNestLogger(logger),
     bodyParser: options.bodyParser ?? true,
+    rawBody: options.rawBody ?? false,
     bufferLogs: true,
   });
   configureApp(app, { logger, ...options.configure });

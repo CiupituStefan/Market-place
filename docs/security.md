@@ -53,7 +53,8 @@ Security controls by layer. Items marked _(Phase N)_ land in that phase.
 
 - Standard error body; stack traces and internal messages are never returned.
 - Logs are JSON with automatic redaction of passwords, tokens, cookies and auth headers.
-- Card data never touches our systems: Stripe Payment Element _(Phase 9)_.
+- Card data never touches our systems: Stripe Payment Element (PCI SAQ A); payment status comes
+  only from signature-verified, deduplicated Stripe webhooks (see [payments](payments.md)).
 - Database roles per service, no public database/Redis/Kafka endpoints _(Phase 16)_.
 
 ## Supply chain and platform _(Phases 17–20)_

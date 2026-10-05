@@ -287,4 +287,54 @@ describe('order-service: lifecycle', () => {
       expect(await h.app.get(OrderSweeper).sweep()).toEqual({ expired: 0, compensated: 0 });
     });
   });
+
+  describe('internal API for payment-service', () => {
+    it('checks access with the same rules as the public endpoint', async () => {
+      const { order } = await placed();
+      const owner = (await h.db.select().from(orders).where(eq(orders.id, order.id)))[0]!.userId;
+      const access = (viewer: Record<string, unknown>) =>
+        request(h.http)
+          .post(`/api/v1/internal/orders/${order.id}/access`)
+          .send({ userId: null, roles: [], orderToken: null, cartToken: null, ...viewer });
+      await access({ userId: owner }).expect(200);
+      await access({ userId: randomUUID() }).expect(404);
+      await access({}).expect(404);
+      await access({ roles: ['STAFF'] }).expect(200);
+    });
+
+    it('ends a fully refunded order as REFUNDED and notes partial refunds', async () => {
+      const { order } = await placed();
+      const paymentId = randomUUID();
+      await pay(order, paymentId).expect(200);
+      const refund = (amount: number, full: boolean) =>
+        request(h.http)
+          .post(`/api/v1/internal/orders/${order.id}/refunded`)
+          .send({ paymentId, amount, full })
+          .expect(200);
+      expect((await refund(10_00, false)).body.status).toBe('PAID');
+      const done = (await refund(order.total.amount, true)).body as Order;
+      expect(done.status).toBe('REFUNDED');
+      expect(done.history.map((e) => e.note).filter(Boolean)).toEqual([
+        'Partially refunded 10.00 EUR',
+        `Refunded ${(order.total.amount / 100).toFixed(2)} EUR; fully refunded`,
+      ]);
+      expect((await refund(order.total.amount, true)).body.status).toBe('REFUNDED');
+    });
+
+    it('settles the refund flag of a cancelled order that was paid late', async () => {
+      const { order, auth } = await placed();
+      await request(h.http)
+        .post(`/api/v1/orders/${order.id}/cancel`)
+        .set('Authorization', auth)
+        .expect(200);
+      const paymentId = randomUUID();
+      expect((await pay(order, paymentId).expect(200)).body.outcome).toBe('REFUND_REQUIRED');
+      await request(h.http)
+        .post(`/api/v1/internal/orders/${order.id}/refunded`)
+        .send({ paymentId, amount: order.total.amount, full: true })
+        .expect(200);
+      const [row] = await h.db.select().from(orders).where(eq(orders.id, order.id));
+      expect(row).toMatchObject({ status: 'CANCELLED', refundRequired: false });
+    });
+  });
 });

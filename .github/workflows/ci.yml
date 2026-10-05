@@ -60,7 +60,7 @@ jobs:
           NODE_ENV: test
           PGPASSWORD: ci-only-password
         run: |
-          for pair in auth-service:auth product-service:products inventory-service:inventory cart-service:cart order-service:orders; do
+          for pair in auth-service:auth product-service:products inventory-service:inventory cart-service:cart order-service:orders payment-service:payments; do
             service="${pair%%:*}"; database="${pair##*:}"
             psql -h localhost -U auth -d auth -tc "SELECT 1 FROM pg_database WHERE datname = '$database'" | grep -q 1 \
               || psql -h localhost -U auth -d auth -c "CREATE DATABASE $database"

@@ -47,9 +47,15 @@ function orderTokenHeader(orderId: string): Record<string, string> {
 
 export const orderQueryKey = (orderId: string) => ['order', orderId] as const;
 
-export function useOrder(orderId: string) {
+/**
+ * One order. With `awaitingPayment`, polls until the webhook-driven status moves
+ * on: the browser never decides that an order is paid.
+ */
+export function useOrder(orderId: string, options: { awaitingPayment?: boolean } = {}) {
   return useQuery({
     queryKey: orderQueryKey(orderId),
+    refetchInterval: (query) =>
+      options.awaitingPayment && query.state.data?.status === 'PENDING_PAYMENT' ? 2_000 : false,
     queryFn: () =>
       api(`/orders/${orderId}`, { schema: OrderSchema, headers: orderTokenHeader(orderId) }),
   });

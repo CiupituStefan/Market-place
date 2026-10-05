@@ -94,3 +94,10 @@ pnpm install
 - Integration tests: `test/**/*.test.ts`, booting the Nest app in-process and calling it with
   Supertest.
 - NestJS tests run through SWC so decorator metadata (needed for DI) is emitted.
+
+## Payments locally
+
+payment-service needs a `payments` database. Without Stripe keys run it with
+`PAYMENT_PROVIDER=mock STRIPE_WEBHOOK_SECRET=whsec_local_development_only`: the order page then
+shows a labelled test form instead of Stripe's card form. With Stripe test keys, see
+[payments](payments.md#local-development).

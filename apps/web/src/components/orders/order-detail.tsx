@@ -2,20 +2,36 @@
 
 import type { Address, Order } from '@market/types';
 import { SHIPPING_COUNTRIES } from '@market/types';
-import { ClockIcon, CloudOffIcon, PackageIcon, TruckIcon } from 'lucide-react';
+import { ClockIcon, CloudOffIcon, LoaderIcon, PackageIcon, TruckIcon } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { EmptyState } from '@/components/empty-state';
 import { ProductArt } from '@/components/product/product-art';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ApiError, userMessage } from '@/lib/api/errors';
+import { CART_QUERY_KEY } from '@/lib/api/cart';
 import { useCancelOrder, useOrder } from '@/lib/api/orders';
 import { formatDateTime, formatMoney } from '@/lib/format';
 import { orderStatusLabel, OrderStatusBadge } from './order-status';
+import { PaymentPanel } from './payment-panel';
 
 /** One order, for its owner (session) or the guest who placed it (order token). */
 export function OrderDetail({ orderId, backHref }: { orderId: string; backHref: string | null }) {
-  const order = useOrder(orderId);
+  // Stripe redirects back here with ?redirect_status=... after 3-D Secure / bank pages.
+  const redirectStatus = useSearchParams().get('redirect_status');
+  const returnedFromStripe = redirectStatus === 'succeeded' || redirectStatus === 'processing';
+  const [submittedHere, setSubmitted] = useState(false);
+  const submitted = submittedHere || returnedFromStripe;
+  const order = useOrder(orderId, { awaitingPayment: submitted });
+  const queryClient = useQueryClient();
+  const settled = submitted && order.data !== undefined && order.data.status !== 'PENDING_PAYMENT';
+  useEffect(() => {
+    // order-service empties the cart once the payment is confirmed: refresh the header count.
+    if (settled) void queryClient.invalidateQueries({ queryKey: CART_QUERY_KEY });
+  }, [settled, queryClient]);
 
   if (order.isPending) {
     return (
@@ -55,10 +71,29 @@ export function OrderDetail({ orderId, backHref }: { orderId: string; backHref: 
       />
     );
   }
-  return <OrderView order={order.data} backHref={backHref} />;
+  return (
+    <OrderView
+      order={order.data}
+      backHref={backHref}
+      paymentSubmitted={submitted}
+      onPaymentSubmitted={() => {
+        setSubmitted(true);
+      }}
+    />
+  );
 }
 
-function OrderView({ order, backHref }: { order: Order; backHref: string | null }) {
+function OrderView({
+  order,
+  backHref,
+  paymentSubmitted,
+  onPaymentSubmitted,
+}: {
+  order: Order;
+  backHref: string | null;
+  paymentSubmitted: boolean;
+  onPaymentSubmitted: () => void;
+}) {
   const cancel = useCancelOrder(order.id);
   const rows = [
     { label: 'Subtotal', value: formatMoney(order.subtotal) },
@@ -95,31 +130,43 @@ function OrderView({ order, backHref }: { order: Order; backHref: string | null 
       {order.status === 'PENDING_PAYMENT' && (
         <section
           aria-label="Payment"
-          className="flex flex-wrap items-center gap-4 rounded-2xl border border-brand/30 bg-brand-soft/60 p-5"
+          className="grid gap-5 rounded-2xl border border-brand/30 bg-brand-soft/40 p-5"
         >
-          <ClockIcon className="size-5 text-brand" aria-hidden="true" />
-          <div className="flex-1 text-sm">
-            <p className="font-medium">Awaiting payment</p>
-            {order.paymentDueAt && (
-              <p className="text-muted-foreground">
-                Your items are held until {formatDateTime(order.paymentDueAt)}. Unpaid orders are
-                cancelled automatically after that.
-              </p>
+          <div className="flex flex-wrap items-center gap-4">
+            <ClockIcon className="size-5 text-brand" aria-hidden="true" />
+            <div className="flex-1 text-sm">
+              <p className="font-medium">Awaiting payment</p>
+              {order.paymentDueAt && (
+                <p className="text-muted-foreground">
+                  Your items are held until {formatDateTime(order.paymentDueAt)}. Unpaid orders are
+                  cancelled automatically after that.
+                </p>
+              )}
+            </div>
+            {!paymentSubmitted && (
+              <Button
+                variant="outline"
+                disabled={cancel.isPending}
+                onClick={() => {
+                  cancel.mutate();
+                }}
+              >
+                Cancel order
+              </Button>
             )}
           </div>
-          <Button
-            variant="outline"
-            disabled={cancel.isPending}
-            onClick={() => {
-              cancel.mutate();
-            }}
-          >
-            Cancel order
-          </Button>
           {cancel.isError && (
-            <p role="alert" className="w-full text-sm text-destructive">
+            <p role="alert" className="text-sm text-destructive">
               {userMessage(cancel.error)}
             </p>
+          )}
+          {paymentSubmitted ? (
+            <p role="status" className="flex items-center gap-2 text-sm">
+              <LoaderIcon className="size-4 animate-spin" aria-hidden="true" /> Confirming your
+              payment with the bank… this page updates by itself.
+            </p>
+          ) : (
+            <PaymentPanel order={order} onSubmitted={onPaymentSubmitted} />
           )}
         </section>
       )}
