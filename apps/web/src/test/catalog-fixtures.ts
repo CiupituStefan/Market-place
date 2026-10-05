@@ -10,12 +10,11 @@ import type {
   ProductPreview,
   Review,
   Variant,
-} from './schemas';
+} from '@/lib/catalog/schemas';
 
 /**
- * Development catalog used until product-service is live (Phase 5). It is shaped
- * exactly like the API responses and validated against the same schemas in tests.
- * Product names and brands are original to CSE Keyboards.
+ * Test data shaped like product-service responses, for component and SEO unit
+ * tests. The running app always reads the catalog from the API.
  */
 
 const CURRENCY: Currency = 'EUR';

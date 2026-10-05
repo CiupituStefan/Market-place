@@ -3,7 +3,8 @@ import { runMain, startService } from '@market/nest-common';
 import { createLogger } from '@market/logger';
 import { AppModule, JWKS_PATH } from './app.module.js';
 import { loadConfig, SERVICE_NAME } from './config.js';
-import { connectPostgres, runMigrations } from './db/database.js';
+import { connectPostgres, runMigrations } from '@market/db';
+import { MIGRATIONS_FOLDER, schema } from './db/database.js';
 import { SigningKeys } from './tokens/signing-keys.js';
 
 runMain(SERVICE_NAME, async () => {
@@ -24,10 +25,15 @@ runMain(SERVICE_NAME, async () => {
   }
 
   if (config.MIGRATE_ON_START) {
-    await runMigrations(config.DATABASE_URL);
+    await runMigrations(config.DATABASE_URL, MIGRATIONS_FOLDER);
     logger.info('database migrations applied');
   }
-  const postgres = connectPostgres(config.DATABASE_URL, config.DATABASE_POOL_MAX);
+  const postgres = connectPostgres({
+    url: config.DATABASE_URL,
+    schema,
+    applicationName: SERVICE_NAME,
+    maxConnections: config.DATABASE_POOL_MAX,
+  });
 
   await startService({
     serviceName: SERVICE_NAME,

@@ -1,3 +1,4 @@
+import { isUniqueViolation } from '@market/db';
 import { DomainError, ErrorCode } from '@market/types';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { eq, sql } from 'drizzle-orm';
@@ -12,14 +13,6 @@ import { SessionService, type ClientInfo } from './session.service.js';
 
 const invalidCredentials = () =>
   new DomainError(ErrorCode.INVALID_CREDENTIALS, 'Invalid email or password');
-
-function isUniqueViolation(error: unknown): boolean {
-  for (let current: unknown = error, depth = 0; current && depth < 4; depth += 1) {
-    if (typeof current === 'object' && 'code' in current && current.code === '23505') return true;
-    current = current instanceof Error ? current.cause : undefined;
-  }
-  return false;
-}
 
 @Injectable()
 export class AuthService {

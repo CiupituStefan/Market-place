@@ -1,40 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { activeFilterCount, parseCatalogQuery, toSearchParams } from './query';
+import { activeFilterCount, PAGE_SIZE, parseCatalogQuery, toSearchParams } from './query';
 
-describe('parseCatalogQuery', () => {
-  it('applies defaults', () => {
-    expect(parseCatalogQuery({})).toMatchObject({
-      sort: 'featured',
-      page: 1,
-      inStock: false,
-      layout: [],
-    });
+describe('storefront catalog query', () => {
+  it('always uses the storefront page size', () => {
+    expect(parseCatalogQuery({ pageSize: '100' }).pageSize).toBe(PAGE_SIZE);
   });
 
-  it('parses comma lists and repeated params', () => {
-    const query = parseCatalogQuery({ layout: '75%,TKL', switchType: ['Linear', 'Tactile'] });
-    expect(query.layout).toEqual(['75%', 'TKL']);
-    expect(query.switchType).toEqual(['Linear', 'Tactile']);
-  });
-
-  it('falls back to defaults on invalid values instead of throwing', () => {
-    const query = parseCatalogQuery({
-      sort: 'drop table',
-      page: '-4',
-      minPrice: 'abc',
-      inStock: 'maybe',
-    });
-    expect(query).toMatchObject({ sort: 'featured', page: 1, minPrice: undefined, inStock: false });
-  });
-
-  it('caps search length', () => {
-    expect(parseCatalogQuery({ q: 'x'.repeat(500) }).q).toBeUndefined();
-    expect(parseCatalogQuery({ q: '  forge ' }).q).toBe('forge');
-  });
-});
-
-describe('toSearchParams', () => {
-  it('round-trips and omits defaults', () => {
+  it('round-trips through the URL and omits defaults', () => {
     const query = parseCatalogQuery({
       layout: '75%',
       sort: 'newest',
@@ -47,10 +19,14 @@ describe('toSearchParams', () => {
     expect(parseCatalogQuery(Object.fromEntries(params))).toEqual(query);
     expect(toSearchParams(parseCatalogQuery({})).toString()).toBe('');
   });
-});
 
-describe('activeFilterCount', () => {
-  it('counts attribute values, stock and price range', () => {
+  it('never puts the category or page size in the query string', () => {
+    const params = toSearchParams(parseCatalogQuery({ category: 'keyboards' }));
+    expect(params.has('category')).toBe(false);
+    expect(params.has('pageSize')).toBe(false);
+  });
+
+  it('counts active filters', () => {
     expect(
       activeFilterCount(parseCatalogQuery({ layout: '75%,TKL', inStock: '1', minPrice: '10' })),
     ).toBe(4);

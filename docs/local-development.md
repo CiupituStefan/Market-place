@@ -25,6 +25,18 @@ ADMIN_EMAIL=you@example.com ADMIN_PASSWORD='a long passphrase' \
   pnpm --filter @market/auth-service build && pnpm --filter @market/auth-service seed:admin
 ```
 
+product-service needs its own database (database-per-service) and a demo catalog:
+
+```bash
+createuser products --pwprompt && createdb products --owner products
+export DATABASE_URL=postgresql://products:products-dev-password@localhost:5432/products
+pnpm --filter @market/product-service build && pnpm --filter @market/product-service seed
+pnpm --filter @market/product-service dev
+```
+
+The storefront reads the catalog through the gateway (`API_INTERNAL_URL`, default
+`http://localhost:4000`), so run `api-gateway` too.
+
 Verification and password-reset links are printed in the auth-service log in development
 (`DEV_LOG_EMAIL_LINKS`), until notification-service sends real emails.
 

@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { products } from '@/lib/catalog/fixtures';
+import { products } from '@/test/catalog-fixtures';
 import { ProductCard } from './product-card';
 
 describe('ProductCard', () => {

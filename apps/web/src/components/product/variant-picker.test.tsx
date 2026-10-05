@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { products } from '@/lib/catalog/fixtures';
+import { products } from '@/test/catalog-fixtures';
 import { VariantPicker } from './variant-picker';
 
 const forge = products.find((p) => p.slug === 'cse-forge-75')!;

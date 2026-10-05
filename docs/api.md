@@ -6,17 +6,17 @@ combined Swagger UI at **`/docs`**.
 
 ## Resources and routing
 
-| Path prefix                                                   | Service              |
-| ------------------------------------------------------------- | -------------------- |
-| `/api/v1/auth`, `/api/v1/users`                               | auth-service         |
-| `/api/v1/products`, `/categories`, `/search`, `/configurator` | product-service      |
-| `/api/v1/inventory`                                           | inventory-service    |
-| `/api/v1/cart`, `/wishlist`, `/discounts`                     | cart-service         |
-| `/api/v1/orders`                                              | order-service        |
-| `/api/v1/payments` (incl. `/webhook`)                         | payment-service      |
-| `/api/v1/newsletter`, `/notifications`                        | notification-service |
-| `/api/v1/reviews`                                             | review-service       |
-| `/api/v1/admin`                                               | admin-service        |
+| Path prefix                                                             | Service              |
+| ----------------------------------------------------------------------- | -------------------- |
+| `/api/v1/auth`, `/api/v1/users`                                         | auth-service         |
+| `/api/v1/products` (incl. `?q=` search), `/categories`, `/configurator` | product-service      |
+| `/api/v1/inventory`                                                     | inventory-service    |
+| `/api/v1/cart`, `/wishlist`, `/discounts`                               | cart-service         |
+| `/api/v1/orders`                                                        | order-service        |
+| `/api/v1/payments` (incl. `/webhook`)                                   | payment-service      |
+| `/api/v1/newsletter`, `/notifications`                                  | notification-service |
+| `/api/v1/reviews`                                                       | review-service       |
+| `/api/v1/admin`                                                         | admin-service        |
 
 Endpoint style:
 

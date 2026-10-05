@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
-import { ReviewWall } from '@/components/home/review-wall';
 import { ProductGrid } from '@/components/product/product-card';
 import { ProductDetails } from '@/components/product/product-details';
 import {
@@ -21,9 +20,15 @@ import { catalog, categoryTrail } from '@/lib/catalog';
 import { defaultSelection } from '@/lib/catalog/variants';
 import { categoryCrumbs, productJsonLd } from '@/lib/seo/structured-data';
 
-export async function generateStaticParams() {
-  const slugs = await catalog.getAllProductSlugs();
-  return slugs.map(({ slug }) => ({ slug }));
+/**
+ * Incremental static regeneration: product pages are rendered on first request,
+ * cached, and refreshed in the background every five minutes. Nothing is
+ * prerendered at build time, so builds do not depend on the catalog API.
+ */
+export const revalidate = 300;
+
+export function generateStaticParams(): { slug: string }[] {
+  return [];
 }
 
 export async function generateMetadata(props: PageProps<'/product/[slug]'>): Promise<Metadata> {
@@ -52,12 +57,10 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
   const product = await catalog.getProduct(slug);
   if (!product) notFound();
 
-  const [categories, related, allReviews] = await Promise.all([
+  const [categories, related] = await Promise.all([
     catalog.getCategories(),
-    catalog.getRelated(product, 4),
-    catalog.getReviews(),
+    catalog.getRelated(product),
   ]);
-  const reviews = allReviews.filter((r) => r.productName === product.name);
   const crumbs = [
     ...categoryCrumbs(categoryTrail(categories, product.categorySlug)),
     { name: product.name, href: `/product/${product.slug}` },
@@ -97,13 +100,9 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
             <Rating value={product.rating.average} count={product.rating.count} size="md" />
           </div>
         </div>
-        {reviews.length > 0 ? (
-          <ReviewWall reviews={reviews} />
-        ) : (
-          <p className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-            No written reviews yet. Owners can review after their order is delivered.
-          </p>
-        )}
+        <p className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+          No written reviews yet. Owners can review after their order is delivered.
+        </p>
       </section>
 
       {product.faq.length > 0 && (

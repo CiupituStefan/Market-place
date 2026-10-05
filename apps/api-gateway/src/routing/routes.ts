@@ -31,7 +31,6 @@ export const ROUTES: readonly RouteDefinition[] = [
   { prefix: '/api/v1/users', service: 'auth-service' },
   { prefix: '/api/v1/products', service: 'product-service' },
   { prefix: '/api/v1/categories', service: 'product-service' },
-  { prefix: '/api/v1/search', service: 'product-service' },
   { prefix: '/api/v1/configurator', service: 'product-service' },
   { prefix: '/api/v1/inventory', service: 'inventory-service' },
   { prefix: '/api/v1/cart', service: 'cart-service' },

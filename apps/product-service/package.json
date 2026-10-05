@@ -11,10 +11,16 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "clean": "rm -rf dist .turbo coverage"
+    "clean": "rm -rf dist .turbo coverage",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node dist/db/migrate-cli.js",
+    "seed": "node dist/seed/seed-cli.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1146.0",
+    "@aws-sdk/s3-presigned-post": "^3.1146.0",
     "@market/config": "workspace:*",
+    "@market/db": "workspace:*",
     "@market/events": "workspace:*",
     "@market/logger": "workspace:*",
     "@market/nest-common": "workspace:*",
@@ -23,11 +29,13 @@
     "@nestjs/core": "^12.1.2",
     "@nestjs/platform-express": "^12.1.2",
     "@nestjs/swagger": "^12.0.2",
+    "drizzle-orm": "^0.45.3",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@market/eslint-config": "workspace:*",
     "@market/tsconfig": "workspace:*",
     "@nestjs/cli": "^12.0.8",
@@ -36,7 +44,9 @@
     "@types/express": "^5.0.6",
     "@types/node": "^22.19.0",
     "@types/supertest": "^7.2.1",
+    "drizzle-kit": "^0.31.11",
     "eslint": "^10.12.0",
+    "jose": "^6.2.12",
     "supertest": "^7.3.1",
     "typescript": "~6.0.3",
     "unplugin-swc": "^2.0.0",

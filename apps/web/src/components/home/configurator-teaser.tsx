@@ -9,9 +9,8 @@ import { KEYBOARD_LAYOUTS, type KeyboardLayout, type ProductPreview } from '@/li
 import { cn } from '@/lib/utils';
 
 /**
- * Visual preview of the configurator. It only changes the rendering: pricing,
- * stock checks, compatibility rules and configuration IDs come from
- * product-service when the full configurator ships.
+ * Homepage teaser: changes only the rendering. The real configurator
+ * (/configurator) gets prices, rules and configuration IDs from product-service.
  */
 const CASES = [
   {
@@ -152,8 +151,8 @@ export function ConfiguratorTeaser() {
         </ol>
 
         <Button size="lg" asChild className="mt-auto self-start">
-          <Link href="/shop/keyboards">
-            Explore base boards <ArrowRightIcon />
+          <Link href="/configurator">
+            Start configuring <ArrowRightIcon />
           </Link>
         </Button>
       </div>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { products } from '@/lib/catalog/fixtures';
+import { products } from '@/test/catalog-fixtures';
 import { breadcrumbJsonLd, productJsonLd, serializeJsonLd } from './structured-data';
 
 describe('structured data', () => {

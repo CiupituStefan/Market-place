@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { products } from './fixtures';
+import { products } from '@/test/catalog-fixtures';
 import { defaultSelection, findVariant, selectValue, valueAvailability } from './variants';
 
 const forge = products.find((p) => p.slug === 'cse-forge-75')!;

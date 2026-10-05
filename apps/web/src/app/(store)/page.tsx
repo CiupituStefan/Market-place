@@ -2,22 +2,22 @@ import { CategoryTiles } from '@/components/home/category-tiles';
 import { ConfiguratorTeaser } from '@/components/home/configurator-teaser';
 import { Hero } from '@/components/home/hero';
 import { NewsletterForm } from '@/components/home/newsletter-form';
-import { ReviewWall } from '@/components/home/review-wall';
 import { SectionHeading } from '@/components/home/section-heading';
 import { WhyUs } from '@/components/home/why-us';
 import { ProductGrid } from '@/components/product/product-card';
 import { JsonLd } from '@/components/seo/json-ld';
+import { connection } from 'next/server';
 import { catalog } from '@/lib/catalog';
 import { organizationJsonLd, websiteJsonLd } from '@/lib/seo/structured-data';
 
 export default async function HomePage() {
-  const [featured, bestSellers, newArrivals, categories, reviews, ratingStats] = await Promise.all([
+  // Rendered per request from cached catalog data, so builds never need the API.
+  await connection();
+  const [featured, bestSellers, newArrivals, categories] = await Promise.all([
     catalog.getFeatured(),
     catalog.getBestSellers(4),
     catalog.getNewArrivals(4),
     catalog.getCategories(),
-    catalog.getReviews(),
-    catalog.getRatingStats(),
   ]);
   const tiles = [
     ...categories.filter((c) => c.slug !== 'accessories' && c.parentSlug === null),
@@ -98,18 +98,7 @@ export default async function HomePage() {
         <WhyUs />
       </section>
 
-      <section
-        aria-labelledby="reviews-title"
-        className="container-page py-16 [contain-intrinsic-size:auto_900px] [content-visibility:auto]"
-      >
-        <SectionHeading
-          id="reviews-title"
-          eyebrow="Reviews"
-          title="Typists agree"
-          description={`${ratingStats.average.toFixed(1)} average across ${ratingStats.count.toLocaleString('en')} reviews.`}
-        />
-        <ReviewWall reviews={reviews} />
-      </section>
+      {/* Reviews section returns in the review-service phase, fed by real verified reviews. */}
 
       <section
         aria-labelledby="newsletter-title"

@@ -53,13 +53,24 @@ jobs:
           NEXT_TELEMETRY_DISABLED: '1'
           REDIS_URL: redis://localhost:6379
 
-      - name: Apply database migrations to PostgreSQL
-        run: pnpm --filter @market/auth-service db:migrate
+      - name: Apply database migrations to PostgreSQL (one database per service)
         env:
           NODE_ENV: test
-          DATABASE_URL: postgresql://auth:ci-only-password@localhost:5432/auth
-
-      - name: Fail if the schema has migrations that were not generated
+          PGPASSWORD: ci-only-password
         run: |
-          pnpm --filter @market/auth-service exec drizzle-kit generate --name ci-check
-          git diff --exit-code -- apps/auth-service/drizzle || (echo "Run pnpm db:generate and commit the migration" && exit 1)
+          for pair in auth-service:auth product-service:products; do
+            service="${pair%%:*}"; database="${pair##*:}"
+            psql -h localhost -U auth -d auth -tc "SELECT 1 FROM pg_database WHERE datname = '$database'" | grep -q 1 \
+              || psql -h localhost -U auth -d auth -c "CREATE DATABASE $database"
+            DATABASE_URL="postgresql://auth:ci-only-password@localhost:5432/$database" \
+              pnpm --filter "@market/$service" db:migrate
+          done
+
+      - name: Fail if a schema changed without a generated migration
+        run: |
+          for dir in apps/*/; do
+            [ -f "$dir/drizzle.config.ts" ] || continue
+            (cd "$dir" && pnpm exec drizzle-kit generate --name ci-check)
+          done
+          git diff --exit-code -- 'apps/*/drizzle' || (echo "Run pnpm db:generate and commit the migration" && exit 1)
+          test -z "$(git status --porcelain -- 'apps/*/drizzle')" || (git status -- 'apps/*/drizzle' && exit 1)

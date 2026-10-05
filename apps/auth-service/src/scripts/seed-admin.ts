@@ -4,7 +4,8 @@ import { z } from 'zod';
 import { normalizeEmail, PASSWORD_MIN } from '../auth/dto.js';
 import { hashPassword } from '../auth/password.js';
 import { loadConfig } from '../config.js';
-import { connectPostgres } from '../db/database.js';
+import { connectPostgres } from '@market/db';
+import { schema } from '../db/database.js';
 import { users } from '../db/schema.js';
 
 /**
@@ -23,7 +24,12 @@ const Input = z.object({
 try {
   const config = loadConfig();
   const input = Input.parse(process.env);
-  const postgres = connectPostgres(config.DATABASE_URL, 1);
+  const postgres = connectPostgres({
+    url: config.DATABASE_URL,
+    schema,
+    applicationName: 'auth-service-seed',
+    maxConnections: 1,
+  });
   try {
     const email = normalizeEmail(input.ADMIN_EMAIL);
     await postgres.db

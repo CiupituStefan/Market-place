@@ -35,6 +35,14 @@ grants, so splitting a busy service onto its own cluster later is an operational
 - Every table that publishes events has an `outbox_events` table written in the same transaction.
 - Concurrency-sensitive updates use row locks (`SELECT … FOR UPDATE`) or atomic `UPDATE … RETURNING`.
 
+## Shared plumbing (`@market/db`)
+
+`connectPostgres`, `runMigrations`, `isUniqueViolation`, the `outbox_events` table definition
+re-exported by every publishing service, `enqueueEvent` (validates the envelope, writes it in the
+caller's transaction) and `@market/db/testing` (PGlite with migrations and extensions).
+
+Inside a transaction, queries run sequentially: a transaction is a single connection.
+
 ## Tests
 
 Integration tests run against **PGlite** (PostgreSQL compiled to WebAssembly, in-process) with the

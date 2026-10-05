@@ -46,7 +46,7 @@ export function Hero() {
               </Link>
             </Button>
             <Button size="lg" variant="outline" asChild>
-              <Link href="/#configurator">Build your own</Link>
+              <Link href="/configurator">Build your own</Link>
             </Button>
           </div>
           <dl className="mt-12 grid max-w-md grid-cols-3 gap-6 border-t pt-6">

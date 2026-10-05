@@ -25,6 +25,9 @@ export function node({ tsconfigRootDir, nest = false }) {
             '@typescript-eslint/consistent-type-imports': 'off',
             // Nest modules are decorated empty classes by design.
             '@typescript-eslint/no-extraneous-class': ['error', { allowWithDecorator: true }],
+            // ESLint's core rule does not see reads inside decorator arguments
+            // (e.g. @Body(new ZodValidationPipe(Schema))) and reports false positives.
+            'no-useless-assignment': 'off',
           },
         }
       : {},

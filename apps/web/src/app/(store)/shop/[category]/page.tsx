@@ -7,11 +7,6 @@ import { catalog, categoryTrail, parseCatalogQuery } from '@/lib/catalog';
 import { listingMetadata } from '@/lib/seo/listing-metadata';
 import { categoryCrumbs } from '@/lib/seo/structured-data';
 
-export async function generateStaticParams() {
-  const categories = await catalog.getCategories();
-  return categories.map((c) => ({ category: c.slug }));
-}
-
 export async function generateMetadata(props: PageProps<'/shop/[category]'>): Promise<Metadata> {
   const { category: slug } = await props.params;
   const category = await catalog.getCategory(slug);

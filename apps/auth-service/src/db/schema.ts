@@ -3,7 +3,6 @@ import {
   check,
   index,
   integer,
-  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -115,30 +114,8 @@ export const oneTimeTokens = pgTable(
   ],
 );
 
-/**
- * Transactional outbox: events are written in the same transaction as the state
- * change and published to Kafka by a relay (Phase 10). This avoids the
- * dual-write problem where the DB commits but the event is lost.
- */
-export const outboxEvents = pgTable(
-  'outbox_events',
-  {
-    /** Equals the envelope's eventId. */
-    id: uuid('id').primaryKey(),
-    topic: text('topic').notNull(),
-    /** Kafka message key (aggregate id) for per-entity ordering. */
-    messageKey: text('message_key').notNull(),
-    envelope: jsonb('envelope').notNull(),
-    ...timestamps,
-    publishedAt: timestamp('published_at', { withTimezone: true }),
-    attempts: integer('attempts').notNull().default(0),
-  },
-  (table) => [
-    index('outbox_events_unpublished_idx')
-      .on(table.createdAt)
-      .where(sql`${table.publishedAt} IS NULL`),
-  ],
-);
+/** Transactional outbox (shared definition, one table per service database). */
+export { outboxEvents } from '@market/db';
 
 export type UserRow = typeof users.$inferSelect;
 export type SessionRow = typeof sessions.$inferSelect;

@@ -1,9 +1,12 @@
 import type { MetadataRoute } from 'next';
+import { connection } from 'next/server';
 import { catalog } from '@/lib/catalog';
 import { contentPages } from '@/lib/content';
 import { absoluteUrl } from '@/lib/site';
 
+/** Generated per request (from cached catalog data) so builds do not need the API. */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  await connection();
   const [categories, products] = await Promise.all([
     catalog.getCategories(),
     catalog.getAllProductSlugs(),

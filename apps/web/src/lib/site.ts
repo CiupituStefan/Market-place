@@ -25,5 +25,5 @@ export const mainNav = [
   { title: 'Switches', href: '/shop/switches' },
   { title: 'Keycaps', href: '/shop/keycaps' },
   { title: 'Accessories', href: '/shop/accessories' },
-  { title: 'Configurator', href: '/#configurator' },
+  { title: 'Configurator', href: '/configurator' },
 ] as const;

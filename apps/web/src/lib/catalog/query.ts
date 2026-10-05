@@ -1,63 +1,21 @@
-import { z } from 'zod';
-import { SORT_OPTIONS, type SortOption } from './schemas';
+import { CatalogQuerySchema, FILTER_KEYS, type CatalogQuery } from '@market/types';
 
-/** Attribute keys exposed as filters, in display order. */
-export const FILTER_KEYS = [
-  { key: 'brand', label: 'Brand' },
-  { key: 'layout', label: 'Layout' },
-  { key: 'switchType', label: 'Switch type' },
-  { key: 'connection', label: 'Connection' },
-  { key: 'mount', label: 'Mounting' },
-  { key: 'profile', label: 'Profile' },
-  { key: 'material', label: 'Material' },
-] as const;
-export type FilterKey = (typeof FILTER_KEYS)[number]['key'];
-
-const sortValues = SORT_OPTIONS.map((option) => option.value) as [SortOption, ...SortOption[]];
-
-const list = z
-  .union([z.string(), z.array(z.string())])
-  .optional()
-  .transform((value) =>
-    (Array.isArray(value) ? value : value ? value.split(',') : [])
-      .map((v) => v.trim())
-      .filter(Boolean),
-  );
-
-/**
- * Parses URL search params into a catalog query. Invalid values fall back to
- * defaults instead of erroring: URLs are user-editable and get shared around.
- */
-export const CatalogQuerySchema = z.object({
-  q: z.string().trim().max(100).optional().catch(undefined),
-  sort: z.enum(sortValues).default('featured').catch('featured'),
-  page: z.coerce.number().int().min(1).max(500).default(1).catch(1),
-  inStock: z
-    .enum(['1', 'true'])
-    .optional()
-    .transform((value) => value !== undefined)
-    .catch(false),
-  /** Price bounds in major currency units (e.g. euros), as typed by shoppers. */
-  /** Price bounds in major currency units (e.g. euros), as typed by shoppers. */
-  minPrice: z.coerce.number().int().min(0).optional().catch(undefined),
-  maxPrice: z.coerce.number().int().min(0).optional().catch(undefined),
-  brand: list.catch([]),
-  layout: list.catch([]),
-  switchType: list.catch([]),
-  connection: list.catch([]),
-  mount: list.catch([]),
-  profile: list.catch([]),
-  material: list.catch([]),
-});
-export type CatalogQuery = z.infer<typeof CatalogQuerySchema>;
+export { FILTER_KEYS, type CatalogQuery, type FilterKey } from '@market/types';
 
 export type RawSearchParams = Record<string, string | string[] | undefined>;
 
+/** Storefront page size: 3 or 4 columns × rows. */
+export const PAGE_SIZE = 12;
+
+/** Parses URL search params with the same schema product-service uses. */
 export function parseCatalogQuery(params: RawSearchParams): CatalogQuery {
-  return CatalogQuerySchema.parse(params);
+  return CatalogQuerySchema.parse({ ...params, pageSize: PAGE_SIZE });
 }
 
-/** Serialises a query back to a URL search string, omitting defaults. */
+/**
+ * Serialises a query back to a URL search string, omitting defaults. The
+ * category is part of the path and the page size is fixed, so neither appears.
+ */
 export function toSearchParams(query: Partial<CatalogQuery>): URLSearchParams {
   const params = new URLSearchParams();
   if (query.q) params.set('q', query.q);

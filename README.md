@@ -4,7 +4,7 @@ A production-oriented e-commerce platform for mechanical and custom keyboards, k
 stabilizers, cables, desk mats and accessories. Built as TypeScript microservices (NestJS) with a
 Next.js storefront, PostgreSQL, Redis, Kafka and Stripe, deployed to Kubernetes on AWS.
 
-> **Status: Phase 4 of 21 — authentication (auth-service, PostgreSQL, JWT sessions).**
+> **Status: Phase 5 of 21 — catalog, search and configurator (product-service).**
 > See the [roadmap](#roadmap).
 
 ## Architecture at a glance
@@ -52,7 +52,8 @@ packages/
   events/                 versioned Kafka event contracts
   config/                 typed env loading, service/port registry
   logger/                 pino JSON logs + request_id correlation
-  nest-common/            service bootstrap, error filter, validation, health, OpenAPI
+  nest-common/            service bootstrap, error filter, validation, health, OpenAPI, auth guard
+  db/                     PostgreSQL pool, migrations, transactional outbox, PGlite tests
   eslint-config/          shared flat ESLint configs
   tsconfig/               shared strict tsconfigs
 infrastructure/
@@ -84,7 +85,7 @@ pnpm build          # builds shared packages and services (Turborepo, cached)
 pnpm test           # unit + integration tests across the monorepo
 ```
 
-Run the storefront (works without the backend thanks to the fixture catalog):
+Run the storefront (catalog pages need product-service + gateway; see docs/local-development.md):
 
 ```bash
 pnpm --filter @market/web dev
@@ -128,7 +129,7 @@ Kubernetes (Helm) · Terraform · AWS (EKS, RDS, ElastiCache, MSK, ECR, WAF) · 
 | 2   | Next.js frontend shell                         | ✅     |
 | 3   | API Gateway                                    | ✅     |
 | 4   | Auth service                                   | ✅     |
-| 5   | Product service                                |        |
+| 5   | Product service                                | ✅     |
 | 6   | Inventory service                              |        |
 | 7   | Cart service                                   |        |
 | 8   | Order service                                  |        |
