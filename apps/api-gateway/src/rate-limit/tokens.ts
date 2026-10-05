@@ -1,0 +1,2 @@
+export const RATE_LIMIT_STORE = Symbol('RATE_LIMIT_STORE');
+export const RATE_LIMIT_POLICIES = Symbol('RATE_LIMIT_POLICIES');

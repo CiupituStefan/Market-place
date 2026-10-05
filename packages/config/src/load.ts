@@ -17,10 +17,10 @@ export class ConfigError extends Error {
  * Error messages name the variable and the rule, never the value, so secrets
  * cannot leak into logs through a misconfiguration.
  */
-export function loadEnv<S extends z.ZodObject>(
+export function loadEnv<S extends z.ZodType<Record<string, unknown>>>(
   schema: S,
   source: Record<string, string | undefined> = process.env,
-): Readonly<z.infer<S>> {
+): Readonly<z.output<S>> {
   // Treat empty strings as "unset" so `FOO=` in a .env file falls back to defaults.
   const cleaned = Object.fromEntries(
     Object.entries(source).filter(([, value]) => value !== undefined && value !== ''),

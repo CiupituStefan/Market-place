@@ -58,6 +58,7 @@ export function base({ tsconfigRootDir }) {
         '@typescript-eslint/no-unsafe-member-access': 'off',
         // Nest's getHttpServer() is typed as any; passing it to supertest is the standard idiom.
         '@typescript-eslint/no-unsafe-argument': 'off',
+        '@typescript-eslint/no-unsafe-call': 'off',
       },
     },
     // Must stay last: turns off rules that conflict with Prettier.

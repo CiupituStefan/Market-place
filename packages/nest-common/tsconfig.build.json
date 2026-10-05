@@ -1,0 +1,9 @@
+{
+  "extends": "@market/tsconfig/nestjs.json",
+  "compilerOptions": {
+    "declaration": true,
+    "declarationMap": true
+  },
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts", "src/test-utils.ts"]
+}

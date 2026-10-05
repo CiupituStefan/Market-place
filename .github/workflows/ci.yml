@@ -17,6 +17,13 @@ jobs:
     name: Format, lint, typecheck, test, build
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    services:
+      # Real Redis for the gateway's rate-limit store integration tests.
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10
     steps:
       - uses: actions/checkout@v4
 
@@ -33,3 +40,5 @@ jobs:
       - run: pnpm turbo run lint typecheck test build
         env:
           TURBO_TELEMETRY_DISABLED: '1'
+          NEXT_TELEMETRY_DISABLED: '1'
+          REDIS_URL: redis://localhost:6379

@@ -44,10 +44,12 @@ write package.json <<EOF
     "@market/config": "workspace:*",
     "@market/events": "workspace:*",
     "@market/logger": "workspace:*",
+    "@market/nest-common": "workspace:*",
     "@market/types": "workspace:*",
     "@nestjs/common": "^12.1.2",
     "@nestjs/core": "^12.1.2",
     "@nestjs/platform-express": "^12.1.2",
+    "@nestjs/swagger": "^12.0.2",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "zod": "^4.6.5"
@@ -58,6 +60,7 @@ write package.json <<EOF
     "@nestjs/cli": "^12.0.8",
     "@nestjs/testing": "^12.1.2",
     "@swc/core": "^1.16.13",
+    "@types/express": "^5.0.6",
     "@types/node": "^22.19.0",
     "@types/supertest": "^7.2.1",
     "eslint": "^10.12.0",
@@ -146,32 +149,10 @@ export function loadConfig(source?: Record<string, string | undefined>): AppConf
 }
 EOF
 
-write src/health/health.controller.ts <<EOF
-import { Controller, Get } from '@nestjs/common';
-import { SERVICE_NAME } from '../config.js';
-
-/**
- * Kubernetes probes. Liveness only says "the process is responsive"; readiness
- * will also check owned dependencies (database, Kafka) once they are wired in.
- */
-@Controller('health')
-export class HealthController {
-  @Get('live')
-  live(): { status: 'ok'; service: string } {
-    return { status: 'ok', service: SERVICE_NAME };
-  }
-
-  @Get('ready')
-  ready(): { status: 'ok'; service: string; checks: Record<string, 'up' | 'down'> } {
-    return { status: 'ok', service: SERVICE_NAME, checks: {} };
-  }
-}
-EOF
-
 write src/app.module.ts <<'EOF'
+import { HealthModule } from '@market/nest-common';
 import { type DynamicModule, Module } from '@nestjs/common';
-import { APP_CONFIG, type AppConfig } from './config.js';
-import { HealthController } from './health/health.controller.js';
+import { APP_CONFIG, SERVICE_NAME, type AppConfig } from './config.js';
 
 @Module({})
 export class AppModule {
@@ -179,7 +160,8 @@ export class AppModule {
     return {
       module: AppModule,
       global: true,
-      controllers: [HealthController],
+      // Readiness checks for owned dependencies (database, Kafka) are added with them.
+      imports: [HealthModule.register({ serviceName: SERVICE_NAME })],
       providers: [{ provide: APP_CONFIG, useValue: config }],
       exports: [APP_CONFIG],
     };
@@ -189,33 +171,26 @@ EOF
 
 write src/main.ts <<'EOF'
 import 'reflect-metadata';
-import { createLogger } from '@market/logger';
-import { NestFactory } from '@nestjs/core';
+import { runMain, startService } from '@market/nest-common';
 import { AppModule } from './app.module.js';
 import { loadConfig, SERVICE_NAME } from './config.js';
 
-async function bootstrap(): Promise<void> {
+runMain(SERVICE_NAME, async () => {
   const config = loadConfig();
-  const logger = createLogger({
-    service: SERVICE_NAME,
-    level: config.LOG_LEVEL,
-    pretty: config.NODE_ENV === 'development',
+  await startService({
+    serviceName: SERVICE_NAME,
+    module: AppModule.register(config),
+    config,
+    openApi: { title: SERVICE_NAME },
+    configure: { bodyLimit: '1mb' },
   });
-
-  const app = await NestFactory.create(AppModule.register(config), { logger: false });
-  app.enableShutdownHooks();
-  await app.listen(config.PORT, '0.0.0.0');
-  logger.info({ port: config.PORT }, `${SERVICE_NAME} listening`);
-}
-
-bootstrap().catch((error: unknown) => {
-  // The structured logger may not exist yet (e.g. invalid config), so fall back to stderr.
-  process.stderr.write(`Fatal: failed to start ${SERVICE_NAME}\n${String(error)}\n`);
-  process.exit(1);
 });
 EOF
 
-write test/health.test.ts <<EOF
+write test/app.test.ts <<EOF
+import { Writable } from 'node:stream';
+import { createLogger } from '@market/logger';
+import { configureApp, setupOpenApi } from '@market/nest-common';
 import { type INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
@@ -223,7 +198,14 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AppModule } from '../src/app.module.js';
 import { loadConfig } from '../src/config.js';
 
-describe('$NAME health (integration)', () => {
+const silent = createLogger({
+  service: '$NAME',
+  destination: new Writable({ write: (_chunk, _encoding, callback) => {
+      callback();
+    } }),
+});
+
+describe('$NAME (integration)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
@@ -231,6 +213,8 @@ describe('$NAME health (integration)', () => {
       imports: [AppModule.register(loadConfig({ NODE_ENV: 'test' }))],
     }).compile();
     app = moduleRef.createNestApplication({ logger: false });
+    configureApp(app, { logger: silent });
+    setupOpenApi(app, { title: '$NAME' });
     await app.init();
   });
 
@@ -238,14 +222,23 @@ describe('$NAME health (integration)', () => {
     await app.close();
   });
 
-  it('GET /health/live reports the service as alive', async () => {
-    const response = await request(app.getHttpServer()).get('/health/live').expect(200);
-    expect(response.body).toEqual({ status: 'ok', service: '$NAME' });
+  it('exposes liveness and readiness probes', async () => {
+    await request(app.getHttpServer()).get('/health/live').expect(200, { status: 'ok', service: '$NAME' });
+    const res = await request(app.getHttpServer()).get('/health/ready').expect(200);
+    expect(res.body).toMatchObject({ status: 'ok', service: '$NAME' });
   });
 
-  it('GET /health/ready reports readiness', async () => {
-    const response = await request(app.getHttpServer()).get('/health/ready').expect(200);
-    expect(response.body).toMatchObject({ status: 'ok', service: '$NAME' });
+  it('answers unknown API routes with the standard error body', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/api/v1/does-not-exist')
+      .set('x-request-id', 'req-1')
+      .expect(404);
+    expect(res.body).toEqual({ error: { code: 'NOT_FOUND', message: expect.any(String), requestId: 'req-1' } });
+  });
+
+  it('publishes its OpenAPI document for the gateway', async () => {
+    const res = await request(app.getHttpServer()).get('/openapi.json').expect(200);
+    expect(res.body).toMatchObject({ openapi: expect.stringMatching(/^3\./), info: { title: '$NAME' } });
   });
 });
 EOF

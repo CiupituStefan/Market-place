@@ -4,7 +4,7 @@ A production-oriented e-commerce platform for mechanical and custom keyboards, k
 stabilizers, cables, desk mats and accessories. Built as TypeScript microservices (NestJS) with a
 Next.js storefront, PostgreSQL, Redis, Kafka and Stripe, deployed to Kubernetes on AWS.
 
-> **Status: Phase 2 of 21 — storefront shell (Next.js) on top of the Phase 1 monorepo.**
+> **Status: Phase 3 of 21 — API gateway and shared service plumbing (`@market/nest-common`).**
 > See the [roadmap](#roadmap).
 
 ## Architecture at a glance
@@ -52,6 +52,7 @@ packages/
   events/                 versioned Kafka event contracts
   config/                 typed env loading, service/port registry
   logger/                 pino JSON logs + request_id correlation
+  nest-common/            service bootstrap, error filter, validation, health, OpenAPI
   eslint-config/          shared flat ESLint configs
   tsconfig/               shared strict tsconfigs
 infrastructure/
@@ -64,8 +65,9 @@ scripts/
 ```
 
 Every service follows the same skeleton: `src/config.ts` (Zod-validated env), `src/main.ts`
-(bootstrap + structured logging), `src/health` (liveness/readiness probes), `test/` (Supertest
-integration tests) and a README describing the data it owns and the events it publishes/consumes.
+(`startService` from `@market/nest-common`: structured logging, request IDs, standard errors,
+health probes, `/openapi.json`), `test/` (Supertest integration tests) and a README describing the
+data it owns and the events it publishes/consumes.
 
 ## Requirements
 
@@ -89,12 +91,12 @@ pnpm --filter @market/web dev
 # http://localhost:3000
 ```
 
-Run a single service:
+Run the gateway and a service (Swagger UI for all services at http://localhost:4000/docs):
 
 ```bash
+pnpm --filter @market/api-gateway dev
 pnpm --filter @market/product-service dev
-curl localhost:4002/health/live
-# {"status":"ok","service":"product-service"}
+curl -i localhost:4000/api/v1/products     # proxied to product-service, with x-request-id
 ```
 
 ## Scripts
@@ -146,6 +148,7 @@ Kubernetes (Helm) · Terraform · AWS (EKS, RDS, ElastiCache, MSK, ECR, WAF) · 
 
 ## Documentation
 
+- [API conventions](docs/api.md)
 - [Architecture Decision Records](docs/adr/README.md)
 - [Local development](docs/local-development.md)
 - [Storefront (apps/web)](apps/web/README.md)

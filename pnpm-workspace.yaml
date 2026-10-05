@@ -7,3 +7,7 @@ onlyBuiltDependencies:
   - '@nestjs/core'
   - '@swc/core'
   - esbuild
+
+# Packages whose install scripts are deliberately blocked (telemetry).
+ignoredBuiltDependencies:
+  - '@scarf/scarf'

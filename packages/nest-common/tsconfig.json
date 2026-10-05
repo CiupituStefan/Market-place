@@ -1,0 +1,7 @@
+{
+  "extends": "@market/tsconfig/nestjs.json",
+  "compilerOptions": {
+    "rootDir": "."
+  },
+  "include": ["src", "*.config.ts"]
+}
