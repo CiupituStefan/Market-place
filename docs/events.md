@@ -68,14 +68,17 @@ to the source topic unchanged (their `eventId` was never recorded, so they are p
 
 ## Consumers today
 
-| Consumer group              | Events                                  | Effect                                                               | Kind                      |
-| --------------------------- | --------------------------------------- | -------------------------------------------------------------------- | ------------------------- |
-| `product-service.inventory` | InventoryStockChanged                   | variant availability + product roll-up (PREORDER kept at zero)       | exactly once              |
-| `inventory-service.catalog` | ProductCreated, ProductUpdated          | stock record for every variant (at zero), SKU kept in sync           | exactly once              |
-| `cart-service.orders`       | OrderPaid                               | empties the cart the order came from                                 | exactly once              |
-| `payment-service.orders`    | OrderCancelled                          | cancels the open PaymentIntent; refunds if `refundRequired`          | idempotent                |
-| `review-service.orders`     | OrderCreated, OrderPaid, OrderCancelled | verified-purchase projection (products resolved via product-service) | idempotent / exactly once |
-| `product-service.reviews`   | ProductRatingChanged                    | product rating average and count                                     | exactly once              |
+| Consumer group                  | Events                                                                | Effect                                                                             | Kind                      |
+| ------------------------------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------- |
+| `product-service.inventory`     | InventoryStockChanged                                                 | variant availability + product roll-up (PREORDER kept at zero)                     | exactly once              |
+| `inventory-service.catalog`     | ProductCreated, ProductUpdated                                        | stock record for every variant (at zero), SKU kept in sync                         | exactly once              |
+| `cart-service.orders`           | OrderPaid                                                             | empties the cart the order came from                                               | exactly once              |
+| `payment-service.orders`        | OrderCancelled                                                        | cancels the open PaymentIntent; refunds if `refundRequired`                        | idempotent                |
+| `review-service.orders`         | OrderCreated, OrderPaid, OrderCancelled                               | verified-purchase projection (products resolved via product-service)               | idempotent / exactly once |
+| `product-service.reviews`       | ProductRatingChanged                                                  | product rating average and count                                                   | exactly once              |
+| `notification-service.requests` | NotificationRequested                                                 | queues the requested email (auth links)                                            | exactly once              |
+| `notification-service.orders`   | OrderCreated, OrderPaid, OrderShipped, OrderDelivered, OrderCancelled | order contact projection; confirmation, shipping, delivery and cancellation emails | exactly once              |
+| `notification-service.payments` | PaymentFailed, PaymentRefunded                                        | payment-failed (once per order) and refund emails                                  | exactly once              |
 
 Checkout itself (cart → order → reservation → discount → payment) stays synchronous and orchestrated
 ([ADR-014](adr/ADR-014-checkout-saga.md)): the shopper needs an answer now. Events carry the

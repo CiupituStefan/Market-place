@@ -56,6 +56,7 @@ export class JwtVerifier {
       sessionId: claims.data.sid,
       roles: claims.data.roles,
       emailVerified: claims.data.email_verified,
+      email: claims.data.email,
     };
   }
 }

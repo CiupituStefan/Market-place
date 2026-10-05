@@ -19,6 +19,8 @@ export const AccessTokenClaimsSchema = z.object({
   sid: z.uuid(),
   roles: z.array(RoleSchema).min(1),
   email_verified: z.boolean(),
+  /** Account email (added in Phase 11; optional so tokens issued before still verify). */
+  email: z.email().optional(),
 });
 export type AccessTokenClaims = z.infer<typeof AccessTokenClaimsSchema>;
 
@@ -28,4 +30,5 @@ export interface AuthUser {
   sessionId: string;
   roles: z.infer<typeof RoleSchema>[];
   emailVerified: boolean;
+  email?: string | undefined;
 }

@@ -33,7 +33,7 @@ export const ConfigSchema = baseServiceEnv
 
     /** Storefront base URL used in emailed links. */
     WEB_URL: z.url().default('http://localhost:3000'),
-    /** Development only: log verification/reset links until notification-service exists. */
+    /** Development only: also log verification/reset links (handy without Kafka running). */
     DEV_LOG_EMAIL_LINKS: booleanString.optional(),
   })
   .transform((env) => {

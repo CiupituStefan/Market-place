@@ -38,6 +38,14 @@ export const DEFAULT_POLICIES: readonly RateLimitPolicy[] = [
     matches: (method, path) => method === 'POST' && /^\/api\/v1\/orders\/?$/.test(path),
   },
   {
+    // Public forms that send email: limits mail bombing through our domain.
+    name: 'email-forms',
+    limit: 5,
+    windowMs: MINUTE,
+    matches: (method, path) =>
+      method === 'POST' && /^\/api\/v1\/newsletter\/subscriptions\/?$/.test(path),
+  },
+  {
     name: 'writes',
     limit: 120,
     windowMs: MINUTE,

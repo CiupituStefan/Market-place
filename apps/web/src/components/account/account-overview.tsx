@@ -3,6 +3,7 @@
 import { HeartIcon, MapPinIcon, PackageIcon } from 'lucide-react';
 import Link from 'next/link';
 import { SignOutButton } from '@/components/auth/sign-out-button';
+import { EmailPreferences } from './email-preferences';
 import { RequireSession } from './require-session';
 
 const links = [
@@ -49,6 +50,7 @@ export function AccountOverview() {
               </li>
             ))}
           </ul>
+          <EmailPreferences />
         </div>
       )}
     </RequireSession>

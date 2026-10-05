@@ -170,6 +170,7 @@ export class SessionService {
         sid: sessionId,
         roles: user.roles as Role[],
         email_verified: user.emailVerifiedAt !== null,
+        email: user.email,
       },
       this.config.ACCESS_TOKEN_TTL_SECONDS,
     );

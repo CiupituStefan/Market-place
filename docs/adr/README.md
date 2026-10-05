@@ -17,6 +17,7 @@ ADRs are immutable once accepted; a changed decision gets a new ADR that superse
 | [ADR-012](ADR-012-inventory-concurrency.md)     | Row locking + DB invariants for stock                                     | Accepted |
 | [ADR-013](ADR-013-cart-pricing-and-identity.md) | Server-priced carts, hashed visitor tokens, coupons claimed at order time | Accepted |
 | [ADR-014](ADR-014-checkout-saga.md)             | Orchestrated checkout saga with persisted state and idempotent steps      | Accepted |
+| [ADR-015](ADR-015-notifications.md)             | Notifications from domain events, queued delivery log, SES                | Accepted |
 
 Planned: ADR-005 Kubernetes, ADR-006 AWS —
 written in the phase that implements each decision.

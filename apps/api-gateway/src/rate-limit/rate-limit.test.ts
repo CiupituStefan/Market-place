@@ -35,6 +35,8 @@ describe('policies', () => {
     ['POST', '/api/v1/payments/create-intent', 'payments'],
     ['DELETE', '/api/v1/cart/items/1', 'writes'],
     ['POST', '/api/v1/orders', 'checkout'],
+    ['POST', '/api/v1/newsletter/subscriptions', 'email-forms'],
+    ['POST', '/api/v1/newsletter/confirm', 'writes'],
     ['POST', '/api/v1/orders/1/cancel', 'writes'],
     ['GET', '/api/v1/orders', 'reads'],
     ['GET', '/api/v1/auth/login', 'reads'],
