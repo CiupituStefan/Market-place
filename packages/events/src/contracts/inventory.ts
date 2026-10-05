@@ -46,3 +46,22 @@ export const InventoryDecrementedV1 = defineEvent({
     remaining: z.array(z.object({ variantId: z.uuid(), onHand: z.int().nonnegative() })),
   }),
 });
+
+/**
+ * Emitted whenever a variant's sellable quantity changes (receipt, adjustment,
+ * reservation, sale, release). product-service projects it into the catalog's
+ * availability, so listings never need a synchronous stock call.
+ */
+export const InventoryStockChangedV1 = defineEvent({
+  type: 'InventoryStockChanged',
+  version: 1,
+  topic: Topics.INVENTORY,
+  payload: z.object({
+    variantId: z.uuid(),
+    sku: z.string().min(1),
+    onHand: z.int().nonnegative(),
+    reserved: z.int().nonnegative(),
+    available: z.int().nonnegative(),
+    availability: z.enum(['IN_STOCK', 'LOW_STOCK', 'OUT_OF_STOCK']),
+  }),
+});

@@ -4,7 +4,7 @@ A production-oriented e-commerce platform for mechanical and custom keyboards, k
 stabilizers, cables, desk mats and accessories. Built as TypeScript microservices (NestJS) with a
 Next.js storefront, PostgreSQL, Redis, Kafka and Stripe, deployed to Kubernetes on AWS.
 
-> **Status: Phase 5 of 21 — catalog, search and configurator (product-service).**
+> **Status: Phase 6 of 21 — inventory with reservations that cannot oversell.**
 > See the [roadmap](#roadmap).
 
 ## Architecture at a glance
@@ -130,7 +130,7 @@ Kubernetes (Helm) · Terraform · AWS (EKS, RDS, ElastiCache, MSK, ECR, WAF) · 
 | 3   | API Gateway                                    | ✅     |
 | 4   | Auth service                                   | ✅     |
 | 5   | Product service                                | ✅     |
-| 6   | Inventory service                              |        |
+| 6   | Inventory service                              | ✅     |
 | 7   | Cart service                                   |        |
 | 8   | Order service                                  |        |
 | 9   | Payment service + Stripe                       |        |
@@ -151,6 +151,7 @@ Kubernetes (Helm) · Terraform · AWS (EKS, RDS, ElastiCache, MSK, ECR, WAF) · 
 
 - [API conventions](docs/api.md)
 - [Databases](docs/database.md)
+- [Events](docs/events.md)
 - [Security](docs/security.md)
 - [Architecture Decision Records](docs/adr/README.md)
 - [Local development](docs/local-development.md)

@@ -32,6 +32,7 @@ describe('event contracts', () => {
         'InventoryReleased@v1',
         'InventoryReservationExpired@v1',
         'InventoryReserved@v1',
+        'InventoryStockChanged@v1',
         'NotificationRequested@v1',
         'OrderCancelled@v1',
         'OrderCreated@v1',

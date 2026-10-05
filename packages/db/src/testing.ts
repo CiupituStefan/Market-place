@@ -17,3 +17,43 @@ export async function createTestDatabase<TSchema extends Record<string, unknown>
   await migrate(db, { migrationsFolder: options.migrationsFolder });
   return { db: db as unknown as Database<TSchema>, close: () => client.close() };
 }
+
+/**
+ * Throwaway database on a real PostgreSQL server, for tests that need several
+ * concurrent connections (row locks, SKIP LOCKED, deadlocks) which PGlite cannot
+ * provide. `adminUrl` must be allowed to CREATE/DROP DATABASE (CI service, local dev).
+ */
+export async function createPostgresTestDatabase<TSchema extends Record<string, unknown>>(options: {
+  adminUrl: string;
+  schema: TSchema;
+  migrationsFolder: string;
+  maxConnections?: number;
+}): Promise<{ db: Database<TSchema>; url: string; close: () => Promise<void> }> {
+  const { default: pg } = await import('pg');
+  const { drizzle: drizzlePg } = await import('drizzle-orm/node-postgres');
+  const { migrate: migratePg } = await import('drizzle-orm/node-postgres/migrator');
+
+  const name = `test_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+  const admin = new pg.Client({ connectionString: options.adminUrl });
+  await admin.connect();
+  await admin.query(`CREATE DATABASE ${name}`);
+  await admin.end();
+
+  const url = new URL(options.adminUrl);
+  url.pathname = `/${name}`;
+  const pool = new pg.Pool({ connectionString: url.toString(), max: options.maxConnections ?? 20 });
+  const db = drizzlePg(pool, { schema: options.schema });
+  await migratePg(db, { migrationsFolder: options.migrationsFolder });
+
+  return {
+    db: db as unknown as Database<TSchema>,
+    url: url.toString(),
+    close: async () => {
+      await pool.end();
+      const cleanup = new pg.Client({ connectionString: options.adminUrl });
+      await cleanup.connect();
+      await cleanup.query(`DROP DATABASE IF EXISTS ${name} WITH (FORCE)`);
+      await cleanup.end();
+    },
+  };
+}

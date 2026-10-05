@@ -1,35 +1,65 @@
 # inventory-service
 
-Default port: **4003**
+Default port: **4003**. Stock levels, checkout reservations and the stock ledger. Its one job is to
+make overselling impossible.
 
-## Responsibilities
+## How overselling is prevented
 
-- On-hand and reserved stock per variant.
-- Reservations with expiry (atomic, row-locked; no overselling).
-- Confirm reservation → stock decrement; release on payment failure / cancellation / expiry.
-- Append-only stock movements ledger; low-stock alerts.
+1. **Row locks in a global order.** A reservation locks every affected `inventory` row with
+   `SELECT … FOR UPDATE`, sorted by variant id, checks availability on the locked rows, then
+   increments `reserved`. Concurrent checkouts for the last unit queue on the lock; exactly one wins.
+   The fixed order means two orders for {A, B} and {B, A} can never deadlock.
+2. **Database invariants.** `CHECK (0 <= reserved <= on_hand)` and `on_hand >= 0`: even a bug in
+   application code cannot oversell; the statement fails instead.
+3. **Idempotency.** One reservation per `orderId` (unique index); retries return the same
+   reservation. Confirm and release are no-ops when repeated.
+4. **Expiry.** Unpaid reservations expire after `RESERVATION_TTL_SECONDS` (15 min). The sweeper uses
+   `FOR UPDATE SKIP LOCKED`, so every replica can run it without double-releasing.
+5. **Late payments.** If a payment arrives after the reservation expired, confirmation sells from
+   available stock if any is left; otherwise it fails with `INSUFFICIENT_STOCK` and the order must be
+   refunded. It never sells stock that is not there.
 
-## Owned data
+These properties are tested against a real PostgreSQL (`test/concurrency.test.ts`): 25 shoppers
+for the last unit, 40 orders for 10 units, opposite lock orders, concurrent retries, duplicated
+webhooks, parallel sweepers and a payment racing the sweeper. Mutation checks confirmed the tests
+fail when the row locks or the lock order are removed.
 
-`inventory` database: `inventory`, `inventory_reservations`, `stock_movements`.
+## Flow
 
-No other service may access this data store directly; other services go through this service's REST API or its events.
+```
+order created ──▶ reserve ──(payment succeeded)──▶ confirm: on_hand -= q, reserved -= q
+                     │
+                     ├──(payment failed / cancelled)──▶ release: reserved -= q
+                     └──(TTL elapsed)──────────────────▶ expire:  reserved -= q
+```
+
+## API
+
+Back office (`/api/v1/inventory`, STAFF/ADMIN): list (least available first, `lowStock=1`), item,
+movements ledger, adjustments (`RECEIVED` / `ADJUSTMENT`, never below what is reserved), low-stock
+threshold, reservations by status.
+
+Internal (`/api/v1/internal/...`, not routable through the gateway): `reservations` (create,
+201/200 idempotent), `reservations/:id`, `reservations/:id/confirm`, `reservations/:id/release`,
+`availability`, `variants/sync` (stock records for catalog variants).
+
+## Data
+
+`inventory` database: `inventory`, `inventory_reservations`, `inventory_reservation_items`,
+`stock_movements` (append-only ledger with resulting levels and actor), `outbox_events`.
 
 ## Events
 
-- Publishes: `InventoryReserved`, `InventoryReservationExpired`, `InventoryReleased`, `InventoryDecremented`
-- Consumes: `OrderPaid` (confirm), `OrderCancelled` (release), `ProductCreated` (create stock rows)
+`InventoryReserved`, `InventoryReleased`, `InventoryReservationExpired`, `InventoryDecremented`, and
+`InventoryStockChanged` for every level change (product-service projects it into catalog
+availability).
 
-Contracts live in [`packages/events`](../../packages/events).
-
-## Development
+## Commands
 
 ```bash
-pnpm --filter @market/inventory-service dev        # watch mode
-pnpm --filter @market/inventory-service test       # unit + integration tests
-pnpm --filter @market/inventory-service build && pnpm --filter @market/inventory-service start
+pnpm --filter @market/inventory-service dev
+pnpm --filter @market/inventory-service test                       # PGlite suites
+TEST_DATABASE_URL=postgresql://postgres@localhost:5432/postgres \
+  pnpm --filter @market/inventory-service test                     # + concurrency suite
+pnpm --filter @market/inventory-service build && pnpm --filter @market/inventory-service seed   # needs product-service running
 ```
-
-Health probes: `GET /health/live`, `GET /health/ready`.
-
-> Phase 1 status: skeleton (config, structured logging, health probes, tests). Domain logic arrives in its phase — see the root README roadmap.

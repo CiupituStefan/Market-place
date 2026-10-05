@@ -47,4 +47,5 @@ Inside a transaction, queries run sequentially: a transaction is a single connec
 
 Integration tests run against **PGlite** (PostgreSQL compiled to WebAssembly, in-process) with the
 real migrations applied: same SQL, constraints and indexes as production, no external database.
-Concurrency tests that need several connections (inventory, Phase 6) run against a real PostgreSQL.
+Concurrency tests that need several connections run against a real PostgreSQL via
+`createPostgresTestDatabase` (a throwaway database per run) when `TEST_DATABASE_URL` is set; CI sets it.
