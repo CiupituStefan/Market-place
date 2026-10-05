@@ -1,14 +1,12 @@
-import { AdminPage, AdminTable } from '@/components/admin/admin-page';
+import { AdminPage } from '@/components/admin/admin-page';
+import { CustomersView } from '@/components/admin/customers-view';
 
 export const metadata = { title: 'Customers' };
 
 export default function AdminUsersPage() {
   return (
-    <AdminPage title="Customers" description="Customer accounts with their orders and reviews.">
-      <AdminTable
-        columns={['Customer', 'Email', 'Role', 'Orders', 'Joined']}
-        empty="No customers yet."
-      />
+    <AdminPage title="Customers" description="Accounts with their orders, reviews and access.">
+      <CustomersView />
     </AdminPage>
   );
 }

@@ -73,11 +73,16 @@ export class OrderService {
 
   /** Back office: every order, newest first, optionally by status or number/email search. */
   async listAll(
-    filters: { status?: OrderStatus; q?: string },
+    filters: {
+      status?: OrderStatus | undefined;
+      q?: string | undefined;
+      userId?: string | undefined;
+    },
     query: PaginationQuery,
   ): Promise<Paginated<OrderSummary>> {
     const conditions: SQL[] = [];
     if (filters.status) conditions.push(eq(orders.status, filters.status));
+    if (filters.userId) conditions.push(eq(orders.userId, filters.userId));
     if (filters.q) {
       const pattern = `%${filters.q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
       const match = or(ilike(orders.number, pattern), ilike(orders.email, pattern));

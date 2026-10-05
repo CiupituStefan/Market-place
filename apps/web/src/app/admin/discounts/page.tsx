@@ -1,4 +1,5 @@
-import { AdminPage, AdminTable } from '@/components/admin/admin-page';
+import { AdminPage } from '@/components/admin/admin-page';
+import { DiscountsView } from '@/components/admin/discounts-view';
 
 export const metadata = { title: 'Discounts' };
 
@@ -6,12 +7,9 @@ export default function AdminDiscountsPage() {
   return (
     <AdminPage
       title="Discounts"
-      description="Percentage and fixed-amount coupons with expiry and usage limits."
+      description="Percentage and fixed-amount codes with limits and expiry."
     >
-      <AdminTable
-        columns={['Code', 'Type', 'Value', 'Used / limit', 'Expires', 'Status']}
-        empty="No discount codes yet."
-      />
+      <DiscountsView />
     </AdminPage>
   );
 }

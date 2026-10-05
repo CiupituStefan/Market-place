@@ -41,6 +41,8 @@ export const ProductPreviewSchema = z.object({
 export type ProductPreview = z.infer<typeof ProductPreviewSchema>;
 
 export const ProductImageSchema = z.object({
+  /** Present on images served by product-service (needed to delete one in the back office). */
+  id: z.uuid().optional(),
   url: z.url(),
   alt: z.string(),
   width: z.int().positive(),

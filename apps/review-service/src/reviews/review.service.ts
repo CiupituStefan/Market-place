@@ -279,21 +279,25 @@ export class ReviewService {
   // ── moderation (back office) ───────────────────────────────────────────────
 
   async moderationQueue(
-    status: ReviewStatus,
+    filter: { status?: ReviewStatus | undefined; userId?: string | undefined },
     query: PaginationQuery,
   ): Promise<Paginated<ProductReview & { moderationNote: string | null; reportCount: number }>> {
     const { offset, limit } = toOffset(query);
+    const where = and(
+      filter.status ? eq(reviews.status, filter.status) : undefined,
+      filter.userId ? eq(reviews.userId, filter.userId) : undefined,
+    );
     const rows = await this.db
       .select()
       .from(reviews)
-      .where(eq(reviews.status, status))
+      .where(where)
       .orderBy(desc(reviews.reportCount), asc(reviews.createdAt))
       .limit(limit)
       .offset(offset);
     const [{ total } = { total: 0 }] = await this.db
       .select({ total: count() })
       .from(reviews)
-      .where(eq(reviews.status, status));
+      .where(where);
     const views = await this.views(rows, null);
     return paginate(
       views.map((view, i) => ({

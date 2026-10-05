@@ -2,6 +2,7 @@ import {
   BarChart3Icon,
   BoxesIcon,
   LayoutDashboardIcon,
+  MailIcon,
   MessageSquareTextIcon,
   PackageIcon,
   ReceiptIcon,
@@ -59,6 +60,12 @@ export const adminNav: AdminNavItem[] = [
     label: 'Discounts',
     icon: TicketPercentIcon,
     description: 'Coupons, limits and expiry.',
+  },
+  {
+    href: '/admin/emails',
+    label: 'Emails',
+    icon: MailIcon,
+    description: 'Delivery log and failed emails.',
   },
   {
     href: '/admin/analytics',

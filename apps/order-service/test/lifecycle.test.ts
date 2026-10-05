@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Order, OrderSummary, Paginated } from '@market/types';
-import { eq } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { orders, outboxEvents } from '../src/db/schema.js';
@@ -39,7 +39,7 @@ describe('order-service: lifecycle', () => {
         expectedTotal: cart.total.amount,
       })
       .expect(201);
-    return { order: res.body as Order, auth, cart, variantId: item.variantId! };
+    return { order: res.body as Order, auth, cart, variantId: item.variantId!, userId };
   }
 
   const pay = (order: Order, paymentId = randomUUID(), amount = order.total.amount) =>
@@ -47,10 +47,15 @@ describe('order-service: lifecycle', () => {
       .post(`/api/v1/internal/orders/${order.id}/payment-succeeded`)
       .send({ paymentId, amount, currency: 'EUR' });
 
+  // Ordered by the outbox sequence: without ORDER BY, row order is unspecified.
   const eventTypes = async (orderId: string) =>
-    (await h.db.select().from(outboxEvents).where(eq(outboxEvents.messageKey, orderId))).map(
-      (row) => (row.envelope as { eventType: string }).eventType,
-    );
+    (
+      await h.db
+        .select()
+        .from(outboxEvents)
+        .where(eq(outboxEvents.messageKey, orderId))
+        .orderBy(asc(outboxEvents.sequence))
+    ).map((row) => (row.envelope as { eventType: string }).eventType);
 
   describe('customer cancellation', () => {
     it('cancels an unpaid order and gives back stock and the discount use', async () => {
@@ -192,6 +197,20 @@ describe('order-service: lifecycle', () => {
           (o) => o.status === 'PENDING_PAYMENT',
         ),
       ).toBe(true);
+    });
+
+    it('filters by customer (customer detail page)', async () => {
+      const { order, userId } = await placed();
+      await placed();
+      const res = await request(h.http)
+        .get(`/api/v1/orders/manage?userId=${userId}`)
+        .set('Authorization', staff)
+        .expect(200);
+      expect((res.body as Paginated<OrderSummary>).items.map((o) => o.id)).toEqual([order.id]);
+      await request(h.http)
+        .get('/api/v1/orders/manage?userId=nope')
+        .set('Authorization', staff)
+        .expect(400);
     });
 
     it('fulfils a paid order step by step', async () => {

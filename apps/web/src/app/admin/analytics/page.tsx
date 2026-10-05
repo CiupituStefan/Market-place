@@ -1,4 +1,5 @@
-import { AdminPage, AdminTable } from '@/components/admin/admin-page';
+import { AdminPage } from '@/components/admin/admin-page';
+import { AnalyticsView } from '@/components/admin/analytics-view';
 
 export const metadata = { title: 'Analytics' };
 
@@ -6,12 +7,9 @@ export default function AdminAnalyticsPage() {
   return (
     <AdminPage
       title="Analytics"
-      description="Revenue, orders, average order value, best sellers and inventory alerts."
+      description="Revenue, orders, average order value and best sellers."
     >
-      <AdminTable
-        columns={['Product', 'Units sold', 'Revenue', 'Share']}
-        empty="Analytics populate once orders are paid."
-      />
+      <AnalyticsView />
     </AdminPage>
   );
 }

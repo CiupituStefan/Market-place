@@ -79,6 +79,8 @@ to the source topic unchanged (their `eventId` was never recorded, so they are p
 | `notification-service.requests` | NotificationRequested                                                 | queues the requested email (auth links)                                            | exactly once              |
 | `notification-service.orders`   | OrderCreated, OrderPaid, OrderShipped, OrderDelivered, OrderCancelled | order contact projection; confirmation, shipping, delivery and cancellation emails | exactly once              |
 | `notification-service.payments` | PaymentFailed, PaymentRefunded                                        | payment-failed (once per order) and refund emails                                  | exactly once              |
+| `admin-service.orders`          | OrderCreated, OrderPaid, OrderCancelled                               | sales read model (revenue, AOV, best sellers)                                      | exactly once              |
+| `admin-service.payments`        | PaymentRefunded                                                       | refunds in the sales read model                                                    | exactly once              |
 
 Checkout itself (cart → order → reservation → discount → payment) stays synchronous and orchestrated
 ([ADR-014](adr/ADR-014-checkout-saga.md)): the shopper needs an answer now. Events carry the

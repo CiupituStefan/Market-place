@@ -5,7 +5,11 @@ import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ReviewService } from './review.service.js';
 
-const QueueQuery = PaginationQuerySchema.extend({ status: ReviewStatusSchema.default('PENDING') });
+const QueueQuery = PaginationQuerySchema.extend({
+  status: ReviewStatusSchema.optional(),
+  /** One customer's reviews in every status (customer detail page). */
+  userId: z.uuid().optional(),
+});
 const ModerateSchema = z
   .object({ status: ReviewStatusSchema, note: z.string().trim().max(300).nullable().default(null) })
   .strict();
@@ -19,9 +23,12 @@ export class ManageReviewsController {
   constructor(private readonly reviews: ReviewService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Moderation queue (most reported first, then oldest)' })
+  @ApiOperation({
+    summary: 'Moderation queue (most reported first, then oldest); PENDING unless filtered',
+  })
   queue(@Query(new ZodValidationPipe(QueueQuery)) query: z.infer<typeof QueueQuery>) {
-    return this.reviews.moderationQueue(query.status, query);
+    const status = query.status ?? (query.userId ? undefined : 'PENDING');
+    return this.reviews.moderationQueue({ status, userId: query.userId }, query);
   }
 
   @Post(':id/status')

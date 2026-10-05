@@ -1,4 +1,5 @@
-import { AdminPage, AdminTable } from '@/components/admin/admin-page';
+import { AdminPage } from '@/components/admin/admin-page';
+import { OrdersView } from '@/components/admin/orders-view';
 
 export const metadata = { title: 'Orders' };
 
@@ -8,10 +9,7 @@ export default function AdminOrdersPage() {
       title="Orders"
       description="Review orders, update status, add tracking and issue refunds."
     >
-      <AdminTable
-        columns={['Order', 'Customer', 'Status', 'Total', 'Payment', 'Placed']}
-        empty="No orders yet."
-      />
+      <OrdersView />
     </AdminPage>
   );
 }

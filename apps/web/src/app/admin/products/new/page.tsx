@@ -1,12 +1,16 @@
-import { ProductEditorShell } from '@/components/admin/product-editor-shell';
+import { AdminPage } from '@/components/admin/admin-page';
+import { NewProductForm } from '@/components/admin/new-product-form';
 
 export const metadata = { title: 'New product' };
 
 export default function NewProductPage() {
   return (
-    <ProductEditorShell
+    <AdminPage
       title="New product"
-      description="Products are saved as drafts until published."
-    />
+      description="Products start as drafts: add photos and stock, then publish."
+      back={{ href: '/admin/products', label: 'Products' }}
+    >
+      <NewProductForm />
+    </AdminPage>
   );
 }

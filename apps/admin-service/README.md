@@ -4,32 +4,59 @@ Default port: **4009**
 
 ## Responsibilities
 
-- Back-office API used by `/admin`: STAFF/ADMIN only.
-- Composes admin views by calling owning services over REST (it never reads their databases).
-- Analytics read model (revenue, orders, AOV, best sellers, inventory alerts) built from Kafka events.
-- Audit log of admin actions.
+- Analytics for the back office (`/admin`, STAFF and ADMIN only): revenue, orders, average order
+  value, refunds, discounts, best sellers and per-customer lifetime figures.
+- A **read model built only from Kafka events**: it never reads another service's database and
+  never calls them. Every other back-office screen talks to the service that owns the data
+  directly through the gateway (`/orders/manage`, `/inventory`, `/products/manage`, ...), so there
+  is no second copy of business rules here. See
+  [ADR-016](../../docs/adr/ADR-016-admin-dashboard.md).
 
 ## Owned data
 
-`admin` database: `analytics_daily`, `product_sales`, `inventory_alerts`, `audit_log` (projections only).
+`admin` database (projections only):
 
-No other service may access this data store directly; other services go through this service's REST API or its events.
+| Table           | Built from                              | Purpose                                        |
+| --------------- | --------------------------------------- | ---------------------------------------------- |
+| `sales_orders`  | OrderCreated, OrderPaid, OrderCancelled | totals, discount, status, paid/cancelled times |
+| `sales_lines`   | OrderCreated                            | units and line revenue for best sellers        |
+| `sales_refunds` | PaymentRefunded                         | refunds counted on the day they settle         |
+| `inbox_events`  | —                                       | consumed event ids (exactly-once handlers)     |
+
+## Definitions
+
+- **Gross sales**: totals (VAT and shipping included, after discounts) of orders paid in the
+  range. A payment that arrives after cancellation still counts; its refund offsets it.
+- **Net sales** = gross sales − refunds settled in the range.
+- **AOV** = gross sales / paid orders.
+- **Best sellers**: units of paid, not cancelled orders; revenue is line revenue before
+  order-level discounts.
+- Days are **store-local** (`ANALYTICS_TIME_ZONE`, Europe/Bucharest): PostgreSQL converts range
+  bounds, so daylight-saving changes are handled.
+
+## API (through the gateway, `/api/v1`, STAFF/ADMIN)
+
+| Method & path                                     | Purpose                                                     |
+| ------------------------------------------------- | ----------------------------------------------------------- |
+| `GET /admin/analytics/summary?from&to`            | figures for the range and the same-length period before it  |
+| `GET /admin/analytics/daily?from&to`              | per-day gross sales, refunds, paid orders (empty days kept) |
+| `GET /admin/analytics/best-sellers?from&to&limit` | top variants by units                                       |
+| `GET /admin/analytics/customers/:userId`          | lifetime orders, spend, refunds, first/last order           |
+
+`from`/`to` are inclusive `YYYY-MM-DD`; default is the last 30 days; at most one year.
 
 ## Events
 
 - Publishes: —
-- Consumes: `OrderPaid`, `OrderCancelled`, `PaymentRefunded`, `InventoryDecremented`, `ProductCreated`
-
-Contracts live in [`packages/events`](../../packages/events).
+- Consumes: `OrderCreated`, `OrderPaid`, `OrderCancelled` (`admin-service.orders`),
+  `PaymentRefunded` (`admin-service.payments`).
 
 ## Development
 
 ```bash
-pnpm --filter @market/admin-service dev        # watch mode
-pnpm --filter @market/admin-service test       # unit + integration tests
-pnpm --filter @market/admin-service build && pnpm --filter @market/admin-service start
+pnpm --filter @market/admin-service dev
+pnpm --filter @market/admin-service test
+pnpm --filter @market/admin-service db:generate
 ```
 
 Health probes: `GET /health/live`, `GET /health/ready`.
-
-> Phase 1 status: skeleton (config, structured logging, health probes, tests). Domain logic arrives in its phase — see the root README roadmap.

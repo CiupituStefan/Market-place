@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { createEvent, OrderCancelledV1, OrderCreatedV1, OrderPaidV1 } from '@market/events';
 import { EventProcessor, InMemoryPublisher } from '@market/messaging';
 import type { ProductReview, ReviewPage } from '@market/types';
-import { eq } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { outboxEvents } from '../src/db/schema.js';
@@ -43,7 +43,13 @@ describe('review-service', () => {
   };
 
   const ratingEvents = async (productId: string) =>
-    (await h.db.select().from(outboxEvents).where(eq(outboxEvents.messageKey, productId)))
+    (
+      await h.db
+        .select()
+        .from(outboxEvents)
+        .where(eq(outboxEvents.messageKey, productId))
+        .orderBy(asc(outboxEvents.sequence))
+    )
       .map(
         (row) =>
           row.envelope as { eventType: string; payload: { average?: number; count?: number } },
@@ -244,6 +250,22 @@ describe('review-service', () => {
       expect(await ratingEvents(productId)).toEqual([
         [5, 1],
         [0, 0],
+      ]);
+    });
+
+    it('lists one customer’s reviews in every status', async () => {
+      const me = await shopper();
+      const published = h.catalog.addProduct().productId;
+      const held = h.catalog.addProduct().productId;
+      await write(me.auth, published).expect(201);
+      await write(me.auth, held, { body: `${body} call +40 712 345 678` }).expect(201);
+      const res = await request(h.http)
+        .get(`/api/v1/reviews/manage?userId=${me.userId}`)
+        .set('Authorization', staff)
+        .expect(200);
+      expect(res.body.items.map((r: { status: string }) => r.status).sort()).toEqual([
+        'PENDING',
+        'PUBLISHED',
       ]);
     });
   });

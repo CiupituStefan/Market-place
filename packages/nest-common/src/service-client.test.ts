@@ -68,8 +68,10 @@ afterAll(async () => {
 });
 
 describe('createServiceClient', () => {
-  const call = () =>
-    createServiceClient({ baseUrl: base, service: 'test-service', timeoutMs: 200 });
+  // Generous by default (a cold first request on a busy CI runner can be slow); the
+  // timeout test passes its own short limit.
+  const call = (timeoutMs = 5_000) =>
+    createServiceClient({ baseUrl: base, service: 'test-service', timeoutMs });
 
   it('calls under /api/v1, propagates the request id and validates the response', async () => {
     const result = await runWithContext({ requestId: 'trace-123' }, () =>
@@ -97,9 +99,10 @@ describe('createServiceClient', () => {
 
   it('maps timeouts, 5xx, schema drift and unreachable hosts to SERVICE_UNAVAILABLE', async () => {
     for (const path of ['/slow', '/broken', '/drift']) {
-      await expect(call()(path, { schema: z.object({ value: z.number() }) })).rejects.toMatchObject(
-        { code: 'SERVICE_UNAVAILABLE' },
-      );
+      // 200 ms limit against a 500 ms reply: the timeout path.
+      await expect(
+        call(200)(path, { schema: z.object({ value: z.number() }) }),
+      ).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' });
     }
     const down = createServiceClient({ baseUrl: 'http://127.0.0.1:1', service: 'down' });
     await expect(down('/x', { schema: z.unknown() })).rejects.toMatchObject({

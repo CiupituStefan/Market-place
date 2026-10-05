@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { AdminPage, AdminTable } from '@/components/admin/admin-page';
+import { AdminPage } from '@/components/admin/admin-page';
+import { ProductsView } from '@/components/admin/products-view';
 import { Button } from '@/components/ui/button';
 
 export const metadata = { title: 'Products' };
@@ -15,10 +16,7 @@ export default function AdminProductsPage() {
         </Button>
       }
     >
-      <AdminTable
-        columns={['Product', 'Status', 'Variants', 'Price from', 'Stock', 'Updated']}
-        empty="No products yet."
-      />
+      <ProductsView />
     </AdminPage>
   );
 }

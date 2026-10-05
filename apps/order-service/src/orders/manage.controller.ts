@@ -15,6 +15,7 @@ import { OrderService } from './order.service.js';
 const ListQuery = PaginationQuerySchema.extend({
   status: OrderStatusSchema.optional(),
   q: z.string().trim().min(1).max(100).optional(),
+  userId: z.uuid().optional(),
 });
 
 const StatusChangeSchema = z
@@ -41,11 +42,13 @@ export class ManageOrdersController {
   constructor(private readonly orders: OrderService) {}
 
   @Get()
-  @ApiOperation({ summary: 'All orders, newest first; filter by status, search number/email' })
+  @ApiOperation({
+    summary: 'All orders, newest first; filter by status or customer, search number/email',
+  })
   list(
     @Query(new ZodValidationPipe(ListQuery)) query: z.infer<typeof ListQuery>,
   ): Promise<Paginated<OrderSummary>> {
-    return this.orders.listAll({ status: query.status, q: query.q }, query);
+    return this.orders.listAll({ status: query.status, q: query.q, userId: query.userId }, query);
   }
 
   @Get(':id')

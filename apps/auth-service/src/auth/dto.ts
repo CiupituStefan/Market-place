@@ -53,14 +53,8 @@ export const ListUsersQuerySchema = z.object({
   q: z.string().trim().max(100).optional(),
 });
 
-/** Public representation of a user: never includes hashes, lockout state or tokens. */
-export const UserResponseSchema = z.object({
-  id: z.uuid(),
-  email: z.email(),
-  firstName: z.string(),
-  lastName: z.string(),
-  roles: z.array(RoleSchema),
-  emailVerified: z.boolean(),
-  createdAt: z.iso.datetime(),
-});
-export type UserResponse = z.infer<typeof UserResponseSchema>;
+/** Public representation of a user (shared contract): never hashes, lockout state or tokens. */
+export {
+  UserAccountSchema as UserResponseSchema,
+  type UserAccount as UserResponse,
+} from '@market/types';

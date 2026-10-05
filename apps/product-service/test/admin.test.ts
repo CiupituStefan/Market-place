@@ -353,6 +353,7 @@ describe('images', () => {
       .get(`/api/v1/products/manage/${id}`)
       .set('cookie', `cse_at=${staff}`);
     expect(product.body.images[0]).toEqual({
+      id: registered.body.id,
       url: `https://cdn.csekeyboards.test/${upload.body.key}`,
       alt: 'Front view',
       width: 1600,

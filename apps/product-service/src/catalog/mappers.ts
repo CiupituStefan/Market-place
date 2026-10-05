@@ -15,7 +15,7 @@ export function money(amount: number, currency: string): Money {
 }
 
 export function toImage(row: ImageRow): ProductImage {
-  return { url: row.url, alt: row.alt, width: row.width, height: row.height };
+  return { id: row.id, url: row.url, alt: row.alt, width: row.width, height: row.height };
 }
 
 export function groupAttributes(

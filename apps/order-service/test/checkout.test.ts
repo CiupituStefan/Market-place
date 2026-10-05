@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Order, PlacedOrder } from '@market/types';
 import { DomainError, ErrorCode } from '@market/types';
-import { eq } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { idempotencyKeys, orders, outboxEvents } from '../src/db/schema.js';
@@ -49,9 +49,13 @@ describe('order-service: checkout', () => {
   }
 
   const events = async (orderId: string) =>
-    (await h.db.select().from(outboxEvents).where(eq(outboxEvents.messageKey, orderId))).map(
-      (row) => (row.envelope as { eventType: string }).eventType,
-    );
+    (
+      await h.db
+        .select()
+        .from(outboxEvents)
+        .where(eq(outboxEvents.messageKey, orderId))
+        .orderBy(asc(outboxEvents.sequence))
+    ).map((row) => (row.envelope as { eventType: string }).eventType);
 
   it('places an order from the server-priced cart and holds the stock', async () => {
     const { cart, place } = await shopper();

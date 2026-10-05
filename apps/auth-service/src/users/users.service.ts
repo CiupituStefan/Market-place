@@ -45,6 +45,12 @@ export class UsersService {
     return paginate(rows.map(toUserResponse), totals[0]?.total ?? 0, query);
   }
 
+  async get(userId: string): Promise<UserResponse> {
+    const [user] = await this.db.select().from(users).where(eq(users.id, userId));
+    if (!user) throw new DomainError(ErrorCode.NOT_FOUND, 'User not found');
+    return toUserResponse(user);
+  }
+
   /**
    * Changes roles and signs the user out everywhere, so a removed privilege takes
    * effect immediately instead of when the current access token expires.

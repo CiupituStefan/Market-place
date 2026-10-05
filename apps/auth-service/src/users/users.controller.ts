@@ -24,6 +24,13 @@ export class UsersController {
     return this.users.list(query);
   }
 
+  @Get(':id')
+  @Authenticated('STAFF', 'ADMIN')
+  @ApiOperation({ summary: 'One account (customer detail in the back office)' })
+  get(@Param('id', new ParseUUIDPipe()) id: string): Promise<UserResponse> {
+    return this.users.get(id);
+  }
+
   @Patch(':id/roles')
   @Authenticated('ADMIN')
   @ApiOperation({ summary: 'Change roles (ADMIN only); signs the user out everywhere' })

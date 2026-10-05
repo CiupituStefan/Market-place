@@ -3,7 +3,7 @@ import { createEvent, OrderCancelledV1 } from '@market/events';
 import { createLogger } from '@market/logger';
 import { EventProcessor, InMemoryPublisher } from '@market/messaging';
 import type { Payment, PaymentSession } from '@market/types';
-import { eq } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import Stripe from 'stripe';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -53,9 +53,13 @@ describe('payment-service', () => {
     request(h.http).post('/api/v1/payments/mock/confirm').send({ clientSecret, outcome });
 
   const eventTypes = async (orderId: string) =>
-    (await h.db.select().from(outboxEvents).where(eq(outboxEvents.messageKey, orderId))).map(
-      (row) => (row.envelope as { eventType: string }).eventType,
-    );
+    (
+      await h.db
+        .select()
+        .from(outboxEvents)
+        .where(eq(outboxEvents.messageKey, orderId))
+        .orderBy(asc(outboxEvents.sequence))
+    ).map((row) => (row.envelope as { eventType: string }).eventType);
 
   describe('payment sessions', () => {
     it('creates one intent per order for the order total and reuses it', async () => {

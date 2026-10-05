@@ -1,4 +1,6 @@
-import { AdminPage, AdminTable } from '@/components/admin/admin-page';
+import { Suspense } from 'react';
+import { AdminPage } from '@/components/admin/admin-page';
+import { InventoryView } from '@/components/admin/inventory-view';
 
 export const metadata = { title: 'Inventory' };
 
@@ -6,12 +8,11 @@ export default function AdminInventoryPage() {
   return (
     <AdminPage
       title="Inventory"
-      description="On-hand stock, active reservations and the stock movement ledger."
+      description="Stock levels, received goods, corrections and reservations."
     >
-      <AdminTable
-        columns={['SKU', 'Product', 'On hand', 'Reserved', 'Available', 'Reorder point']}
-        empty="No inventory records yet."
-      />
+      <Suspense>
+        <InventoryView />
+      </Suspense>
     </AdminPage>
   );
 }

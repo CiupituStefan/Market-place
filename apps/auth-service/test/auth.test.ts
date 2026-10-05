@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { NotificationRequestedV1 } from '@market/events';
 import { JwtVerifier } from '@market/nest-common';
 import { eq } from 'drizzle-orm';
@@ -362,6 +363,16 @@ describe('back-office users API', () => {
       .set('cookie', `cse_at=${staff.access}`)
       .expect(200);
     expect(wildcard.body.total).toBe(0);
+    const one = await request(http)
+      .get(`/api/v1/users/${staff.id}`)
+      .set('cookie', `cse_at=${staff.access}`)
+      .expect(200);
+    expect(one.body).toMatchObject({ id: staff.id, roles: ['USER', 'STAFF'] });
+    expect(one.body).not.toHaveProperty('passwordHash');
+    await request(http)
+      .get(`/api/v1/users/${randomUUID()}`)
+      .set('cookie', `cse_at=${staff.access}`)
+      .expect(404);
   });
 
   it('only admins change roles, and the change signs the user out', async () => {
