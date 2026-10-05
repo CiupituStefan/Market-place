@@ -68,12 +68,14 @@ to the source topic unchanged (their `eventId` was never recorded, so they are p
 
 ## Consumers today
 
-| Consumer group              | Events                         | Effect                                                         | Kind         |
-| --------------------------- | ------------------------------ | -------------------------------------------------------------- | ------------ |
-| `product-service.inventory` | InventoryStockChanged          | variant availability + product roll-up (PREORDER kept at zero) | exactly once |
-| `inventory-service.catalog` | ProductCreated, ProductUpdated | stock record for every variant (at zero), SKU kept in sync     | exactly once |
-| `cart-service.orders`       | OrderPaid                      | empties the cart the order came from                           | exactly once |
-| `payment-service.orders`    | OrderCancelled                 | cancels the open PaymentIntent; refunds if `refundRequired`    | idempotent   |
+| Consumer group              | Events                                  | Effect                                                               | Kind                      |
+| --------------------------- | --------------------------------------- | -------------------------------------------------------------------- | ------------------------- |
+| `product-service.inventory` | InventoryStockChanged                   | variant availability + product roll-up (PREORDER kept at zero)       | exactly once              |
+| `inventory-service.catalog` | ProductCreated, ProductUpdated          | stock record for every variant (at zero), SKU kept in sync           | exactly once              |
+| `cart-service.orders`       | OrderPaid                               | empties the cart the order came from                                 | exactly once              |
+| `payment-service.orders`    | OrderCancelled                          | cancels the open PaymentIntent; refunds if `refundRequired`          | idempotent                |
+| `review-service.orders`     | OrderCreated, OrderPaid, OrderCancelled | verified-purchase projection (products resolved via product-service) | idempotent / exactly once |
+| `product-service.reviews`   | ProductRatingChanged                    | product rating average and count                                     | exactly once              |
 
 Checkout itself (cart → order → reservation → discount → payment) stays synchronous and orchestrated
 ([ADR-014](adr/ADR-014-checkout-saga.md)): the shopper needs an answer now. Events carry the
@@ -100,7 +102,7 @@ consequences that may happen a moment later.
 |                           | InventoryStockChanged                                                 | inventory-service | product-service (availability)       |
 | `orders.order.events`     | OrderCreated, OrderPaid, OrderCancelled, OrderShipped, OrderDelivered | order-service     | notification, review, payment, admin |
 | `payments.payment.events` | PaymentCreated, PaymentSucceeded, PaymentFailed, PaymentRefunded      | payment-service   | order, notification, admin           |
-| `reviews.review.events`   | ReviewCreated                                                         | review-service    | product-service (ratings)            |
+| `reviews.review.events`   | ReviewCreated, ProductRatingChanged                                   | review-service    | product-service (ratings)            |
 | `notifications.requests`  | NotificationRequested                                                 | any service       | notification-service                 |
 
 ## Order events (Phase 8)

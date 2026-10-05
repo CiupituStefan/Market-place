@@ -15,7 +15,7 @@ APIs and events (ADR-001).
 | order-service     | `orders`        | orders (address snapshots), order_items, order_status_history, idempotency_keys      |
 | payment-service   | `payments`      | payments, refunds, webhook_events (Stripe event inbox)                               |
 | notification-svc  | `notifications` | notification_preferences, notification_logs (Phase 11)                               |
-| review-service    | `reviews`       | reviews, review_votes (Phase 12)                                                     |
+| review-service    | `reviews`       | reviews, review_votes, review_reports, purchases (projection)                        |
 
 In AWS the databases may share one RDS cluster at first; isolation is enforced by roles and
 grants, so splitting a busy service onto its own cluster later is an operational change only.

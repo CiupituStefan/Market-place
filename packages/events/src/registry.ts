@@ -16,6 +16,7 @@ import {
   PaymentSucceededV1,
   ProductCreatedV1,
   ProductUpdatedV1,
+  ProductRatingChangedV1,
   ReviewCreatedV1,
 } from './contracts/index.js';
 import type { EventDefinition } from './define.js';
@@ -43,6 +44,7 @@ export const ALL_EVENTS: readonly EventDefinition[] = [
   PaymentFailedV1,
   PaymentRefundedV1,
   ReviewCreatedV1,
+  ProductRatingChangedV1,
   NotificationRequestedV1,
 ];
 

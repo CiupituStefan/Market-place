@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { createEvent, InventoryStockChangedV1 } from '@market/events';
+import { createEvent, InventoryStockChangedV1, ProductRatingChangedV1 } from '@market/events';
 import { createLogger } from '@market/logger';
 import { EventProcessor, InMemoryPublisher } from '@market/messaging';
 import { eq } from 'drizzle-orm';
@@ -90,5 +90,66 @@ describe('InventoryStockChanged → catalog availability', () => {
 
   it('ignores variants that are no longer in the catalog', async () => {
     expect(await processor.process(stockChanged(randomUUID(), 'GONE-1', 4))).toBe('processed');
+  });
+});
+
+describe('ProductRatingChanged → product rating', () => {
+  let h: Harness;
+
+  beforeAll(async () => {
+    h = await createHarness();
+  });
+
+  afterAll(async () => {
+    await h.close();
+  });
+
+  it('applies the aggregate exactly once, and a lookup finds the product', async () => {
+    const product = (await request(h.http).get('/api/v1/products/cse-forge-75').expect(200))
+      .body as {
+      id: string;
+    };
+    const processor = new EventProcessor(
+      h.db,
+      new InMemoryPublisher(),
+      productConsumers(h.app.get(CatalogWriterService))[1]!,
+      {
+        maxAttempts: 1,
+        retryDelayMs: 1,
+        logger: createLogger({ service: 'test', level: 'silent' }),
+      },
+    );
+    const envelope = createEvent(
+      ProductRatingChangedV1,
+      {
+        productId: product.id,
+        average: 4.25,
+        count: 4,
+        distribution: { 1: 0, 2: 0, 3: 1, 4: 1, 5: 2 },
+      },
+      { producer: 'review-service', aggregateId: product.id, correlationId: 'test' },
+    );
+    const message = {
+      topic: 'reviews.review.events',
+      partition: 0,
+      offset: '1',
+      key: product.id,
+      value: JSON.stringify(envelope),
+      headers: {},
+    };
+    expect(await processor.process(message)).toBe('processed');
+    expect(await processor.process(message)).toBe('duplicate');
+    const after = (await request(h.http).get('/api/v1/products/cse-forge-75')).body as {
+      rating: { average: number; count: number };
+    };
+    expect(after.rating).toEqual({ average: 4.3, count: 4 });
+
+    const lookup = await request(h.http)
+      .post('/api/v1/internal/products/lookup')
+      .send({ productIds: [product.id, randomUUID()] })
+      .expect(200);
+    expect(lookup.body).toEqual([
+      { productId: product.id, slug: 'cse-forge-75', name: 'CSE Forge 75', status: 'PUBLISHED' },
+    ]);
   });
 });

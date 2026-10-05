@@ -317,6 +317,23 @@ export class CatalogWriterService {
     return true;
   }
 
+  /**
+   * Projects review-service's rating aggregate (ProductRatingChanged, inside the
+   * consumer's inbox transaction). The event carries the full aggregate, so
+   * applying it is idempotent. Not a catalog change: no ProductUpdated.
+   */
+  async applyRating(
+    tx: Database,
+    productId: string,
+    average: number,
+    count: number,
+  ): Promise<void> {
+    await tx
+      .update(products)
+      .set({ ratingAverage: count === 0 ? 0 : average, ratingCount: count })
+      .where(eq(products.id, productId));
+  }
+
   private async lockProduct(tx: Database, productId: string): Promise<ProductRow> {
     const [row] = await tx.select().from(products).where(eq(products.id, productId)).for('update');
     if (!row) throw notFound();

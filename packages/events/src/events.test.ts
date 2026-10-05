@@ -45,6 +45,7 @@ describe('event contracts', () => {
         'PaymentSucceeded@v1',
         'ProductCreated@v1',
         'ProductUpdated@v1',
+        'ProductRatingChanged@v1',
         'ReviewCreated@v1',
       ].sort(),
     );

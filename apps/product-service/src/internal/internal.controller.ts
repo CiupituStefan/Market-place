@@ -9,6 +9,14 @@ import { DATABASE, type Database } from '../db/database.js';
 import { productImages, products, productVariants } from '../db/schema.js';
 
 const LookupSchema = z.object({ variantIds: z.array(z.uuid()).min(1).max(100) }).strict();
+const ProductLookupSchema = z.object({ productIds: z.array(z.uuid()).min(1).max(100) }).strict();
+
+export interface ProductLookup {
+  productId: string;
+  slug: string;
+  name: string;
+  status: ProductStatus;
+}
 
 export interface VariantLookup {
   variantId: string;
@@ -36,6 +44,24 @@ export interface VariantLookup {
 @Controller('internal')
 export class InternalController {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
+
+  /** For review-service: does the product exist, and is it published? */
+  @Post('products/lookup')
+  @HttpCode(200)
+  async lookupProducts(
+    @Body(new ZodValidationPipe(ProductLookupSchema)) body: { productIds: string[] },
+  ): Promise<ProductLookup[]> {
+    const rows = await this.db
+      .select({
+        productId: products.id,
+        slug: products.slug,
+        name: products.name,
+        status: products.status,
+      })
+      .from(products)
+      .where(inArray(products.id, body.productIds));
+    return rows;
+  }
 
   @Post('variants/lookup')
   @HttpCode(200)

@@ -7,7 +7,7 @@ import {
   ProductExperience,
   ProductExperienceFromUrl,
 } from '@/components/product/product-experience';
-import { Rating } from '@/components/product/rating';
+import { ReviewsSection } from '@/components/reviews/reviews-section';
 import { Breadcrumbs } from '@/components/seo/breadcrumbs';
 import { JsonLd } from '@/components/seo/json-ld';
 import {
@@ -86,23 +86,13 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
       </section>
 
       <section id="reviews" aria-labelledby="reviews-title" className="mt-24 scroll-mt-28">
-        <div className="mb-8 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="eyebrow">Reviews</p>
-            <h2 id="reviews-title" className="mt-3 text-3xl font-semibold tracking-tight">
-              What owners say
-            </h2>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-4xl font-semibold tabular-nums">
-              {product.rating.average.toFixed(1)}
-            </span>
-            <Rating value={product.rating.average} count={product.rating.count} size="md" />
-          </div>
+        <div className="mb-8">
+          <p className="eyebrow">Reviews</p>
+          <h2 id="reviews-title" className="mt-3 text-3xl font-semibold tracking-tight">
+            What owners say
+          </h2>
         </div>
-        <p className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-          No written reviews yet. Owners can review after their order is delivered.
-        </p>
+        <ReviewsSection productId={product.id} />
       </section>
 
       {product.faq.length > 0 && (
