@@ -51,7 +51,7 @@ export function base({ tsconfigRootDir }) {
       ...tseslint.configs.disableTypeChecked,
     },
     {
-      files: ['**/*.test.ts', '**/*.spec.ts', '**/test/**/*.ts'],
+      files: ['**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}', '**/test/**/*.ts'],
       rules: {
         '@typescript-eslint/no-non-null-assertion': 'off',
         '@typescript-eslint/no-unsafe-assignment': 'off',

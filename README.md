@@ -4,7 +4,7 @@ A production-oriented e-commerce platform for mechanical and custom keyboards, k
 stabilizers, cables, desk mats and accessories. Built as TypeScript microservices (NestJS) with a
 Next.js storefront, PostgreSQL, Redis, Kafka and Stripe, deployed to Kubernetes on AWS.
 
-> **Status: Phase 1 of 21 — monorepo, tooling, shared packages and service skeletons.**
+> **Status: Phase 2 of 21 — storefront shell (Next.js) on top of the Phase 1 monorepo.**
 > See the [roadmap](#roadmap).
 
 ## Architecture at a glance
@@ -36,7 +36,7 @@ Key rules (details in [ADR-001](docs/adr/ADR-001-microservices.md)):
 
 ```
 apps/
-  web/                    Next.js storefront + /admin            (Phase 2)
+  web/                    Next.js storefront + /admin shell       port 3000
   api-gateway/            edge: routing, auth, rate limits        port 4000
   auth-service/           users, sessions, tokens, RBAC           port 4001
   product-service/        catalog, variants, search, configurator port 4002
@@ -80,6 +80,13 @@ corepack enable
 pnpm install
 pnpm build          # builds shared packages and services (Turborepo, cached)
 pnpm test           # unit + integration tests across the monorepo
+```
+
+Run the storefront (works without the backend thanks to the fixture catalog):
+
+```bash
+pnpm --filter @market/web dev
+# http://localhost:3000
 ```
 
 Run a single service:
@@ -141,6 +148,7 @@ Kubernetes (Helm) · Terraform · AWS (EKS, RDS, ElastiCache, MSK, ECR, WAF) · 
 
 - [Architecture Decision Records](docs/adr/README.md)
 - [Local development](docs/local-development.md)
+- [Storefront (apps/web)](apps/web/README.md)
 
 ## Security
 
