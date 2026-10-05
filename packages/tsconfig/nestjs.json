@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "NestJS microservice",
+  "extends": "./base.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "rootDir": "${configDir}/src",
+    "outDir": "${configDir}/dist",
+    "declaration": false,
+    "declarationMap": false,
+
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "verbatimModuleSyntax": false,
+    "strictPropertyInitialization": false
+  }
+}
