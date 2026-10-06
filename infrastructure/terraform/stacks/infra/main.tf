@@ -8,6 +8,7 @@ locals {
   helm_values_parameter = "/cse/${var.environment}/helm-values"
   grafana_parameter     = "/cse/${var.environment}/grafana"
   registry              = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.region}.amazonaws.com"
+  kafka_admin           = "kafka-admin"
   # Every deployable unit; services are also Kafka users and have a secrets entry.
   services = [
     "api-gateway", "auth-service", "product-service", "inventory-service", "cart-service",
@@ -149,8 +150,10 @@ module "msk" {
   client_security_group_id = module.eks.cluster_security_group_id
   kms_key_arn              = aws_kms_key.this.arn
   broker_instance_type     = var.sizing.kafka_broker_type
-  users                    = local.services
-  credentials_version      = var.credential_versions.kafka
+  # The services, plus the admin user the kafka-access job (platform stack) applies ACLs with.
+  users                   = concat(local.services, [local.kafka_admin])
+  credentials_version     = var.credential_versions.kafka
+  allow_all_authenticated = !var.kafka_acls_enforced
 }
 
 module "secrets" {
@@ -318,6 +321,10 @@ locals {
         keyPrefix         = local.secret_prefix
         kafkaSecretPrefix = "AmazonMSK_${local.name}_"
         redisSecretKey    = module.redis.secret_name
+      }
+      networkPolicy = {
+        dataCidrs = module.network.data_subnet_cidrs
+        vpcCidrs  = [module.network.vpc_cidr]
       }
       ingress = {
         certificateArn    = aws_acm_certificate_validation.app.certificate_arn

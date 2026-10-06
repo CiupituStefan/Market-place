@@ -93,6 +93,17 @@ token mounted and no Kubernetes RBAC permissions; AWS access only through per-se
 service accepts calls only from the components in its `allowFrom`, and only `web` and
 `api-gateway` from the load balancer. The ALB is HTTPS-only (TLS 1.2+/1.3 policy) behind AWS WAF.
 
+Egress is denied by default too (`networkPolicy.egress`): each component may reach DNS, the
+components that list it in their `allowFrom`, PostgreSQL/Redis/Kafka only in the data subnets
+(`networkPolicy.dataCidrs`, required, set by Terraform), the OpenTelemetry collector, and, only
+where `internetEgress: true` (web, product, payment and notification services: Stripe, S3, SES),
+HTTPS to addresses outside the VPC and never the instance metadata endpoint.
+
+In the cluster, Kyverno admits a pod in the application namespace only if every image is from
+our ECR registry, tagged with a commit SHA (or pinned by digest), and carries SLSA provenance
+signed by `build.yml` on `main` (Terraform `modules/platform/admission.tf`). Services do not
+create Kafka topics (`KAFKA_CREATE_TOPICS: false`): the kafka-access job does, with the ACLs.
+
 ## Availability
 
 Rolling updates never go below the desired capacity (`maxUnavailable: 0`); replicas are spread

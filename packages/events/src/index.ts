@@ -1,3 +1,4 @@
+export * from './access.js';
 export * from './contracts/index.js';
 export * from './define.js';
 export * from './envelope.js';

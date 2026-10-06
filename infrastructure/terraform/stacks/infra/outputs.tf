@@ -76,3 +76,21 @@ output "observability" {
     grafana_endpoint         = module.observability.grafana_endpoint
   }
 }
+
+output "admission" {
+  description = "What the cluster's admission policies allow: images from this registry, built by this repository's build workflow."
+  value = {
+    registry          = local.registry
+    github_repository = var.github_repository
+  }
+}
+
+output "kafka" {
+  description = "For the kafka-access job (platform stack): where the brokers are and the admin user's secret."
+  value = {
+    bootstrap_brokers = module.msk.bootstrap_brokers_sasl_scram
+    admin_secret_name = module.msk.user_secret_names[local.kafka_admin]
+    admin_secret_arn  = module.msk.user_secret_arns_by_user[local.kafka_admin]
+    data_cidrs        = module.network.data_subnet_cidrs
+  }
+}

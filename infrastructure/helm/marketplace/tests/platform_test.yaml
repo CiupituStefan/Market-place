@@ -103,3 +103,88 @@ tests:
           path: metadata.annotations["eks.amazonaws.com/role-arn"]
           value: arn:aws:iam::123456789012:role/cse-product-service
       - equal: { path: automountServiceAccountToken, value: false }
+
+  - it: denies egress by default too
+    template: networkpolicy.yaml
+    documentSelector: { path: metadata.name, value: default-deny }
+    asserts:
+      - equal: { path: spec.policyTypes, value: [Ingress, Egress] }
+
+  - it: lets a service call only the services that accept it, on their port
+    template: networkpolicy.yaml
+    documentSelector: { path: metadata.name, value: order-service-egress }
+    asserts:
+      # order-service is in the allowFrom of auth, inventory and cart (not product, not payment).
+      - contains:
+          path: spec.egress
+          content:
+            to:
+              - podSelector:
+                  matchLabels:
+                    {
+                      app.kubernetes.io/name: inventory-service,
+                      app.kubernetes.io/instance: RELEASE-NAME,
+                    }
+            ports: [{ port: 4003, protocol: TCP }]
+      - notContains:
+          path: spec.egress
+          content:
+            to:
+              - podSelector:
+                  matchLabels:
+                    {
+                      app.kubernetes.io/name: payment-service,
+                      app.kubernetes.io/instance: RELEASE-NAME,
+                    }
+            ports: [{ port: 4006, protocol: TCP }]
+
+  - it: reaches PostgreSQL and Kafka in the data subnets only, and never the internet
+    template: networkpolicy.yaml
+    documentSelector: { path: metadata.name, value: order-service-egress }
+    asserts:
+      - contains:
+          path: spec.egress
+          content:
+            to:
+              - ipBlock: { cidr: 10.20.192.0/21 }
+              - ipBlock: { cidr: 10.20.200.0/21 }
+              - ipBlock: { cidr: 10.20.208.0/21 }
+            ports: [{ port: 5432, protocol: TCP }, { port: 9096, protocol: TCP }]
+      - notContains:
+          path: spec.egress
+          content:
+            ports: [{ port: 443, protocol: TCP }]
+          any: true
+
+  - it: gives HTTPS out to payment-service, never towards the VPC or instance metadata
+    template: networkpolicy.yaml
+    documentSelector: { path: metadata.name, value: payment-service-egress }
+    asserts:
+      - contains:
+          path: spec.egress
+          content:
+            to:
+              - ipBlock: { cidr: 0.0.0.0/0, except: [10.20.0.0/16, 169.254.169.254/32] }
+            ports: [{ port: 443, protocol: TCP }]
+
+  - it: keeps the web app away from the data stores
+    template: networkpolicy.yaml
+    documentSelector: { path: metadata.name, value: web-egress }
+    asserts:
+      - notContains:
+          path: spec.egress
+          content:
+            ports: [{ port: 5432, protocol: TCP }]
+          any: true
+      - notContains:
+          path: spec.egress
+          content:
+            ports: [{ port: 9096, protocol: TCP }]
+          any: true
+
+  - it: refuses egress policies without the data subnets
+    template: networkpolicy.yaml
+    set: { global.networkPolicy.dataCidrs: [] }
+    asserts:
+      - failedTemplate:
+          errorMessage: global.networkPolicy.dataCidrs is required with egress policies (data subnets)

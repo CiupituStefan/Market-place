@@ -20,7 +20,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "clean": "rm -rf dist .turbo coverage"
+    "clean": "rm -rf dist .turbo coverage",
+    "acls": "UPDATE_KAFKA_ACCESS=1 vitest run src/access.test.ts"
   },
   "dependencies": {
     "@market/types": "workspace:*",

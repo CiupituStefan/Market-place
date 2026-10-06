@@ -21,15 +21,11 @@ import { defaultSelection } from '@/lib/catalog/variants';
 import { categoryCrumbs, productJsonLd } from '@/lib/seo/structured-data';
 
 /**
- * Incremental static regeneration: product pages are rendered on first request,
- * cached, and refreshed in the background every five minutes. Nothing is
- * prerendered at build time, so builds do not depend on the catalog API.
+ * Rendered per request: cached HTML would carry one visitor's CSP nonce to everyone
+ * (src/proxy.ts). The catalog data itself stays cached (60 s, tag "catalog"), so a render
+ * costs no API round trip most of the time, and builds do not depend on the catalog API.
  */
-export const revalidate = 300;
-
-export function generateStaticParams(): { slug: string }[] {
-  return [];
-}
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata(props: PageProps<'/product/[slug]'>): Promise<Metadata> {
   const { slug } = await props.params;

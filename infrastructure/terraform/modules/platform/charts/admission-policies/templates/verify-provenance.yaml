@@ -1,0 +1,57 @@
+{{- /*
+Every image must carry a SLSA build provenance attestation, Sigstore-signed (keyless, public
+transparency log) by this repository's build workflow on main: GitHub artifact attestations,
+pushed next to the image in ECR. The deploy pipeline checks the same before Helm runs; this
+catches anything that bypasses it. The verified digest replaces the tag in the pod spec.
+*/}}
+apiVersion: policies.kyverno.io/v1
+kind: ImageValidatingPolicy
+metadata:
+  name: cse-verify-provenance
+  annotations:
+    policies.kyverno.io/title: Signed build provenance
+spec:
+  validationActions: {{ .Values.provenanceValidationActions | toJson }}
+  failurePolicy: Fail
+  webhookConfiguration:
+    timeoutSeconds: 30
+  matchConstraints:
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: In
+          values: {{ .Values.namespaces | toJson }}
+    resourceRules:
+      - apiGroups: ['']
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [pods]
+  matchImageReferences:
+    - glob: '{{ .Values.provenance.imageGlob | default (printf "%s/cse/*" .Values.registry) }}'
+  credentials:
+    providers: [amazon]
+  validationConfigurations:
+    mutateDigest: true
+    verifyDigest: true
+    required: true
+  attestors:
+    - name: build
+      cosign:
+        keyless:
+          identities:
+            - issuer: https://token.actions.githubusercontent.com
+              subject: >-
+                {{ .Values.provenance.subject | default (printf "https://github.com/%s/.github/workflows/build.yml@refs/heads/main" (required "githubRepository is required" .Values.githubRepository)) }}
+        ctlog:
+          url: https://rekor.sigstore.dev
+  attestations:
+    - name: slsa
+      intoto:
+        type: https://slsa.dev/provenance/v1
+  validations:
+    - expression: >-
+        images.containers.map(image, verifyAttestationSignatures(image, attestations.slsa, [attestors.build])).all(e, e > 0)
+        && (!has(images.initContainers) || images.initContainers.map(image, verifyAttestationSignatures(image, attestations.slsa, [attestors.build])).all(e, e > 0))
+      message: >-
+        images must carry SLSA provenance signed by
+        {{ .Values.githubRepository }}/.github/workflows/build.yml on main

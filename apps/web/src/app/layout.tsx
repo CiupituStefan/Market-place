@@ -1,6 +1,7 @@
 import { GeistMono } from 'geist/font/mono';
 import { GeistSans } from 'geist/font/sans';
 import type { Metadata, Viewport } from 'next';
+import { headers } from 'next/headers';
 import type { ReactNode } from 'react';
 import { Providers } from '@/components/providers';
 import { siteConfig } from '@/lib/site';
@@ -38,7 +39,12 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+/**
+ * Reads the CSP nonce set by the proxy. Reading request headers makes every page render per
+ * request: a nonce cannot be baked into static HTML. Data stays cached (fetch revalidation).
+ */
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
   return (
     // next-themes sets the theme class before hydration, hence suppressHydrationWarning.
     <html
@@ -47,7 +53,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       className={`${GeistSans.variable} ${GeistMono.variable}`}
     >
       <body className="min-h-dvh font-sans">
-        <Providers>{children}</Providers>
+        <Providers nonce={nonce}>{children}</Providers>
       </body>
     </html>
   );

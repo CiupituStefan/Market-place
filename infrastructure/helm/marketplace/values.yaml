@@ -32,8 +32,9 @@ global:
     KAFKA_BROKERS: ''
     KAFKA_SSL: 'true'
     KAFKA_SASL_MECHANISM: SCRAM-SHA-512
-    # Each service creates the topics it uses (and their dead-letter topics) if missing.
-    KAFKA_CREATE_TOPICS: 'true'
+    # Topics are created with the ACLs by the kafka-access job (infrastructure/kafka); the
+    # services' Kafka users are not allowed to create any.
+    KAFKA_CREATE_TOPICS: 'false'
     KAFKA_REPLICATION_FACTOR: '3'
     KAFKA_TOPIC_PARTITIONS: '6'
 
@@ -75,6 +76,12 @@ global:
 
   networkPolicy:
     enabled: true
+    # Default-deny egress with per-component allow-lists (templates/networkpolicy.yaml).
+    egress: true
+    # Data subnets (RDS, ElastiCache, MSK) and the whole VPC; from Terraform (helm_values).
+    dataCidrs: []
+    vpcCidrs: []
+    collectorNamespace: observability
 
   podSecurityContext:
     runAsNonRoot: true
@@ -100,6 +107,8 @@ global:
 # `database: true` adds the migration init container (DATABASE_MIGRATION_URL from the secret).
 components:
   web:
+    # HTTPS out (AWS APIs, Stripe, the image CDN); every other component has no internet.
+    internetEgress: true
     port: 3000
     healthPaths: { live: /api/health, ready: /api/health }
     replicas: 2
@@ -168,6 +177,8 @@ components:
     env: {}
 
   product-service:
+    # HTTPS out (AWS APIs, Stripe, the image CDN); every other component has no internet.
+    internetEgress: true
     port: 4002
     replicas: 2
     database: true
@@ -222,6 +233,8 @@ components:
       INVENTORY_SERVICE_URL: http://inventory-service:4003
 
   payment-service:
+    # HTTPS out (AWS APIs, Stripe, the image CDN); every other component has no internet.
+    internetEgress: true
     port: 4006
     replicas: 2
     database: true
@@ -235,6 +248,8 @@ components:
       PAYMENT_PROVIDER: stripe
 
   notification-service:
+    # HTTPS out (AWS APIs, Stripe, the image CDN); every other component has no internet.
+    internetEgress: true
     port: 4007
     replicas: 2
     database: true

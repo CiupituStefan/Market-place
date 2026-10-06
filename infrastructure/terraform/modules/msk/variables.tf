@@ -47,7 +47,7 @@ variable "credentials_version" {
 }
 
 variable "allow_all_authenticated" {
-  description = "Until per-topic ACLs are applied, any authenticated user may use any topic."
+  description = "allow.everyone.if.no.acl.found: true only while the first ACLs are applied (bootstrap)."
   type        = bool
   default     = true
 }

@@ -53,7 +53,17 @@
         },
         "externalSecrets": { "type": "object" },
         "ingress": { "type": "object" },
-        "networkPolicy": { "type": "object" },
+        "networkPolicy": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "egress": { "type": "boolean" },
+            "dataCidrs": { "type": "array", "items": { "type": "string" } },
+            "vpcCidrs": { "type": "array", "items": { "type": "string" } },
+            "collectorNamespace": { "type": "string" }
+          }
+        },
         "preStopSleepSeconds": { "type": "integer", "minimum": 0, "maximum": 60 }
       }
     },
@@ -69,6 +79,7 @@
           "database": { "type": "boolean" },
           "secrets": { "type": "boolean" },
           "redis": { "type": "boolean" },
+          "internetEgress": { "type": "boolean" },
           "imagePerEnvironment": { "type": "boolean" },
           "sharedEnv": { "type": "boolean" },
           "public": { "enum": ["web", "api"] },

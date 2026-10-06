@@ -17,3 +17,8 @@ output "private_subnet_ids" {
 output "data_subnet_ids" {
   value = aws_subnet.data[*].id
 }
+
+output "data_subnet_cidrs" {
+  description = "Where RDS, ElastiCache and MSK live (Kubernetes egress policies allow only these)."
+  value       = aws_subnet.data[*].cidr_block
+}

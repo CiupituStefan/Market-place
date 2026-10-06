@@ -41,10 +41,16 @@ describe.skipIf(!brokers)('messaging on a real Kafka broker', () => {
       db,
       logger: silentLogger,
       publishes: [InventoryStockChangedV1.topic],
+      access: {
+        'messaging-test': {
+          publishes: [InventoryStockChangedV1.topic],
+          consumes: [InventoryStockChangedV1.topic],
+        },
+      },
       consumers: [
         {
           // A fresh group per run: it reads the topic from the start, so filter to this run's ids.
-          name: `messaging-test-${randomUUID()}`,
+          name: `messaging-test.${randomUUID()}`,
           topics: [InventoryStockChangedV1.topic],
           handlers: [
             on(InventoryStockChangedV1, async (event, tx: TestDb) => {

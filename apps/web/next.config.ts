@@ -40,11 +40,14 @@ const securityHeaders = [
     // Payment is allowed for Stripe's Payment Request button (Apple/Google Pay).
     value: 'camera=(), microphone=(), geolocation=(), payment=(self "https://js.stripe.com")',
   },
+  // Own browsing context group (no window.opener access), while Stripe/wallet popups work.
+  { key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' },
+  { key: 'Cross-Origin-Resource-Policy', value: 'same-site' },
+  { key: 'X-Permitted-Cross-Domain-Policies', value: 'none' },
   ...(isProduction
     ? [{ key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' }]
     : []),
-  // A nonce-based Content-Security-Policy is added in the security hardening phase,
-  // once the Stripe and analytics origins are final.
+  // Content-Security-Policy is set per request with a nonce (src/proxy.ts).
 ];
 
 const nextConfig: NextConfig = {

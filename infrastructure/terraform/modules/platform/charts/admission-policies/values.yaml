@@ -1,0 +1,12 @@
+# Set by Terraform (modules/platform).
+namespaces: []
+# ECR registry host, e.g. 123456789012.dkr.ecr.eu-central-1.amazonaws.com
+registry: ''
+# owner/repository on GitHub whose build workflow signs the images.
+githubRepository: ''
+# [Deny] rejects unproven images; [Audit] only reports them (policy reports).
+provenanceValidationActions: [Deny]
+# Overrides for tests (another image and signer); empty in real use.
+provenance:
+  imageGlob: ''
+  subject: ''

@@ -1,3 +1,5 @@
 # Reviewed false positives (gitleaks fingerprints: commit:file:rule:line).
 # A deliberately forged unsubscribe token in a test.
 ad4d2f77029c263885e5176f0949506f21a68c35:apps/notification-service/test/notifications.test.ts:generic-api-key:437
+# A fake password the telemetry test logs on purpose, to prove the logger redacts it.
+f4adbe00abe8f36dc0f2aaab4daf1cbcf4f2a6d9:packages/telemetry/test/fixtures/app.mjs:generic-api-key:22

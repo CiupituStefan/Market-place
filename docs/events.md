@@ -89,10 +89,15 @@ consequences that may happen a moment later.
 ## Operations
 
 - Topics: one per bounded context (below), plus `<topic>.dlq`. `KAFKA_TOPIC_PARTITIONS` (6) and
-  `KAFKA_REPLICATION_FACTOR` (1 locally, 3 on MSK). Each service creates the topics it publishes to
-  or consumes, if missing, at startup (`KAFKA_CREATE_TOPICS`, on in the Helm chart). On MSK every
-  service has its own SCRAM user; until per-topic ACLs are applied, any authenticated user may
-  use any topic ([terraform README](../infrastructure/terraform/README.md#kafka-topics-and-acls)).
+  `KAFKA_REPLICATION_FACTOR` (1 locally, 3 on MSK). Locally each service creates the topics it uses
+  at startup (`KAFKA_CREATE_TOPICS`). On MSK every service has its own SCRAM user, limited by ACLs
+  to the topics it publishes and consumes and to consumer groups named `<service>.*`; topics and
+  ACLs come from one list, [`packages/events/src/access.ts`](../packages/events/src/access.ts)
+  ([terraform README](../infrastructure/terraform/README.md#kafka-topics-and-acls)). A service
+  that uses a topic or group outside its access refuses to start, in every environment.
+- A new topic, or a service consuming another one: change `access.ts`, run
+  `pnpm --filter @market/events acls` (regenerates `infrastructure/kafka/`; CI fails if
+  forgotten), and apply the platform stack **before** deploying the code that needs it.
 - Without `KAFKA_BROKERS` (local development) messaging is off and events wait in the outbox;
   production refuses to start without it.
 - Tracing: the request's W3C trace context is stored with the outbox row and sent as the

@@ -154,12 +154,25 @@ write to these. See [docs/observability.md](../../docs/observability.md).
 
 ## Kafka topics and ACLs
 
-Services create the topics they use at startup. The MSK configuration sets
-`allow.everyone.if.no.acl.found=true`, so **any authenticated service user may use any topic**
-today; unauthenticated access is impossible (SCRAM only). Per-topic ACLs (each user may write
-the topics it publishes, read the topics it consumes, and create exactly those) are a follow-up:
-they need a Kafka admin client inside the VPC (the Terraform Kafka provider or a job in the
-cluster), after which `allow_all_authenticated` is turned off.
+Each service's SCRAM user may write the topics it publishes, read the topics it consumes (and
+write their dead-letter topics), and use consumer groups `<service>.*`; nothing else, not even
+creating topics. `api-gateway` has no Kafka access. The list is
+[`packages/events/src/access.ts`](../../packages/events/src/access.ts), rendered to
+[`infrastructure/kafka/`](../kafka) (`acls.txt`, `topics.txt`).
+
+MSK is reachable only inside the VPC, so `platform` runs a Job (`kafka-access` namespace,
+`apply.sh` in the pinned `apache/kafka` image) as a separate `kafka-admin` SCRAM user whenever
+those files change: it creates missing topics, adds missing ACLs and **removes ACLs not in the
+list**. Only that job's IRSA role can read the admin secret; the shared External Secrets role is
+denied it. `infrastructure/kafka/test.sh` checks all of this on a real broker in CI.
+
+New environment (MSK has no `super.users`, so the first ACLs need the bootstrap mode):
+
+1. `infra` with `kafka_acls_enforced = false` (default): `allow.everyone.if.no.acl.found=true`.
+2. `platform`: the job's first step gives `kafka-admin` the cluster ACLs, which closes ACL
+   management to everyone else, then applies the rest.
+3. Set `kafka_acls_enforced = true` in the environment's `infra.tfvars` and apply `infra`
+   (brokers restart one at a time): from then on only what the ACLs allow is allowed.
 
 ## Changing things
 

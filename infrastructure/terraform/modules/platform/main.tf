@@ -4,6 +4,8 @@
 #   ExternalDNS                  — Route 53 records for the ingress hosts (this zone only)
 #   metrics-server               — CPU metrics for the HPAs
 #   OpenTelemetry collector      — traces, metrics, logs → X-Ray, AMP, CloudWatch (observability.tf)
+#   Kyverno                      — admission control: registry, tags, signed provenance (admission.tf)
+#   kafka-access job             — Kafka topics and per-service ACLs (kafka.tf)
 # plus the application namespace, enforcing the "restricted" Pod Security Standard.
 terraform {
   required_version = ">= 1.11.0"
@@ -160,6 +162,14 @@ module "external_secrets_role" {
         Effect   = "Allow"
         Action   = "kms:Decrypt"
         Resource = var.kms_key_arn
+      },
+      {
+        # Shares the AmazonMSK_ prefix with the services' users, but is for the kafka-access
+        # job alone (kafka.tf).
+        Sid      = "NeverTheKafkaAdmin"
+        Effect   = "Deny"
+        Action   = "secretsmanager:*"
+        Resource = var.kafka.admin_secret_arn
       },
     ]
   })

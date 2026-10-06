@@ -1,0 +1,78 @@
+# Pods as the chart renders them (allowed) and as an attacker or a mistake would (refused).
+apiVersion: v1
+kind: Pod
+metadata: { name: order-service, namespace: cse-staging }
+spec:
+  initContainers:
+    - name: migrate
+      image: 123456789012.dkr.ecr.eu-central-1.amazonaws.com/cse/order-service:3f9c2e1a0b4d5c6e7f8091a2b3c4d5e6f7a8b9c0
+  containers:
+    - name: order-service
+      image: 123456789012.dkr.ecr.eu-central-1.amazonaws.com/cse/order-service:3f9c2e1a0b4d5c6e7f8091a2b3c4d5e6f7a8b9c0
+---
+apiVersion: v1
+kind: Pod
+metadata: { name: web, namespace: cse-staging }
+spec:
+  containers:
+    - name: web
+      image: 123456789012.dkr.ecr.eu-central-1.amazonaws.com/cse/web:3f9c2e1a0b4d5c6e7f8091a2b3c4d5e6f7a8b9c0-staging
+---
+apiVersion: v1
+kind: Pod
+metadata: { name: pinned-by-digest, namespace: cse-staging }
+spec:
+  containers:
+    - name: cart-service
+      image: 123456789012.dkr.ecr.eu-central-1.amazonaws.com/cse/cart-service@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402
+---
+apiVersion: v1
+kind: Pod
+metadata: { name: public-image, namespace: cse-staging }
+spec:
+  containers:
+    - name: shell
+      image: public.ecr.aws/docker/library/alpine:3.24
+---
+apiVersion: v1
+kind: Pod
+metadata: { name: latest-tag, namespace: cse-staging }
+spec:
+  containers:
+    - name: order-service
+      image: 123456789012.dkr.ecr.eu-central-1.amazonaws.com/cse/order-service:latest
+---
+apiVersion: v1
+kind: Pod
+metadata: { name: other-account, namespace: cse-staging }
+spec:
+  containers:
+    - name: order-service
+      image: 999999999999.dkr.ecr.eu-central-1.amazonaws.com/cse/order-service:3f9c2e1a0b4d5c6e7f8091a2b3c4d5e6f7a8b9c0
+---
+apiVersion: v1
+kind: Pod
+metadata: { name: sneaky-init, namespace: cse-staging }
+spec:
+  initContainers:
+    - name: setup
+      image: docker.io/attacker/miner:1.0
+  containers:
+    - name: order-service
+      image: 123456789012.dkr.ecr.eu-central-1.amazonaws.com/cse/order-service:3f9c2e1a0b4d5c6e7f8091a2b3c4d5e6f7a8b9c0
+---
+apiVersion: v1
+kind: Pod
+metadata: { name: lookalike-registry, namespace: cse-staging }
+spec:
+  containers:
+    - name: order-service
+      image: 123456789012.dkr.ecr.eu-central-1.amazonaws.com.evil.example/cse/order-service:3f9c2e1a0b4d5c6e7f8091a2b3c4d5e6f7a8b9c0
+---
+apiVersion: v1
+kind: Pod
+metadata: { name: elsewhere, namespace: kube-system }
+spec:
+  containers:
+    - name: coredns
+      image: public.ecr.aws/eks-distro/coredns/coredns:v1.11.4

@@ -93,3 +93,13 @@ variable "grafana" {
   })
   default = { enabled = false }
 }
+
+variable "kafka_acls_enforced" {
+  description = <<-EOT
+    false while a new cluster is bootstrapped: any authenticated user may use resources without
+    ACLs, which lets the platform stack's kafka-access job create the first ACLs. Set to true once
+    that job has run (README): from then on, only what the ACLs allow is allowed.
+  EOT
+  type        = bool
+  default     = false
+}

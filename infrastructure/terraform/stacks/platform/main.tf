@@ -88,4 +88,6 @@ module "platform" {
   app_namespace        = local.infra.app_namespace
   deployers_group      = local.infra.deployers_group
   observability        = local.infra.observability
+  admission            = local.infra.admission
+  kafka                = local.infra.kafka
 }

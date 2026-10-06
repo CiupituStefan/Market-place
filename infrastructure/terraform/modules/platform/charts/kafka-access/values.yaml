@@ -1,0 +1,17 @@
+# Set by Terraform (modules/platform/kafka.tf).
+region: ''
+# IAM role (IRSA) that may read only the admin user's secret.
+roleArn: ''
+# Secrets Manager name of the admin user's SCRAM credentials (AmazonMSK_<cluster>_kafka-admin).
+adminSecretName: ''
+# MSK SASL/SCRAM bootstrap brokers (host:9096,...).
+bootstrapBrokers: ''
+# The brokers' subnets: the only place the job may connect to (besides DNS).
+dataCidrs: []
+# Hash of the files below: a change runs a new Job.
+revision: ''
+files:
+  apply.sh: ''
+  acls.txt: ''
+  topics.txt: ''
+image: apache/kafka:4.3.1@sha256:77e3df9054047a88b520d0cc46e16696d3b22022e1d580aeccd2632df6532837

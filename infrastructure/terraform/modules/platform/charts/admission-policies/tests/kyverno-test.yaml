@@ -1,0 +1,16 @@
+# kyverno test (run by infrastructure/helm/check.sh against the rendered chart).
+apiVersion: cli.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: cse-restrict-images
+policies: [policies.yaml]
+resources: [resources.yaml]
+results:
+  - policy: cse-restrict-images
+    kind: Pod
+    resources: [order-service, web, pinned-by-digest]
+    result: pass
+  - policy: cse-restrict-images
+    kind: Pod
+    resources: [public-image, latest-tag, other-account, sneaky-init, lookalike-registry]
+    result: fail

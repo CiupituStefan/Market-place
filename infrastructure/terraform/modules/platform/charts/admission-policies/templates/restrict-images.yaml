@@ -1,0 +1,40 @@
+{{- /*
+Only this account's ECR images, tagged with a full Git SHA (`<sha>` or `<sha>-<environment>`)
+or pinned by digest, may run in the application namespaces: no public images, no `latest`,
+no mutable tags. Checked for every container, init container and debug container.
+*/}}
+{{- if not .Values.namespaces }}{{ fail "namespaces must list at least one namespace" }}{{ end }}
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: cse-restrict-images
+  annotations:
+    policies.kyverno.io/title: Images from our registry, by commit SHA
+spec:
+  validationActions: [Deny]
+  failurePolicy: Fail
+  matchConstraints:
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: In
+          values: {{ .Values.namespaces | toJson }}
+    resourceRules:
+      - apiGroups: ['']
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [pods, pods/ephemeralcontainers]
+  variables:
+    - name: allowed
+      expression: >-
+        '^{{ required "registry is required" .Values.registry | replace "." "\\\\." }}/cse/[a-z0-9-]+(:[0-9a-f]{40}(-(staging|production))?|@sha256:[0-9a-f]{64})$'
+    - name: images
+      expression: >-
+        object.spec.containers.map(c, c.image)
+        + (has(object.spec.initContainers) ? object.spec.initContainers.map(c, c.image) : [])
+        + (has(object.spec.ephemeralContainers) ? object.spec.ephemeralContainers.map(c, c.image) : [])
+  validations:
+    - expression: variables.images.all(image, image.matches(variables.allowed))
+      messageExpression: >-
+        'only {{ .Values.registry }}/cse/<image>:<git-sha> images may run here, got: '
+        + variables.images.filter(image, !image.matches(variables.allowed)).join(', ')

@@ -1,0 +1,14 @@
+# Kafka topics
+# Generated from packages/events/src/access.ts by `pnpm --filter @market/events acls`; do not edit.
+catalog.product.events
+catalog.product.events.dlq
+inventory.stock.events
+inventory.stock.events.dlq
+notifications.requests
+notifications.requests.dlq
+orders.order.events
+orders.order.events.dlq
+payments.payment.events
+payments.payment.events.dlq
+reviews.review.events
+reviews.review.events.dlq

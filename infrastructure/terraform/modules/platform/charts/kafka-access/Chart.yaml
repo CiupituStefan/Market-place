@@ -1,0 +1,5 @@
+apiVersion: v2
+name: kafka-access
+description: Applies the Kafka topics and per-service ACLs (infrastructure/kafka) as the admin user
+type: application
+version: 0.1.0

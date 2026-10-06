@@ -1,5 +1,5 @@
 import type { Database } from '@market/db';
-import type { Topic } from '@market/events';
+import { kafkaAccess, kafkaAccessViolations, type KafkaAccess, type Topic } from '@market/events';
 import type { Logger } from '@market/logger';
 import type { MessagingConfig } from './config.js';
 import { EventProcessor, KafkaEventConsumer, type ConsumerDefinition } from './consumer.js';
@@ -27,8 +27,18 @@ export async function startMessaging<TDb extends AnyDatabase>(options: {
   /** Topics this service publishes to (from its outbox). Empty: no relay. */
   publishes: Topic[];
   consumers: ConsumerDefinition<TDb>[];
+  /** What each service may use; the shared list unless a test brings its own. */
+  access?: Readonly<Record<string, KafkaAccess>>;
 }): Promise<Messaging> {
   const { config, logger, serviceName } = options;
+  // In every environment, so a change that the cluster's ACLs would refuse fails in tests and
+  // locally, not with an authorization error in production.
+  const violations = kafkaAccessViolations(serviceName, options, options.access ?? kafkaAccess);
+  if (violations.length > 0) {
+    throw new Error(
+      `${serviceName} uses Kafka beyond its access (packages/events/src/access.ts): ${violations.join('; ')}`,
+    );
+  }
   if (!config.KAFKA_BROKERS?.length) {
     if (config.NODE_ENV === 'production')
       throw new Error('KAFKA_BROKERS is required in production');

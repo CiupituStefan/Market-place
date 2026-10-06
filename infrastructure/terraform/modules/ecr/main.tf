@@ -1,5 +1,5 @@
 # One repository per image. Tags are immutable (a Git SHA always means the same image),
-# images are scanned on push, and old untagged/feature images expire.
+# images are scanned on push, and old images expire (with their attestations).
 terraform {
   required_version = ">= 1.11.0"
   required_providers {
@@ -41,6 +41,10 @@ resource "aws_ecr_repository" "this" {
   }
 }
 
+# Only tagged images are counted and expired. Everything untagged in these repositories is a
+# referrer (the signed provenance and SBOM attestations admission control requires): ECR expires
+# those itself within a day of their image, and an "untagged" or "any" rule could drop them
+# first, after which the image could no longer be scheduled, nor rolled back to.
 resource "aws_ecr_lifecycle_policy" "this" {
   for_each   = aws_ecr_repository.this
   repository = each.value.name
@@ -48,15 +52,14 @@ resource "aws_ecr_lifecycle_policy" "this" {
     rules = [
       {
         rulePriority = 1
-        description  = "Drop untagged layers after a week"
-        selection    = { tagStatus = "untagged", countType = "sinceImagePushed", countUnit = "days", countNumber = 7 }
-        action       = { type = "expire" }
-      },
-      {
-        rulePriority = 2
         description  = "Keep the most recent images for rollbacks"
-        selection    = { tagStatus = "any", countType = "imageCountMoreThan", countNumber = var.keep_images }
-        action       = { type = "expire" }
+        selection = {
+          tagStatus      = "tagged"
+          tagPatternList = ["*"]
+          countType      = "imageCountMoreThan"
+          countNumber    = var.keep_images
+        }
+        action = { type = "expire" }
       },
     ]
   })

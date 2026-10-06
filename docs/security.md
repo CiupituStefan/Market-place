@@ -67,8 +67,9 @@ Security controls by layer. Items marked _(Phase N)_ land in that phase.
   checkout); CloudFront serves images from a private bucket.
 - GitHub Actions reaches AWS through OIDC roles (no access keys); pods through per-service IRSA
   roles; nodes enforce IMDSv2 with hop limit 1.
-- Known gap: Kafka topics have no per-topic ACLs yet (any authenticated service may use any
-  topic).
+- Kafka: per-service ACLs from [`access.ts`](../packages/events/src/access.ts) (write own
+  topics, read consumed ones, own consumer groups; no topic creation), applied declaratively by
+  an in-cluster job as an admin user nobody else can read; tested on a real broker in CI.
 
 ## Supply chain ([CI](ci.md), [repository settings](repository-settings.md))
 
@@ -104,7 +105,27 @@ Security controls by layer. Items marked _(Phase N)_ land in that phase.
 - Telemetry backends are reached only by the collector, through an IRSA role limited to this
   environment's workspace, log group and X-Ray writes.
 
-## Still to come _(Phase 20)_
+## Storefront ([`proxy.ts`](../apps/web/src/proxy.ts), [`csp.ts`](../apps/web/src/lib/security/csp.ts))
 
-Provenance verification at admission (in-cluster policy), Kubernetes RBAC review, CSP with nonces on the
-storefront.
+- Strict CSP with a fresh nonce per request and `strict-dynamic`: no inline script runs unless
+  Next.js rendered it; Stripe is the only third-party origin (scripts, frames, API). Verified in
+  Chromium: injected inline scripts and event handlers are blocked, the app hydrates without
+  violations. Pages are rendered per request for this (catalog data stays cached for 60 s).
+- `frame-ancestors 'none'`, `form-action 'self'`, `base-uri 'self'`, `object-src 'none'`, COOP,
+  CORP, HSTS, `nosniff`, a strict Referrer-Policy and Permissions-Policy.
+- `/admin` and `/account` redirect to sign-in without a session cookie (the API still decides).
+
+## Cluster
+
+- Ingress **and egress** denied by default per component ([helm README](../infrastructure/helm/README.md#security-defaults)):
+  data stores only in the data subnets, the internet (HTTPS) only for the four components that
+  call Stripe or AWS APIs, never the instance metadata endpoint.
+- Admission (Kyverno, fail-closed, application namespace): images only from our ECR registry by
+  commit SHA or digest, every container, init and debug container included, and only with SLSA
+  provenance signed by `build.yml` on `main`, checked against the public transparency log. This
+  covers what the deploy check cannot: `kubectl` with stolen credentials, a tampered chart.
+- ECR keeps attestations as long as their image (lifecycle rules count tagged images only).
+- Pod Security Standard `restricted` enforced on the application and kafka-access namespaces;
+  the CI deploy role cannot read Secrets.
+
+Threats, boundaries and what is left: [threat model](threat-model.md).

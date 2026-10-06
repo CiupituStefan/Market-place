@@ -20,4 +20,9 @@ run "immutable_scanned_encrypted" {
     condition     = aws_ecr_repository.this["order-service"].name == "cse/order-service"
     error_message = "Repositories follow the chart's image naming (registry/cse/<name>)."
   }
+  assert {
+    condition = alltrue([for p in aws_ecr_lifecycle_policy.this :
+    alltrue([for rule in jsondecode(p.policy).rules : rule.selection.tagStatus == "tagged"])])
+    error_message = "Lifecycle rules select tagged images only: untagged artifacts are the attestations admission control needs."
+  }
 }

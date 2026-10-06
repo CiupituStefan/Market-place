@@ -36,7 +36,8 @@ resource "aws_msk_configuration" "this" {
     "min.insync.replicas=2",
     "unclean.leader.election.enable=false",
     "num.partitions=6",
-    # Authenticated clients only (SASL/SCRAM); per-topic ACLs tighten this further.
+    # Authenticated clients only (SASL/SCRAM), each limited by its ACLs (infrastructure/kafka).
+    # true only while a new cluster gets its first ACLs.
     "allow.everyone.if.no.acl.found=${var.allow_all_authenticated}",
   ])
 }

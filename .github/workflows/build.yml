@@ -176,13 +176,15 @@ jobs:
 
       # Signed statements (Sigstore, public transparency log) that this digest was built by this
       # workflow from this commit on main, and of what it contains. The deploy refuses images
-      # without them.
+      # without them, and they are pushed next to the image (OCI referrers) for the cluster's
+      # admission control to check every pod against.
       - name: Attest build provenance
         if: env.PUSH == 'true' && steps.push.outputs.attest == 'true'
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-name: ${{ steps.push.outputs.name }}
           subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
 
       - name: Attest the SBOM
         if: env.PUSH == 'true' && steps.push.outputs.attest == 'true'
@@ -191,6 +193,7 @@ jobs:
           subject-name: ${{ steps.push.outputs.name }}
           subject-digest: ${{ steps.push.outputs.digest }}
           sbom-path: sbom.cdx.json
+          push-to-registry: true
 
   # One stable name for branch protection and for the deploy workflow to wait on.
   built:

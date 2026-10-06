@@ -2,15 +2,16 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { contentPages } from '@/lib/content';
 
-export const dynamicParams = false;
+/** Own keys only: `/constructor` or `/toString` must be a 404, not a prototype method. */
+const contentOf = (page: string) =>
+  Object.hasOwn(contentPages, page) ? contentPages[page] : undefined;
 
-export function generateStaticParams() {
-  return Object.keys(contentPages).map((page) => ({ page }));
-}
+/** Per request, like every page: see the CSP nonce note in product/[slug]/page.tsx. */
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata(props: PageProps<'/[page]'>): Promise<Metadata> {
   const { page } = await props.params;
-  const content = contentPages[page];
+  const content = contentOf(page);
   if (!content) return {};
   return {
     title: content.title,
@@ -21,7 +22,7 @@ export async function generateMetadata(props: PageProps<'/[page]'>): Promise<Met
 
 export default async function ContentPage(props: PageProps<'/[page]'>) {
   const { page } = await props.params;
-  const content = contentPages[page];
+  const content = contentOf(page);
   if (!content) notFound();
   return (
     <article className="container-page max-w-3xl py-16">

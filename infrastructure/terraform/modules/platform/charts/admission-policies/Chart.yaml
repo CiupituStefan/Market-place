@@ -1,0 +1,5 @@
+apiVersion: v2
+name: admission-policies
+description: Kyverno policies for the application namespaces (what may run there)
+type: application
+version: 0.1.0

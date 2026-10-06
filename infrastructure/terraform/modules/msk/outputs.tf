@@ -9,3 +9,7 @@ output "user_secret_names" {
 output "user_secret_arns" {
   value = [for secret in aws_secretsmanager_secret.user : secret.arn]
 }
+
+output "user_secret_arns_by_user" {
+  value = { for user, secret in aws_secretsmanager_secret.user : user => secret.arn }
+}

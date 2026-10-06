@@ -54,3 +54,21 @@ variable "observability" {
     log_group_arn            = string
   })
 }
+
+variable "admission" {
+  description = "Admission control: the only registry images may come from, and the repository whose build workflow must have signed their provenance."
+  type = object({
+    registry          = string
+    github_repository = string
+  })
+}
+
+variable "kafka" {
+  description = "MSK details for the kafka-access job (infra stack output)."
+  type = object({
+    bootstrap_brokers = string
+    admin_secret_name = string
+    admin_secret_arn  = string
+    data_cidrs        = list(string)
+  })
+}
