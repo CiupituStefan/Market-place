@@ -4,7 +4,7 @@ A production-oriented e-commerce platform for mechanical and custom keyboards, k
 stabilizers, cables, desk mats and accessories. Built as TypeScript microservices (NestJS) with a
 Next.js storefront, PostgreSQL, Redis, Kafka and Stripe, deployed to Kubernetes on AWS.
 
-> **Status: Phases 1–17 of 21 — GitHub Actions CI: tests on real infrastructure, secret/dependency/code/image scanning, images to ECR by Git SHA.** Phase 18 (CD to staging and production) is next.
+> **Status: Phases 1–18 of 21 — CD: every merge to staging with smoke tests, approved promotion to production, automatic rollback.** Phase 19 (observability) is next.
 > See the [roadmap](#roadmap).
 
 ## Architecture at a glance
@@ -155,7 +155,7 @@ Kubernetes (Helm) · Terraform · AWS (EKS, RDS, ElastiCache, MSK, ECR, WAF) · 
 | 15  | Kubernetes + Helm                              | ✅     |
 | 16  | Terraform + AWS                                | ✅     |
 | 17  | GitHub Actions CI                              | ✅     |
-| 18  | GitHub Actions CD                              |        |
+| 18  | GitHub Actions CD                              | ✅     |
 | 19  | Observability                                  |        |
 | 20  | Security hardening                             |        |
 | 21  | E2E testing                                    |        |
@@ -170,6 +170,7 @@ Kubernetes (Helm) · Terraform · AWS (EKS, RDS, ElastiCache, MSK, ECR, WAF) · 
 - [Architecture Decision Records](docs/adr/README.md)
 - [Local development](docs/local-development.md)
 - [Continuous integration](docs/ci.md)
+- [Deployment](docs/deployment.md)
 - [Storefront (apps/web)](apps/web/README.md)
 
 ## Security

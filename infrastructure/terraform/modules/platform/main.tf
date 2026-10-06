@@ -36,6 +36,74 @@ resource "kubernetes_namespace_v1" "app" {
   }
 }
 
+# The CI deploy role: exactly the kinds the application chart renders, in its namespace.
+# No Secrets: Helm keeps its release records in ConfigMaps (HELM_DRIVER=configmap; the chart
+# renders no Secret, only ExternalSecret references), so CI cannot read application secrets.
+resource "kubernetes_role_v1" "deployer" {
+  metadata {
+    name      = "cse-deployer"
+    namespace = kubernetes_namespace_v1.app.metadata[0].name
+  }
+  rule {
+    api_groups = [""]
+    resources  = ["configmaps", "services", "serviceaccounts"]
+    verbs      = ["get", "list", "watch", "create", "update", "patch", "delete"]
+  }
+  rule {
+    api_groups = ["apps"]
+    resources  = ["deployments"]
+    verbs      = ["get", "list", "watch", "create", "update", "patch", "delete"]
+  }
+  rule {
+    api_groups = ["autoscaling"]
+    resources  = ["horizontalpodautoscalers"]
+    verbs      = ["get", "list", "watch", "create", "update", "patch", "delete"]
+  }
+  rule {
+    api_groups = ["policy"]
+    resources  = ["poddisruptionbudgets"]
+    verbs      = ["get", "list", "watch", "create", "update", "patch", "delete"]
+  }
+  rule {
+    api_groups = ["networking.k8s.io"]
+    resources  = ["networkpolicies", "ingresses"]
+    verbs      = ["get", "list", "watch", "create", "update", "patch", "delete"]
+  }
+  rule {
+    api_groups = ["external-secrets.io"]
+    resources  = ["externalsecrets"]
+    verbs      = ["get", "list", "watch", "create", "update", "patch", "delete"]
+  }
+  # Rollout status and diagnostics when a deploy fails.
+  rule {
+    api_groups = ["apps"]
+    resources  = ["replicasets"]
+    verbs      = ["get", "list", "watch"]
+  }
+  rule {
+    api_groups = [""]
+    resources  = ["pods", "pods/log", "events"]
+    verbs      = ["get", "list", "watch"]
+  }
+}
+
+resource "kubernetes_role_binding_v1" "deployer" {
+  metadata {
+    name      = "cse-deployer"
+    namespace = kubernetes_namespace_v1.app.metadata[0].name
+  }
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "Role"
+    name      = kubernetes_role_v1.deployer.metadata[0].name
+  }
+  subject {
+    kind      = "Group"
+    name      = var.deployers_group
+    api_group = "rbac.authorization.k8s.io"
+  }
+}
+
 # ── AWS Load Balancer Controller ──────────────────────────────────────────────
 
 module "alb_controller_role" {

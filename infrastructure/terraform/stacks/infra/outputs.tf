@@ -51,42 +51,16 @@ output "database_master_secret_arn" {
   value = module.postgres.master_user_secret_arn
 }
 
-# The account-specific values of the Helm chart (infrastructure/helm/README.md), consumed
-# by the deploy pipeline as an extra values file. Contains no secrets.
+# The account-specific values of the Helm chart (infrastructure/helm/README.md). No secrets.
+# The deploy pipeline reads them from SSM (local.helm_values_parameter), not from state.
 output "helm_values" {
-  value = yamlencode({
-    global = {
-      externalSecrets = {
-        keyPrefix         = local.secret_prefix
-        kafkaSecretPrefix = "AmazonMSK_${local.name}_"
-        redisSecretKey    = module.redis.secret_name
-      }
-      ingress = {
-        certificateArn    = aws_acm_certificate_validation.app.certificate_arn
-        wafAclArn         = module.waf.web_acl_arn
-        loadBalancerCidrs = [module.network.vpc_cidr]
-      }
-      env = {
-        KAFKA_BROKERS = module.msk.bootstrap_brokers_sasl_scram
-      }
-    }
-    components = {
-      product-service = {
-        iamRoleArn = module.product_service_role.arn
-        env = {
-          S3_BUCKET      = module.assets.bucket_name
-          S3_REGION      = var.region
-          ASSET_BASE_URL = module.assets.cdn_url
-        }
-      }
-      notification-service = {
-        iamRoleArn = module.notification_service_role.arn
-        env = {
-          SES_REGION            = var.region
-          SES_CONFIGURATION_SET = module.ses.configuration_set
-          EMAIL_FROM            = "CSE Keyboards <hello@${var.environment == "production" ? var.domain : "${var.environment}.${var.domain}"}>"
-        }
-      }
-    }
-  })
+  value = local.helm_values
+}
+
+output "helm_values_parameter" {
+  value = aws_ssm_parameter.helm_values.name
+}
+
+output "deployers_group" {
+  value = local.deployers_group
 }

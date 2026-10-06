@@ -63,5 +63,6 @@ managed services wherever they remove real operational work (rule 14).
   it is tracked as a follow-up, and ADR-018's claim that ACLs exist was corrected.
 - Services verify the RDS server certificate against the RDS root certificates shipped in the
   Helm chart (`sslmode=verify-full`).
-- The deploy pipeline (Phase 18) reads the `helm_values` output of `infra` and the registry from
-  `global`, so deploy jobs need read access to the state bucket.
+- The deploy pipeline needs the `helm_values` output. (Correction, Phase 18: `infra` writes it,
+  registry included, to the SSM parameter `/cse/<env>/helm-values`; deploy jobs read that and
+  never the state bucket. See ADR-021.)

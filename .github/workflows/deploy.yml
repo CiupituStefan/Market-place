@@ -1,0 +1,190 @@
+name: Deploy (reusable)
+
+# One deployment of one commit to one environment: check the images exist, install the chart
+# with --atomic (a rollout that does not become ready rolls itself back), smoke test through
+# the public edge, and roll back to the previous release if the smoke tests fail.
+# Called by deploy-staging.yml and deploy-production.yml; never run on its own.
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: staging or production
+        type: string
+        required: true
+      sha:
+        description: Full commit SHA whose images to deploy
+        type: string
+        required: true
+      allow-older:
+        description: Allow a commit older than the deployed one (a deliberate, manual rollback)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy ${{ inputs.sha }} to ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    # The GitHub environment holds the deploy role variable and, for production, the
+    # required reviewers; the AWS role trusts only jobs bound to this environment.
+    environment:
+      name: ${{ inputs.environment }}
+      url: ${{ steps.hosts.outputs.web }}
+    # One deployment per environment at a time; a newer one waits, it never interrupts.
+    concurrency:
+      group: deploy-${{ inputs.environment }}
+      cancel-in-progress: false
+    permissions:
+      contents: read # checkout
+      id-token: write # OIDC to the environment's deploy role
+      deployments: write # records "smoke-tested" for the commit (production requires it)
+    env:
+      ENVIRONMENT: ${{ inputs.environment }}
+      SHA: ${{ inputs.sha }}
+      AWS_REGION: eu-central-1
+      RELEASE: marketplace
+      NAMESPACE: cse-${{ inputs.environment }}
+      CHART: infrastructure/helm/marketplace
+      # Release records in ConfigMaps: the deploy role has no access to Secrets at all.
+      HELM_DRIVER: configmap
+    steps:
+      - name: Validate the inputs
+        run: |
+          [[ "$ENVIRONMENT" =~ ^(staging|production)$ ]] || { echo "unknown environment $ENVIRONMENT"; exit 1; }
+          [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "sha must be a full 40-character commit SHA"; exit 1; }
+
+      # The chart and values of the same commit as the images.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.sha }}
+          persist-credentials: false
+          fetch-depth: 0 # history, to tell whether the deployed commit is newer
+
+      - name: Public hosts
+        id: hosts
+        run: |
+          values="$CHART/values-$ENVIRONMENT.yaml"
+          echo "web=https://$(yq -er '.global.domains.web' "$values")" >> "$GITHUB_OUTPUT"
+          echo "api=https://$(yq -er '.global.domains.api' "$values")" >> "$GITHUB_OUTPUT"
+
+      - uses: ./.github/actions/install-tool
+        with:
+          url: https://get.helm.sh/helm-v3.19.0-linux-amd64.tar.gz
+          sha256: a7f81ce08007091b86d8bd696eb4d86b8d0f2e1b9f6c714be62f82f96a594496
+          binary: helm
+
+      - name: AWS credentials (GitHub OIDC, no stored keys)
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Every image of this commit is in ECR
+        run: |
+          set -euo pipefail
+          missing=0
+          for component in $(yq -er '.components | keys | .[]' "$CHART/values.yaml"); do
+            tag="$SHA"
+            if [ "$(yq -r ".components.\"$component\".imagePerEnvironment // false" "$CHART/values.yaml")" = true ]; then
+              tag="$SHA-$ENVIRONMENT"
+            fi
+            if aws ecr describe-images --repository-name "cse/$component" --image-ids "imageTag=$tag" >/dev/null 2>&1; then
+              echo "found   cse/$component:$tag"
+            else
+              echo "::error::missing cse/$component:$tag (did build.yml succeed for this commit?)"
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Account-specific values (written by Terraform, no secrets)
+        run: |
+          aws ssm get-parameter --name "/cse/$ENVIRONMENT/helm-values" \
+            --query Parameter.Value --output text > "$RUNNER_TEMP/aws-values.yaml"
+
+      - name: Cluster access
+        run: aws eks update-kubeconfig --name "cse-$ENVIRONMENT" --alias "cse-$ENVIRONMENT"
+
+      - name: Current release (for the record and for rollback)
+        id: before
+        run: |
+          revision="$(helm history "$RELEASE" -n "$NAMESPACE" --max 1 -o json 2>/dev/null | jq -er '.[0].revision' 2>/dev/null || echo none)"
+          echo "revision=$revision" >> "$GITHUB_OUTPUT"
+          echo "Release before this deploy: $revision"
+
+      - name: Never move backwards by accident
+        env:
+          ALLOW_OLDER: ${{ inputs.allow-older }}
+        run: |
+          current="$(helm get values "$RELEASE" -n "$NAMESPACE" -o json 2>/dev/null | jq -r '.global.image.tag // empty' || true)"
+          echo "Deployed now: ${current:-nothing}"
+          if [ -n "$current" ] && [ "$current" != "$SHA" ] && [ "$ALLOW_OLDER" != true ] &&
+            git merge-base --is-ancestor "$SHA" "$current" 2>/dev/null; then
+            echo "::error::$SHA is older than the deployed $current. To roll back, run this environment's deploy workflow by hand with that commit."
+            exit 1
+          fi
+
+      - name: Install the chart (rolls itself back if pods do not become ready)
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          helm upgrade --install "$RELEASE" "$CHART" \
+            --namespace "$NAMESPACE" \
+            -f "$CHART/values-$ENVIRONMENT.yaml" \
+            -f "$RUNNER_TEMP/aws-values.yaml" \
+            --set global.image.tag="$SHA" \
+            --atomic --wait --timeout 15m \
+            --history-max 30 \
+            --description "$SHA $RUN_URL"
+
+      - name: Smoke tests through the public edge
+        id: smoke
+        env:
+          WEB: ${{ steps.hosts.outputs.web }}
+          API: ${{ steps.hosts.outputs.api }}
+          # The first deploy waits for DNS (ExternalDNS) and the load balancer.
+          SMOKE_WARMUP_SECONDS: ${{ steps.before.outputs.revision == 'none' && '600' || '180' }}
+        run: scripts/smoke-test.sh "$WEB" "$API"
+
+      - name: Roll back after failed smoke tests
+        if: failure() && steps.smoke.outcome == 'failure' && steps.before.outputs.revision != 'none'
+        env:
+          PREVIOUS: ${{ steps.before.outputs.revision }}
+        run: |
+          echo "::error::Smoke tests failed; rolling back to revision $PREVIOUS"
+          helm rollback "$RELEASE" "$PREVIOUS" --namespace "$NAMESPACE" --wait --timeout 10m
+
+      - name: Diagnostics
+        if: failure()
+        run: |
+          kubectl -n "$NAMESPACE" get pods -o wide || true
+          kubectl -n "$NAMESPACE" get events --sort-by=.lastTimestamp | tail -n 40 || true
+
+      - name: Record the commit as smoke-tested in this environment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WEB: ${{ steps.hosts.outputs.web }}
+        run: |
+          set -euo pipefail
+          id="$(jq -n --arg ref "$SHA" --arg env "$ENVIRONMENT" \
+            '{ref: $ref, environment: $env, task: "smoke-tested", auto_merge: false, required_contexts: []}' |
+            gh api "repos/$GITHUB_REPOSITORY/deployments" --input - --jq .id)"
+          gh api "repos/$GITHUB_REPOSITORY/deployments/$id/statuses" \
+            -f state=success -f environment_url="$WEB" >/dev/null
+
+      - name: Summary
+        if: always()
+        env:
+          OUTCOME: ${{ job.status }}
+          BEFORE: ${{ steps.before.outputs.revision }}
+        run: |
+          {
+            echo "### $ENVIRONMENT: $OUTCOME"
+            echo "- commit: \`$SHA\`"
+            echo "- release before: revision $BEFORE"
+            echo "- rollback: re-run deploy-$ENVIRONMENT with an earlier commit, or \`HELM_DRIVER=configmap helm -n $NAMESPACE rollback $RELEASE\`"
+          } >> "$GITHUB_STEP_SUMMARY"

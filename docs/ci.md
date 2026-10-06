@@ -52,6 +52,9 @@ security:
 
 The scanned image is the one that gets pushed. The `latest` tag is never used.
 
+On `main` the same run then deploys the commit to staging, and production follows after
+approval: see [deployment](deployment.md).
+
 The web app compiles its public URLs into the browser bundle, so it is built once per
 environment as `web:<sha>-staging` and `web:<sha>-production`. Its hosts come from the
 environment's Helm values (`global.domains`), the same file the deploy uses. The chart picks

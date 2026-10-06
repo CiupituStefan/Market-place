@@ -192,6 +192,21 @@ run "builds_a_whole_environment" {
     condition     = !strcontains(output.helm_values, "password") && !strcontains(output.helm_values, "secret_string")
     error_message = "Helm values must not contain secrets."
   }
+
+  assert {
+    condition     = aws_ssm_parameter.helm_values.name == "/cse/production/helm-values" && aws_ssm_parameter.helm_values.value == output.helm_values
+    error_message = "The deploy pipeline reads the Helm values from SSM."
+  }
+
+  assert {
+    condition     = yamldecode(output.helm_values).global.image.registry == "123456789012.dkr.ecr.eu-central-1.amazonaws.com"
+    error_message = "Images come from this account's ECR registry."
+  }
+
+  assert {
+    condition     = module.eks.access_entry_groups["deploy"] == toset(["cse-deployers"]) && !contains(keys(module.eks.access_policies), "deploy")
+    error_message = "The deploy role gets namespaced RBAC through its group, no EKS access policy."
+  }
 }
 
 run "staging_is_smaller" {

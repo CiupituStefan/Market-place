@@ -11,6 +11,8 @@ trap 'rm -rf "$out"' EXIT
 
 helm unittest "$chart"
 
+deployable_kinds='kind: (ConfigMap|Service|ServiceAccount|Deployment|HorizontalPodAutoscaler|PodDisruptionBudget|NetworkPolicy|Ingress|ExternalSecret)'
+
 for env in staging production; do
   values=(-f "$chart/values-$env.yaml" -f "$chart/ci/example-values.yaml")
   echo "── $env"
@@ -21,4 +23,11 @@ for env in staging production; do
     -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
     "$out/$env.yaml"
   kube-linter lint --config "$chart/.kube-linter.yaml" "$out/$env.yaml"
+  # The CI deploy role may manage only these kinds (Role `cse-deployer`, Terraform
+  # modules/platform) and never Secrets: a new kind needs a matching RBAC change.
+  unexpected="$(grep -E '^kind: ' "$out/$env.yaml" | sort -u | grep -vxE "$deployable_kinds" || true)"
+  if [ -n "$unexpected" ]; then
+    echo "The deploy role cannot manage: $unexpected" >&2
+    exit 1
+  fi
 done

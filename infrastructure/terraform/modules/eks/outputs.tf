@@ -22,3 +22,13 @@ output "oidc_provider_arn" {
 output "oidc_issuer" {
   value = replace(aws_eks_cluster.this.identity[0].oidc[0].issuer, "https://", "")
 }
+
+output "access_entry_groups" {
+  description = "Kubernetes groups per access entry."
+  value       = { for k, e in aws_eks_access_entry.this : k => toset(coalesce(e.kubernetes_groups, [])) }
+}
+
+output "access_policies" {
+  description = "EKS access policy per access entry that has one."
+  value       = { for k, a in aws_eks_access_policy_association.this : k => a.policy_arn }
+}

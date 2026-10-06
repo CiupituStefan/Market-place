@@ -45,11 +45,15 @@ variable "node_max_size" {
 }
 
 variable "access" {
-  description = "IAM roles allowed into the cluster: EKS access policy and optional namespaces."
+  description = <<-EOT
+    IAM roles allowed into the cluster: an EKS access policy (optionally limited to namespaces)
+    and/or Kubernetes groups whose permissions come from RBAC objects (e.g. a namespaced Role).
+  EOT
   type = map(object({
-    principal_arn = string
-    policy        = string
-    namespaces    = optional(list(string), [])
+    principal_arn     = string
+    policy            = optional(string)
+    namespaces        = optional(list(string), [])
+    kubernetes_groups = optional(list(string), [])
   }))
   default = {}
 }

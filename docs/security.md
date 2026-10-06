@@ -79,6 +79,13 @@ Security controls by layer. Items marked _(Phase N)_ land in that phase.
 - Actions pinned to commit SHAs, tools to checksums, service images to digests; read-only
   workflow permissions; Dependabot weekly with a cooldown.
 
+## Deployment ([deployment](deployment.md))
+
+- Production receives only commits deployed and smoke-tested on staging, after a reviewer
+  approves (self-review prevented); automatic rollback on a failed rollout or smoke test.
+- The deploy role has no access to Secrets, Terraform state or IAM: a namespaced Kubernetes
+  Role for the chart's kinds, its environment's SSM parameter, ECR image lookups.
+
 ## Still to come _(Phase 20)_
 
 Image signing and admission verification, Kubernetes RBAC review, CSP with nonces on the

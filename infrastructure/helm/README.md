@@ -21,23 +21,26 @@ marketplace/
 
 ## Deploying
 
+CD does this ([docs/deployment.md](../../docs/deployment.md)); by hand it is:
+
 ```bash
-helm upgrade --install marketplace infrastructure/helm/marketplace \
+aws ssm get-parameter --name /cse/staging/helm-values --query Parameter.Value --output text > aws-values.yaml
+HELM_DRIVER=configmap helm upgrade --install marketplace infrastructure/helm/marketplace \
   --namespace cse-staging \
   -f infrastructure/helm/marketplace/values-staging.yaml \
-  -f terraform-outputs-staging.yaml \
+  -f aws-values.yaml \
   --set global.image.tag="$GIT_SHA" \
-  --atomic --timeout 15m
+  --atomic --wait --timeout 15m
 ```
 
-`terraform-outputs-<env>.yaml` carries the account-specific values (ACM certificate and WAF
-ARNs, VPC CIDR, MSK brokers, secret names, image bucket, IRSA role ARNs):
-`terraform -chdir=infrastructure/terraform/stacks/infra output -raw helm_values`. The ECR
-registry comes from the global stack (`--set global.image.registry=...`). The CD pipeline does
-both (Phase 18). The web app runs `web:<sha>-<environment>` (`imagePerEnvironment`: its public URLs
+`aws-values.yaml` carries the account-specific values Terraform writes (ECR registry, ACM
+certificate and WAF ARNs, VPC CIDR, MSK brokers, secret names, image bucket, IRSA role ARNs).
+Release records live in ConfigMaps (`HELM_DRIVER=configmap`, always): the chart renders no
+Secret, so the deploy role needs no access to Secrets. The web app runs `web:<sha>-<environment>` (`imagePerEnvironment`: its public URLs
 are compiled in). Images are always tagged with the Git SHA: the chart refuses an empty tag and
 `latest`. `--atomic` rolls back automatically when the rollout does not become ready; a manual
-rollback is `helm -n cse-staging rollback marketplace`.
+rollback is `HELM_DRIVER=configmap helm -n cse-staging rollback marketplace` (or a deploy of an earlier
+commit, [docs/deployment.md](../../docs/deployment.md#rolling-back)).
 
 ## What the cluster must provide
 

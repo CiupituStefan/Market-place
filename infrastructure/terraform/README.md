@@ -73,9 +73,11 @@ terraform -chdir=stacks/platform apply -var-file=../../envs/staging/platform.tfv
 ```
 
 Switching environments re-initialises the backend: add `-reconfigure` to `init`. Then follow the
-two runbooks below once per environment, and deploy the chart
-([infrastructure/helm](../helm/README.md)) with `terraform -chdir=stacks/infra output -raw helm_values`
-as an extra values file.
+two runbooks below once per environment. Deployments then come from CD
+([docs/deployment.md](../../docs/deployment.md)): `infra` writes the chart's account-specific
+values (registry, ARNs, hosts; no secrets) to the SSM parameter `/cse/<env>/helm-values`, and the
+platform stack gives the CI deploy role a namespaced Role (`cse-deployer`) without access to
+Secrets.
 
 ### Databases and roles
 
@@ -146,8 +148,9 @@ cluster), after which `allow_all_authenticated` is turned off.
 
 ## Changing things
 
-- `terraform plan` always before `apply`; production applies run from CD with a reviewed plan
-  (Phase 18). Every module pins its provider major version; the stacks commit their lock files
+- `terraform plan` always before `apply`, run by an operator with an SSO session (CI validates
+  and tests every change; applying from a pipeline needs a role broad enough to change IAM and
+  is not automated). Every module pins its provider major version; the stacks commit their lock files
   (`terraform providers lock -platform=linux_amd64 -platform=linux_arm64 -platform=darwin_arm64
 -platform=darwin_amd64` after changing providers).
 - `./check.sh` before pushing (needs terraform, tflint, checkov). Nothing in it touches AWS.

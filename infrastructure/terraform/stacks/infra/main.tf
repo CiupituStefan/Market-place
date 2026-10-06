@@ -2,6 +2,11 @@ locals {
   name          = "cse-${var.environment}"
   app_namespace = "cse-${var.environment}"
   secret_prefix = "cse/${var.environment}"
+  # Kubernetes group of the CI deploy role; bound to a namespaced Role by the platform stack.
+  deployers_group = "cse-deployers"
+  # Helm values for the deploy pipeline (no secrets): read by the deploy role, not from state.
+  helm_values_parameter = "/cse/${var.environment}/helm-values"
+  registry              = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.region}.amazonaws.com"
   # Every deployable unit; services are also Kafka users and have a secrets entry.
   services = [
     "api-gateway", "auth-service", "product-service", "inventory-service", "cart-service",
@@ -81,11 +86,11 @@ module "eks" {
       policy        = "AmazonEKSClusterAdminPolicy"
     } },
     {
-      # CI deploys the application chart into its namespace only.
+      # CI deploys the application chart: permissions from a Role in the app namespace
+      # (platform stack), limited to the kinds the chart renders and with no access to Secrets.
       deploy = {
-        principal_arn = module.github.role_arns["${local.name}-deploy"]
-        policy        = "AmazonEKSEditPolicy"
-        namespaces    = [local.app_namespace]
+        principal_arn     = module.github.role_arns["${local.name}-deploy"]
+        kubernetes_groups = [local.deployers_group]
       }
     },
   )
@@ -238,13 +243,79 @@ module "github" {
       subjects = ["environment:${var.environment}"]
       policy_json = jsonencode({
         Version = "2012-10-17"
-        Statement = [{
-          Sid      = "FindTheCluster"
-          Effect   = "Allow"
-          Action   = ["eks:DescribeCluster"]
-          Resource = "arn:${data.aws_partition.current.partition}:eks:${var.region}:${data.aws_caller_identity.current.account_id}:cluster/${local.name}"
-        }]
+        Statement = [
+          {
+            Sid      = "FindTheCluster"
+            Effect   = "Allow"
+            Action   = ["eks:DescribeCluster"]
+            Resource = "arn:${data.aws_partition.current.partition}:eks:${var.region}:${data.aws_caller_identity.current.account_id}:cluster/${local.name}"
+          },
+          {
+            Sid      = "ReadTheHelmValues"
+            Effect   = "Allow"
+            Action   = ["ssm:GetParameter"]
+            Resource = "arn:${data.aws_partition.current.partition}:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:parameter${local.helm_values_parameter}"
+          },
+          {
+            # Refuse to deploy a commit whose images are missing.
+            Sid      = "CheckTheImagesExist"
+            Effect   = "Allow"
+            Action   = ["ecr:DescribeImages"]
+            Resource = "arn:${data.aws_partition.current.partition}:ecr:${var.region}:${data.aws_caller_identity.current.account_id}:repository/cse/*"
+          },
+        ]
       })
     }
   }
+}
+
+# ── deploy pipeline inputs ────────────────────────────────────────────────────
+
+locals {
+  helm_values = yamlencode({
+    global = {
+      image = { registry = local.registry }
+      externalSecrets = {
+        keyPrefix         = local.secret_prefix
+        kafkaSecretPrefix = "AmazonMSK_${local.name}_"
+        redisSecretKey    = module.redis.secret_name
+      }
+      ingress = {
+        certificateArn    = aws_acm_certificate_validation.app.certificate_arn
+        wafAclArn         = module.waf.web_acl_arn
+        loadBalancerCidrs = [module.network.vpc_cidr]
+      }
+      env = {
+        KAFKA_BROKERS = module.msk.bootstrap_brokers_sasl_scram
+      }
+    }
+    components = {
+      product-service = {
+        iamRoleArn = module.product_service_role.arn
+        env = {
+          S3_BUCKET      = module.assets.bucket_name
+          S3_REGION      = var.region
+          ASSET_BASE_URL = module.assets.cdn_url
+        }
+      }
+      notification-service = {
+        iamRoleArn = module.notification_service_role.arn
+        env = {
+          SES_REGION            = var.region
+          SES_CONFIGURATION_SET = module.ses.configuration_set
+          EMAIL_FROM            = "CSE Keyboards <hello@${var.environment == "production" ? var.domain : "${var.environment}.${var.domain}"}>"
+        }
+      }
+    }
+  })
+}
+
+resource "aws_ssm_parameter" "helm_values" {
+  #checkov:skip=CKV2_AWS_34:Not a secret (resource names, ARNs, hosts); readable by the deploy role.
+  name        = local.helm_values_parameter
+  description = "Account-specific Helm values for ${local.name} (no secrets)"
+  type        = "String"
+  # Standard tier while the YAML fits in 4 KB; moves to advanced on its own if it grows.
+  tier  = "Intelligent-Tiering"
+  value = local.helm_values
 }

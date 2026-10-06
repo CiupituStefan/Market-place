@@ -86,4 +86,5 @@ module "platform" {
   zone_id              = local.infra.zone_id
   domain               = var.domain
   app_namespace        = local.infra.app_namespace
+  deployers_group      = local.infra.deployers_group
 }

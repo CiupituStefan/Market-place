@@ -1,8 +1,9 @@
 name: Build images
 
 # Every pull request builds and scans every image (proves the Dockerfiles and catches
-# vulnerable base layers before merge); main also pushes them to ECR, tagged with the commit
-# SHA. Deployment (Phase 18) starts from a successful run of this workflow on main.
+# vulnerable base layers before merge). On main the images are pushed to ECR, tagged with the
+# commit SHA and deployed to staging + smoke-tested; deploy-production.yml then waits for a
+# reviewer's approval.
 
 on:
   pull_request:
@@ -163,3 +164,18 @@ jobs:
         env:
           RESULT: ${{ needs.image.result }}
         run: test "$RESULT" = success
+
+  # main only: the commit's images are in ECR, so it goes to staging in the same run (main
+  # runs are serialised, so staging never moves backwards). Production follows from
+  # deploy-production.yml once this run succeeds.
+  staging:
+    name: Deploy staging
+    needs: built
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.built.result == 'success'
+    uses: ./.github/workflows/deploy-staging.yml
+    permissions:
+      contents: read # checkout
+      id-token: write # OIDC to the staging deploy role
+      deployments: write # smoke-tested record
+    with:
+      sha: ${{ github.sha }}

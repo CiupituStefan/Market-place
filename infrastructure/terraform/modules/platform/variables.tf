@@ -39,3 +39,8 @@ variable "domain" {
 variable "app_namespace" {
   type = string
 }
+
+variable "deployers_group" {
+  description = "Kubernetes group of the CI deploy role (EKS access entry)."
+  type        = string
+}

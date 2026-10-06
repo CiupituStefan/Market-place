@@ -70,13 +70,14 @@ resource "aws_eks_cluster" "this" {
 
 # Cluster administrators and CI deploy roles, by IAM role ARN.
 resource "aws_eks_access_entry" "this" {
-  for_each      = var.access
-  cluster_name  = aws_eks_cluster.this.name
-  principal_arn = each.value.principal_arn
+  for_each          = var.access
+  cluster_name      = aws_eks_cluster.this.name
+  principal_arn     = each.value.principal_arn
+  kubernetes_groups = length(each.value.kubernetes_groups) > 0 ? each.value.kubernetes_groups : null
 }
 
 resource "aws_eks_access_policy_association" "this" {
-  for_each      = var.access
+  for_each      = { for k, v in var.access : k => v if v.policy != null }
   cluster_name  = aws_eks_cluster.this.name
   principal_arn = each.value.principal_arn
   policy_arn    = "arn:${data.aws_partition.current.partition}:eks::aws:cluster-access-policy/${each.value.policy}"

@@ -1,0 +1,34 @@
+name: Deploy staging
+
+# Runs after every successful image build on main (called by build.yml), or by hand to put
+# any built commit on staging. Production only accepts commits that passed here.
+
+on:
+  workflow_call:
+    inputs:
+      sha:
+        type: string
+        required: true
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Full commit SHA (its images must be in ECR)
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  staging:
+    name: Staging
+    uses: ./.github/workflows/deploy.yml
+    permissions:
+      contents: read # checkout
+      id-token: write # OIDC to the staging deploy role
+      deployments: write # the smoke-tested record production checks
+    with:
+      environment: staging
+      sha: ${{ inputs.sha }}
+      # A manual run may put an older commit back (rollback); the automatic one never does.
+      allow-older: ${{ github.event_name == 'workflow_dispatch' }}

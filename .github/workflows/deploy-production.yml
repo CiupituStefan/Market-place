@@ -1,0 +1,76 @@
+name: Deploy production
+
+# Promotes a commit that passed staging. Automatically offered after every successful build
+# run on main (which already deployed and smoke-tested the commit on staging); the
+# `production` GitHub environment holds it until a reviewer approves. Run by hand with an
+# earlier commit to roll production back.
+
+on:
+  # Runs this file from main, never code from a pull request; only successful main pushes
+  # are accepted below.
+  workflow_run: # zizmor: ignore[dangerous-triggers]
+    workflows: [Build images]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Full commit SHA; it must have been deployed and smoke-tested on staging
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+# Promotions queue one at a time; while one waits for approval, a newer commit replaces any
+# older one still pending, so reviewers are asked about the latest commit.
+concurrency:
+  group: promote-production
+  cancel-in-progress: false
+
+jobs:
+  staged:
+    name: Passed staging
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      deployments: read # the smoke-tested records written by staging deploys
+    outputs:
+      sha: ${{ steps.check.outputs.sha }}
+    steps:
+      - name: The commit was deployed and smoke-tested on staging
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ inputs.sha || github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "sha must be a full 40-character commit SHA"; exit 1; }
+          for id in $(gh api "repos/$GITHUB_REPOSITORY/deployments?sha=$SHA&environment=staging&task=smoke-tested" --jq '.[].id'); do
+            if gh api "repos/$GITHUB_REPOSITORY/deployments/$id/statuses" --jq '.[].state' | grep -qx success; then
+              echo "$SHA passed staging (deployment $id)"
+              echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done
+          echo "::error::$SHA has no successful smoke-tested staging deployment; deploy it to staging first"
+          exit 1
+
+  production:
+    name: Production
+    needs: staged
+    uses: ./.github/workflows/deploy.yml
+    permissions:
+      contents: read # checkout
+      id-token: write # OIDC to the production deploy role
+      deployments: write # the smoke-tested record
+    with:
+      environment: production
+      sha: ${{ needs.staged.outputs.sha }}
+      # Manual runs may roll back to an earlier commit; automatic ones only move forward.
+      allow-older: ${{ github.event_name == 'workflow_dispatch' }}
