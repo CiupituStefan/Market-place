@@ -265,6 +265,9 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}
       DEPLOYMENT_ENVIRONMENT: local
       CORS_ORIGINS: http://localhost:3000
+      # Off only for the end-to-end suite (scripts/e2e.sh): its parallel journeys all come from one
+      # address. The limits themselves are covered by the gateway's tests.
+      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
       AUTH_JWKS_URL: http://auth-service:4001/.well-known/jwks.json
       AUTH_SERVICE_URL: http://auth-service:4001
       PRODUCT_SERVICE_URL: http://product-service:4002

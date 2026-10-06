@@ -9,7 +9,7 @@ A production-oriented e-commerce platform for mechanical and custom keyboards, k
 stabilizers, cables, desk mats and accessories. Built as TypeScript microservices (NestJS) with a
 Next.js storefront, PostgreSQL, Redis, Kafka and Stripe, deployed to Kubernetes on AWS.
 
-> **Status: Phases 1–20 of 21 — Security hardening: strict nonce-based CSP, default-deny egress, admission control with signed provenance, per-service Kafka ACLs, a threat model.** Phase 21 (E2E testing) is next.
+> **Status: all 21 phases done — the last one: Playwright end-to-end journeys (checkout, payment, stock, accounts, fulfilment, reviews, browser security) on the full Docker Compose stack, in CI on every pull request.**
 > See the [roadmap](#roadmap).
 
 ## Architecture at a glance
@@ -163,7 +163,7 @@ Kubernetes (Helm) · Terraform · AWS (EKS, RDS, ElastiCache, MSK, ECR, WAF) · 
 | 18  | GitHub Actions CD                              | ✅     |
 | 19  | Observability                                  | ✅     |
 | 20  | Security hardening                             | ✅     |
-| 21  | E2E testing                                    |        |
+| 21  | E2E testing                                    | ✅     |
 
 ## Documentation
 
@@ -174,6 +174,7 @@ Kubernetes (Helm) · Terraform · AWS (EKS, RDS, ElastiCache, MSK, ECR, WAF) · 
 - [Security](docs/security.md) and [threat model](docs/threat-model.md)
 - [Architecture Decision Records](docs/adr/README.md)
 - [Local development](docs/local-development.md)
+- [Testing](docs/testing.md) (unit, integration, end-to-end)
 - [Continuous integration](docs/ci.md)
 - [Deployment](docs/deployment.md)
 - [Observability](docs/observability.md) and [runbooks](docs/runbooks.md)

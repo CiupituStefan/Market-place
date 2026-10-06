@@ -127,6 +127,9 @@ components:
     autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 10, targetCPUUtilization: 70 }
     env:
       API_INTERNAL_URL: http://api-gateway:4000
+      # Longer than the ALB's 60 s idle timeout (Next.js defaults to 5 s): see
+      # packages/nest-common/src/http-server.ts, which does the same for the services.
+      KEEP_ALIVE_TIMEOUT: '65000'
 
   api-gateway:
     port: 4000

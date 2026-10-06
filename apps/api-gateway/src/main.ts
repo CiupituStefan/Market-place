@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { PinoNestLogger, runMain } from '@market/nest-common';
+import { PinoNestLogger, runMain, tuneHttpServer } from '@market/nest-common';
 import { createLogger } from '@market/logger';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
@@ -21,6 +21,7 @@ runMain(SERVICE_NAME, async () => {
     bufferLogs: true,
   });
   setupGateway(app, config, logger);
+  tuneHttpServer(app.getHttpServer());
   await app.listen(config.PORT, '0.0.0.0');
   logger.info({ port: config.PORT, docs: config.DOCS_ENABLED }, `${SERVICE_NAME} listening`);
 });

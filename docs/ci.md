@@ -22,8 +22,19 @@ real database; outbox → Kafka → consumer → DLQ needs a real broker). Every
 are applied to its own database. The job fails if a schema changed without a committed
 migration. Docker Compose is validated too.
 
+**e2e** — `scripts/e2e.sh --build --down`: builds every image, starts the whole shop in
+Docker Compose (seeded catalog, stock, admin) and runs the Playwright journeys in Chromium
+([testing](testing.md)). On failure the HTML report, traces, screenshots, videos and every
+service's logs are kept as the `e2e-report` artifact for two weeks.
+
 **helm** — `infrastructure/helm/check.sh`: helm-unittest, `helm lint --strict`, kubeconform
-(Kubernetes and CRD schemas) and kube-linter, for staging and production.
+(Kubernetes and CRD schemas) and kube-linter, for staging and production; the cluster's
+admission policies against good and bad pods (`kyverno test`); the kafka-access job's chart.
+
+**kafka-access** — `infrastructure/kafka/test.sh`: applies the generated topics and ACLs to a
+real broker with SASL/SCRAM and the ACL authorizer, then checks that each service can do exactly
+what `access.ts` grants, that drift is removed, and that it holds with
+`allow.everyone.if.no.acl.found=false`.
 
 **terraform** — `infrastructure/terraform/check.sh`:
 
@@ -109,7 +120,9 @@ workflows, and the `AWS_BUILD_ROLE_ARN` variable.
 
 ```bash
 pnpm check                              # verify (needs the Compose infrastructure for real-DB tests)
-infrastructure/helm/check.sh            # helm, helm-unittest plugin, kubeconform, kube-linter
+scripts/e2e.sh --build                  # end-to-end journeys on Docker Compose (Playwright)
+infrastructure/helm/check.sh            # helm, helm-unittest plugin, kubeconform, kube-linter, kyverno
+infrastructure/kafka/test.sh            # Kafka topics and ACLs on a real broker (Docker)
 infrastructure/terraform/check.sh       # terraform, tflint, checkov
 scripts/security-scan.sh                # gitleaks, trivy, semgrep
 actionlint && zizmor --persona auditor .github

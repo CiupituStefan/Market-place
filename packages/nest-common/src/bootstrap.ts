@@ -16,6 +16,7 @@ import { AllExceptionsFilter } from './exception.filter.js';
 import { PinoNestLogger } from './nest-logger.js';
 import { setupOpenApi, type OpenApiOptions } from './openapi.js';
 import { requestContextMiddleware } from './request-context.js';
+import { tuneHttpServer } from './http-server.js';
 
 export interface BaseServiceConfig {
   NODE_ENV: 'development' | 'test' | 'production';
@@ -111,6 +112,7 @@ export async function startService(
   }
   await options.beforeListen?.(app, logger);
 
+  tuneHttpServer(app.getHttpServer());
   await app.listen(config.PORT, '0.0.0.0');
   logger.info({ port: config.PORT }, `${options.serviceName} listening`);
   return { app, logger };

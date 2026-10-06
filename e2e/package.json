@@ -1,0 +1,22 @@
+{
+  "name": "@market/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "End-to-end tests: the shop's critical journeys through a real browser and the whole stack.",
+  "scripts": {
+    "e2e": "playwright test",
+    "e2e:report": "playwright show-report",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "clean": "rm -rf playwright-report test-results .turbo"
+  },
+  "devDependencies": {
+    "@market/eslint-config": "workspace:*",
+    "@market/tsconfig": "workspace:*",
+    "@playwright/test": "1.63.0",
+    "@types/node": "^22.19.0",
+    "eslint": "^10.12.0",
+    "typescript": "~6.0.3"
+  }
+}
