@@ -23,3 +23,8 @@ sizing = {
   redis_replicas      = 0
   kafka_broker_type   = "kafka.t3.small"
 }
+
+# Alerts (Amazon Managed Prometheus → SNS) and dashboards (Amazon Managed Grafana, signed in
+# with IAM Identity Center; put the operators' group IDs in admin_group_ids).
+alert_email = ""
+grafana     = { enabled = true, admin_group_ids = [] }

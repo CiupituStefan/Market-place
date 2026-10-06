@@ -95,6 +95,15 @@ Security controls by layer. Items marked _(Phase N)_ land in that phase.
 - Only images with valid signed provenance from `build.yml` on `main` at the deployed commit
   are deployed.
 
+## Telemetry ([observability](observability.md))
+
+- Query strings (which can hold single-use tokens) are removed from spans in the collector
+  before storage; log fields with secrets are redacted by the logger before export; both tested.
+- Trace context from clients (`traceparent`, `tracestate`, `baggage`) is dropped at the gateway;
+  only our own API receives the web app's trace context.
+- Telemetry backends are reached only by the collector, through an IRSA role limited to this
+  environment's workspace, log group and X-Ray writes.
+
 ## Still to come _(Phase 20)_
 
 Provenance verification at admission (in-cluster policy), Kubernetes RBAC review, CSP with nonces on the

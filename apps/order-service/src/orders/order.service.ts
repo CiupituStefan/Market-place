@@ -1,3 +1,4 @@
+import { domainMetrics } from '@market/telemetry';
 import { enqueueEvent } from '@market/db';
 import { OrderCancelledV1, OrderDeliveredV1, OrderPaidV1, OrderShippedV1 } from '@market/events';
 import {
@@ -399,6 +400,8 @@ export class OrderService {
   }
 
   private async emitCancelled(tx: Database, order: OrderRow, refundRequired: boolean) {
+    // Counted with the event; a rare rollback after this point over-counts by one.
+    domainMetrics.orderCancelled(order.cancelReason ?? 'ADMIN');
     await enqueueEvent(
       tx,
       OrderCancelledV1,

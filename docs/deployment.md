@@ -51,6 +51,9 @@ deploy-production.yml (starts when the build run succeeds)
 
 8. Record a GitHub deployment `smoke-tested` for the commit. Production requires this record
    from staging.
+9. Sync the commit's Grafana dashboards into Amazon Managed Grafana (`scripts/grafana-sync.sh`,
+   15-minute service-account token, deleted afterwards). A failure here warns but does not undo
+   the deployment.
 
 Deployments of one environment never overlap: a newer one waits, it never interrupts. While a
 promotion waits for approval, a newer commit replaces any older one still pending.

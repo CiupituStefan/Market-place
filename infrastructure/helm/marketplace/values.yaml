@@ -56,6 +56,13 @@ global:
     redisSecretKey: ''
     refreshInterval: 1h
 
+  # OpenTelemetry collector installed with the cluster (Terraform platform stack). Empty
+  # endpoint: telemetry off.
+  telemetry:
+    endpoint: http://otel-collector.observability.svc.cluster.local:4318
+    # 1 = every trace. Lower it when traffic makes full tracing expensive.
+    tracesSampleRatio: 1
+
   ingress:
     enabled: true
     className: alb

@@ -1,7 +1,11 @@
 import { createLogger, type Logger } from '@market/logger';
+import { flushTelemetry } from '@market/telemetry';
 import {
+  Injectable,
+  Module,
   RequestMethod,
   type DynamicModule,
+  type OnApplicationShutdown,
   type INestApplication,
   type Type,
 } from '@nestjs/common';
@@ -54,6 +58,18 @@ export function configureApp(app: INestApplication, options: ConfigureAppOptions
   app.enableShutdownHooks();
 }
 
+/** Exports the last spans, metrics and logs once the service has stopped taking work. */
+@Injectable()
+class TelemetryShutdown implements OnApplicationShutdown {
+  async onApplicationShutdown(): Promise<void> {
+    await flushTelemetry();
+  }
+}
+
+/** Root module: the service's module plus process-level concerns (telemetry flush). */
+@Module({})
+class ServiceRoot {}
+
 export interface StartServiceOptions {
   serviceName: string;
   module: Type | DynamicModule;
@@ -78,7 +94,12 @@ export async function startService(
     pretty: config.NODE_ENV === 'development',
   });
 
-  const app = await NestFactory.create<NestExpressApplication>(options.module, {
+  const root: DynamicModule = {
+    module: ServiceRoot,
+    imports: [options.module],
+    providers: [TelemetryShutdown],
+  };
+  const app = await NestFactory.create<NestExpressApplication>(root, {
     logger: new PinoNestLogger(logger),
     bodyParser: options.bodyParser ?? true,
     rawBody: options.rawBody ?? false,
@@ -108,10 +129,15 @@ export function runMain(
       logger.fatal({ err: error }, `failed to start ${serviceName}`);
       // Exit for real: open handles (database pool, broker sockets) would otherwise keep a
       // half-started process alive that never serves traffic and is never restarted.
-      // A short delay lets the log line reach stdout first.
-      setTimeout(() => {
+      // Wait a moment so the log line reaches stdout, and (at most 2 s) for buffered telemetry
+      // to reach the collector.
+      const wait = (ms: number) =>
+        new Promise<void>((resolve) => {
+          setTimeout(resolve, ms);
+        });
+      void Promise.all([wait(100), Promise.race([flushTelemetry(), wait(2_000)])]).then(() => {
         exit(1);
-      }, 100);
+      });
     },
   );
 }

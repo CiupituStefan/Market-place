@@ -52,6 +52,22 @@ describe('buildUpstreamRequestHeaders', () => {
     expect(headers['x-forwarded-for']).toBe('203.0.113.7');
   });
 
+  it("drops the client's trace context (the gateway starts the trace)", () => {
+    const headers = buildUpstreamRequestHeaders(
+      {
+        traceparent: '00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01',
+        tracestate: 'vendor=x',
+        baggage: 'userId=admin',
+        accept: 'application/json',
+      },
+      context,
+    );
+    expect(headers).not.toHaveProperty('traceparent');
+    expect(headers).not.toHaveProperty('tracestate');
+    expect(headers).not.toHaveProperty('baggage');
+    expect(headers.accept).toBe('application/json');
+  });
+
   it('drops hop-by-hop headers, including those named in Connection', () => {
     const headers = buildUpstreamRequestHeaders(
       {

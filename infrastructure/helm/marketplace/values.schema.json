@@ -43,6 +43,14 @@
           "additionalProperties": false,
           "properties": { "caFile": { "type": "string", "pattern": "^files/.+\\.pem$" } }
         },
+        "telemetry": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "endpoint": { "type": "string", "pattern": "^(|https?://.+)$" },
+            "tracesSampleRatio": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 }
+          }
+        },
         "externalSecrets": { "type": "object" },
         "ingress": { "type": "object" },
         "networkPolicy": { "type": "object" },

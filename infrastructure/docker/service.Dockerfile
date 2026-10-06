@@ -54,7 +54,8 @@ LABEL org.opencontainers.image.title="cse-${SERVICE}" \
       org.opencontainers.image.source="https://github.com/CiupituStefan/Market-place"
 ENV NODE_ENV=production \
     PORT=${PORT} \
-    SERVICE_NAME=${SERVICE}
+    SERVICE_NAME=${SERVICE} \
+    OTEL_SERVICE_NAME=${SERVICE}
 # The runtime needs node only: package managers are attack surface, not features.
 RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
       /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /opt/yarn* \
@@ -68,4 +69,6 @@ EXPOSE ${PORT}
 HEALTHCHECK --interval=15s --timeout=3s --start-period=30s --retries=3 \
   CMD ["node", "-e", "fetch('http://127.0.0.1:'+process.env.PORT+'/health/live').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
 # Node is PID 1 and handles SIGTERM itself (graceful shutdown in @market/nest-common).
-CMD ["node", "dist/main.js"]
+# The preload starts OpenTelemetry before the app is imported; without
+# OTEL_EXPORTER_OTLP_ENDPOINT it does nothing.
+CMD ["node", "--import", "@market/telemetry/register", "dist/main.js"]

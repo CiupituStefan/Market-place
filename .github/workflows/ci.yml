@@ -228,6 +228,22 @@ jobs:
           sarif_file: .sarif/code.sarif
           category: semgrep
 
+  observability:
+    name: Observability (alert rules, collector, dashboards)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/install-tool
+        with:
+          url: https://github.com/prometheus/prometheus/releases/download/v3.15.0/prometheus-3.15.0.linux-amd64.tar.gz
+          sha256: 2a542df32eac02ee17b9d844fb2aa1de00dafa5476579ba8a3ba862e9d572ea0
+          binary: promtool
+      - name: Check the observability configuration
+        run: infrastructure/observability/check.sh
+
   dependency-review:
     name: Dependency review (new vulnerabilities, licenses)
     if: github.event_name == 'pull_request'
@@ -284,7 +300,7 @@ jobs:
   passed:
     name: CI passed
     if: always()
-    needs: [verify, helm, terraform, security, workflows, dependency-review]
+    needs: [verify, helm, terraform, observability, security, workflows, dependency-review]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:

@@ -1,3 +1,4 @@
+import { domainMetrics } from '@market/telemetry';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { enqueueEvent, isUniqueViolation } from '@market/db';
 import { OrderCreatedV1 } from '@market/events';
@@ -310,11 +311,13 @@ export class CheckoutService {
         { producer: SERVICE_NAME, aggregateId: orderId },
       );
     });
+    domainMetrics.orderCreated();
   }
 
   /** Undo what a checkout took and mark it FAILED. Every step is idempotent. */
   private async fail(orderId: string, reservationId: string | null, cause: unknown): Promise<void> {
     const reason = cause instanceof DomainError ? cause.code : 'UNEXPECTED';
+    domainMetrics.checkoutFailed(reason);
     if (reservationId) {
       await this.inventory.release(reservationId, 'ORDER_CANCELLED').catch((error: unknown) => {
         this.logger.warn(

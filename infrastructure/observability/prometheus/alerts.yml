@@ -1,0 +1,94 @@
+# Alert rules, the same locally (Prometheus) and in AWS (Amazon Managed Service for
+# Prometheus, loaded by Terraform). Metric names are the OTLP ones translated by Prometheus:
+# dots → underscores, unit and _total suffixes; service.name → `job`.
+# Tested with `promtool test rules alerts.test.yml`. Runbooks: docs/runbooks.md.
+groups:
+  - name: cse-availability
+    rules:
+      - alert: HighErrorRate
+        # 5xx answers are bugs or outages: the shopper saw "something went wrong".
+        expr: |
+          sum by (job) (rate(http_server_request_duration_seconds_count{http_response_status_code=~"5.."}[5m]))
+            / sum by (job) (rate(http_server_request_duration_seconds_count[5m]))
+            > 0.05
+          and sum by (job) (rate(http_server_request_duration_seconds_count[5m])) > 0.1
+        for: 10m
+        labels: { severity: critical }
+        annotations:
+          summary: '{{ $labels.job }}: {{ $value | humanizePercentage }} of requests fail with 5xx'
+          runbook_url: https://github.com/CiupituStefan/Market-place/blob/main/docs/runbooks.md#higherrorrate
+
+      - alert: HighLatency
+        expr: |
+          histogram_quantile(0.95, sum by (job, le) (rate(http_server_request_duration_seconds_bucket[5m])))
+            > 1
+          and sum by (job) (rate(http_server_request_duration_seconds_count[5m])) > 0.1
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: '{{ $labels.job }}: p95 latency {{ $value | humanizeDuration }}'
+          runbook_url: https://github.com/CiupituStefan/Market-place/blob/main/docs/runbooks.md#highlatency
+
+      - alert: ServiceSilent
+        # Telemetry is pushed: a service that reported an hour ago and not in the last 5
+        # minutes is down, crash-looping or cannot reach the collector.
+        expr: |
+          group by (job) (target_info offset 1h)
+            unless group by (job) (last_over_time(target_info[5m]))
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: '{{ $labels.job }} stopped reporting'
+          runbook_url: https://github.com/CiupituStefan/Market-place/blob/main/docs/runbooks.md#servicesilent
+
+      - alert: EventLoopBlocked
+        expr: max by (job) (nodejs_eventloop_delay_p99_seconds) > 0.5
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: '{{ $labels.job }}: event loop delay p99 {{ $value | humanizeDuration }}'
+          runbook_url: https://github.com/CiupituStefan/Market-place/blob/main/docs/runbooks.md#eventloopblocked
+
+  - name: cse-events
+    rules:
+      - alert: EventsDeadLettered
+        # Each one is an event a service gave up on: an order, payment or email that may be stuck.
+        expr: sum by (job, topic) (increase(cse_events_dead_lettered_total[10m])) > 0
+        labels: { severity: warning }
+        annotations:
+          summary: '{{ $labels.job }}: {{ $value | humanize }} event(s) from {{ $labels.topic }} dead-lettered'
+          runbook_url: https://github.com/CiupituStefan/Market-place/blob/main/docs/runbooks.md#eventsdeadlettered
+
+      - alert: OutboxLagging
+        # Events wait in the outbox: Kafka unreachable or the relay stuck. Orders still get
+        # placed, but nothing downstream (payments, emails, analytics) hears about them.
+        expr: |
+          histogram_quantile(0.95, sum by (job, le) (rate(cse_outbox_lag_seconds_bucket[5m]))) > 60
+        for: 10m
+        labels: { severity: critical }
+        annotations:
+          summary: '{{ $labels.job }}: events reach Kafka {{ $value | humanizeDuration }} after they happen'
+          runbook_url: https://github.com/CiupituStefan/Market-place/blob/main/docs/runbooks.md#outboxlagging
+
+  - name: cse-business
+    rules:
+      - alert: PaymentFailureSpike
+        expr: |
+          sum(rate(cse_payments_total{outcome="failed"}[15m]))
+            / sum(rate(cse_payments_total{outcome=~"succeeded|failed"}[15m]))
+            > 0.3
+          and sum(increase(cse_payments_total{outcome=~"succeeded|failed"}[15m])) >= 10
+        for: 10m
+        labels: { severity: critical }
+        annotations:
+          summary: '{{ $value | humanizePercentage }} of payment attempts fail'
+          runbook_url: https://github.com/CiupituStefan/Market-place/blob/main/docs/runbooks.md#paymentfailurespike
+
+      - alert: CheckoutsFailing
+        # Business refusals (out of stock, invalid coupon) are normal; these are not.
+        expr: |
+          sum by (reason) (increase(cse_checkouts_failed_total{reason=~"UNEXPECTED|SERVICE_UNAVAILABLE|INTERNAL_ERROR"}[10m])) >= 3
+        labels: { severity: critical }
+        annotations:
+          summary: '{{ $value | humanize }} checkouts failed with {{ $labels.reason }} in 10 minutes'
+          runbook_url: https://github.com/CiupituStefan/Market-place/blob/main/docs/runbooks.md#checkoutsfailing

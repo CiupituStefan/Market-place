@@ -1,5 +1,6 @@
 import { createEvent, type EventDefinition, type PayloadOf } from '@market/events';
 import { getRequestContext } from '@market/logger';
+import { currentTraceContext } from '@market/telemetry';
 import { sql } from 'drizzle-orm';
 import { bigint, index, integer, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import type { Database } from './postgres.js';
@@ -20,6 +21,11 @@ export const outboxEvents = pgTable(
     /** Kafka message key (aggregate id) for per-entity ordering. */
     messageKey: text('message_key').notNull(),
     envelope: jsonb('envelope').notNull(),
+    /**
+     * Extra Kafka headers, written with the event: the W3C trace context of the request that
+     * caused it (traceparent), so the consumer's work joins the same trace.
+     */
+    headers: jsonb('headers').$type<Record<string, string>>().notNull().default({}),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     publishedAt: timestamp('published_at', { withTimezone: true }),
     attempts: integer('attempts').notNull().default(0),
@@ -51,6 +57,7 @@ export async function enqueueEvent<D extends EventDefinition>(
     topic: definition.topic,
     messageKey: meta.aggregateId,
     envelope,
+    headers: currentTraceContext(),
   });
   return envelope.eventId;
 }

@@ -8,6 +8,7 @@ import {
 } from '@market/events';
 import type { Logger } from '@market/logger';
 import { runWithContext } from '@market/logger';
+import { contextFrom, domainMetrics, failSpan, SpanKind, withSpan } from '@market/telemetry';
 import { Consumer, MessagesStreamModes, stringDeserializers } from '@platformatic/kafka';
 import { and, eq } from 'drizzle-orm';
 import { ZodError } from 'zod';
@@ -122,36 +123,67 @@ export class EventProcessor<TDb extends AnyDatabase> {
     const entry = this.handlers.get(`${event.eventType}@v${String(event.eventVersion)}`);
     if (!entry) return 'ignored';
 
-    let lastError: unknown;
-    for (let attempt = 1; attempt <= this.options.maxAttempts; attempt += 1) {
-      try {
-        const duplicate = await runWithContext({ requestId: event.correlationId }, () =>
-          entry.transactional
-            ? this.handleInTransaction(entry, event)
-            : this.handleOutside(entry, event),
-        );
-        return duplicate ? 'duplicate' : 'processed';
-      } catch (error) {
-        lastError = error;
-        if (error instanceof PermanentEventError || error instanceof ZodError) break;
-        if (attempt < this.options.maxAttempts) {
-          const delay = this.options.retryDelayMs * 2 ** (attempt - 1);
-          this.options.logger.warn(
-            {
-              err: error,
-              eventId: event.eventId,
-              eventType: event.eventType,
-              attempt,
-              retryInMs: delay,
-            },
-            `${this.definition.name}: handler failed; retrying`,
-          );
-          await sleep(delay);
+    // CONSUMER span, child of the publisher's span (trace context in the headers): the
+    // handler's queries and calls join the trace of the request that caused the event.
+    const started = process.hrtime.bigint();
+    const seconds = () => Number(process.hrtime.bigint() - started) / 1e9;
+    return withSpan(
+      `process ${message.topic}`,
+      {
+        kind: SpanKind.CONSUMER,
+        parent: contextFrom(message.headers),
+        attributes: {
+          'messaging.system': 'kafka',
+          'messaging.operation.type': 'process',
+          'messaging.destination.name': message.topic,
+          'messaging.consumer.group.name': this.definition.name,
+          'messaging.message.id': event.eventId,
+          'messaging.kafka.offset': Number(message.offset),
+          'messaging.destination.partition.id': String(message.partition),
+          'cse.event.type': event.eventType,
+          'request.id': event.correlationId,
+        },
+      },
+      async (span) => {
+        let lastError: unknown;
+        for (let attempt = 1; attempt <= this.options.maxAttempts; attempt += 1) {
+          try {
+            const duplicate = await runWithContext({ requestId: event.correlationId }, () =>
+              entry.transactional
+                ? this.handleInTransaction(entry, event)
+                : this.handleOutside(entry, event),
+            );
+            const outcome = duplicate ? 'duplicate' : 'processed';
+            domainMetrics.eventConsumed(message.topic, outcome, seconds());
+            span.setAttribute('cse.event.outcome', outcome);
+            return outcome;
+          } catch (error) {
+            lastError = error;
+            if (error instanceof PermanentEventError || error instanceof ZodError) break;
+            if (attempt < this.options.maxAttempts) {
+              const delay = this.options.retryDelayMs * 2 ** (attempt - 1);
+              span.addEvent('retry', { attempt, 'retry.delay_ms': delay });
+              domainMetrics.eventConsumed(message.topic, 'retried', seconds());
+              this.options.logger.warn(
+                {
+                  err: error,
+                  eventId: event.eventId,
+                  eventType: event.eventType,
+                  attempt,
+                  retryInMs: delay,
+                },
+                `${this.definition.name}: handler failed; retrying`,
+              );
+              await sleep(delay);
+            }
+          }
         }
-      }
-    }
-    await this.deadLetter(message, 'handler-failed', lastError, this.options.maxAttempts);
-    return 'dead-lettered';
+        failSpan(span, lastError);
+        span.setAttribute('cse.event.outcome', 'dead-lettered');
+        await this.deadLetter(message, 'handler-failed', lastError, this.options.maxAttempts);
+        return 'dead-lettered';
+      },
+    );
   }
 
   /** Inbox row and handler writes commit together: exactly-once effects in this database. */
@@ -199,6 +231,7 @@ export class EventProcessor<TDb extends AnyDatabase> {
     attempts: number,
   ) {
     const errorText = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+    domainMetrics.eventDeadLettered(message.topic);
     this.options.logger.error(
       {
         topic: message.topic,

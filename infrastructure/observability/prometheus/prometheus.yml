@@ -1,0 +1,17 @@
+# Local metrics store. Services push over OTLP through the collector (no scrape targets to
+# keep in sync with the services); Tempo's metrics generator writes span metrics.
+global:
+  evaluation_interval: 30s
+
+# OTLP → Prometheus: service.name becomes `job`; these resource attributes become labels too.
+otlp:
+  promote_resource_attributes:
+    - deployment.environment.name
+    - service.version
+
+storage:
+  tsdb:
+    out_of_order_time_window: 10m
+
+rule_files:
+  - /etc/prometheus/alerts.yml

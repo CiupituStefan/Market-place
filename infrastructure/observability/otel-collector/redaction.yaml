@@ -1,0 +1,13 @@
+# Shared by the local collector and the one in Kubernetes (Helm values embed the same rules).
+# Query strings can carry single-use tokens (email verification, password reset, unsubscribe):
+# they never reach trace storage. Applied before any exporter.
+processors:
+  transform/redact:
+    error_mode: ignore
+    trace_statements:
+      - set(span.attributes["url.query"], "REDACTED") where span.attributes["url.query"] != nil
+      - replace_pattern(span.attributes["url.full"], "\\?.*$", "?REDACTED")
+      - replace_pattern(span.attributes["http.url"], "\\?.*$", "?REDACTED")
+      - replace_pattern(span.attributes["http.target"], "\\?.*$", "?REDACTED")
+      - delete_key(span.attributes, "http.request.header.cookie")
+      - delete_key(span.attributes, "http.request.header.authorization")

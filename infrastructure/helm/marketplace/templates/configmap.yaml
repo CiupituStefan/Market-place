@@ -17,6 +17,20 @@ data:
   NODE_ENV: {{ $.Values.global.env.NODE_ENV | quote }}
   {{- end }}
   {{- include "marketplace.derivedEnv" $ctx | nindent 2 }}
+  {{- with $.Values.global.telemetry }}
+  {{- if .endpoint }}
+  # OpenTelemetry: traces, metrics and logs to the in-cluster collector (docs/observability.md).
+  OTEL_EXPORTER_OTLP_ENDPOINT: {{ .endpoint | quote }}
+  OTEL_SERVICE_NAME: {{ $name | quote }}
+  SERVICE_VERSION: {{ $.Values.global.image.tag | quote }}
+  DEPLOYMENT_ENVIRONMENT: {{ $.Values.global.environment | quote }}
+  {{- if .tracesSampleRatio }}
+  # Sample a share of new traces; a trace started upstream keeps its parent's decision.
+  OTEL_TRACES_SAMPLER: parentbased_traceidratio
+  OTEL_TRACES_SAMPLER_ARG: {{ .tracesSampleRatio | quote }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
   {{- range $key, $value := $c.env }}
   {{ $key }}: {{ $value | quote }}
   {{- end }}

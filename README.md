@@ -9,7 +9,7 @@ A production-oriented e-commerce platform for mechanical and custom keyboards, k
 stabilizers, cables, desk mats and accessories. Built as TypeScript microservices (NestJS) with a
 Next.js storefront, PostgreSQL, Redis, Kafka and Stripe, deployed to Kubernetes on AWS.
 
-> **Status: Phases 1–18 of 21 — CD: every merge to staging with smoke tests, approved promotion to production, automatic rollback.** Phase 19 (observability) is next.
+> **Status: Phases 1–19 of 21 — Observability: OpenTelemetry traces, metrics and logs, one trace from the gateway through Kafka, dashboards and tested alerts.** Phase 20 (security hardening) is next.
 > See the [roadmap](#roadmap).
 
 ## Architecture at a glance
@@ -161,7 +161,7 @@ Kubernetes (Helm) · Terraform · AWS (EKS, RDS, ElastiCache, MSK, ECR, WAF) · 
 | 16  | Terraform + AWS                                | ✅     |
 | 17  | GitHub Actions CI                              | ✅     |
 | 18  | GitHub Actions CD                              | ✅     |
-| 19  | Observability                                  |        |
+| 19  | Observability                                  | ✅     |
 | 20  | Security hardening                             |        |
 | 21  | E2E testing                                    |        |
 
@@ -176,6 +176,7 @@ Kubernetes (Helm) · Terraform · AWS (EKS, RDS, ElastiCache, MSK, ECR, WAF) · 
 - [Local development](docs/local-development.md)
 - [Continuous integration](docs/ci.md)
 - [Deployment](docs/deployment.md)
+- [Observability](docs/observability.md) and [runbooks](docs/runbooks.md)
 - [Repository settings](docs/repository-settings.md)
 - [Security policy](SECURITY.md) (report vulnerabilities privately)
 - [Storefront (apps/web)](apps/web/README.md)

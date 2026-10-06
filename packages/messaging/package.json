@@ -26,6 +26,7 @@
     "@market/db": "workspace:*",
     "@market/events": "workspace:*",
     "@market/logger": "workspace:*",
+    "@market/telemetry": "workspace:*",
     "@platformatic/kafka": "^2.13.0",
     "drizzle-orm": "^0.45.3",
     "zod": "^4.6.5"
@@ -35,6 +36,10 @@
     "@market/eslint-config": "workspace:*",
     "@market/tsconfig": "workspace:*",
     "@market/types": "workspace:*",
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/context-async-hooks": "^2.11.0",
+    "@opentelemetry/core": "^2.11.0",
+    "@opentelemetry/sdk-trace-base": "^2.11.0",
     "@types/node": "^22.19.0",
     "drizzle-kit": "^0.31.11",
     "eslint": "^10.12.0",

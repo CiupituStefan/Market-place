@@ -18,7 +18,18 @@ const HOP_BY_HOP = new Set([
  * with these names is dropped so it cannot impersonate a user or spoof its IP.
  */
 const SPOOFABLE_PREFIXES = ['x-user-', 'x-internal-', 'x-forwarded-'];
-const SPOOFABLE = new Set(['forwarded', 'x-real-ip', 'host', 'content-length']);
+const SPOOFABLE = new Set([
+  'forwarded',
+  'x-real-ip',
+  'host',
+  'content-length',
+  // Trace context is a trust boundary too: the gateway starts the trace (and the
+  // instrumentation injects it upstream); clients cannot pick trace IDs or push baggage
+  // into internal services.
+  'traceparent',
+  'tracestate',
+  'baggage',
+]);
 
 function connectionTokens(headers: IncomingHttpHeaders | Record<string, unknown>): Set<string> {
   const value = headers.connection;

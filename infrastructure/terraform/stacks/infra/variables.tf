@@ -77,3 +77,19 @@ variable "credential_versions" {
   })
   default = {}
 }
+
+variable "alert_email" {
+  description = "Receives alert notifications by email (confirm the SNS subscription). Empty: none."
+  type        = string
+  default     = ""
+}
+
+variable "grafana" {
+  description = "Amazon Managed Grafana (needs IAM Identity Center); admin_group_ids are Identity Center groups."
+  type = object({
+    enabled         = bool
+    admin_group_ids = optional(list(string), [])
+    version         = optional(string, "10.4")
+  })
+  default = { enabled = false }
+}

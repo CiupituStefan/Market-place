@@ -8,6 +8,13 @@
       "when": 1791212121973,
       "tag": "0000_messaging",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791290268030,
+      "tag": "0001_outbox_headers",
+      "breakpoints": true
     }
   ]
 }

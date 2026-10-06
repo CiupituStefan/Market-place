@@ -14,7 +14,7 @@ function migrationsWithOutbox(): string {
   mkdirSync(join(dir, 'meta'));
   writeFileSync(
     join(dir, '0000_outbox.sql'),
-    `CREATE TABLE "outbox_events" ("id" uuid PRIMARY KEY NOT NULL, "sequence" bigint GENERATED ALWAYS AS IDENTITY NOT NULL, "topic" text NOT NULL, "message_key" text NOT NULL, "envelope" jsonb NOT NULL, "created_at" timestamp with time zone DEFAULT now() NOT NULL, "published_at" timestamp with time zone, "attempts" integer DEFAULT 0 NOT NULL);`,
+    `CREATE TABLE "outbox_events" ("id" uuid PRIMARY KEY NOT NULL, "sequence" bigint GENERATED ALWAYS AS IDENTITY NOT NULL, "topic" text NOT NULL, "message_key" text NOT NULL, "envelope" jsonb NOT NULL, "headers" jsonb DEFAULT '{}'::jsonb NOT NULL, "created_at" timestamp with time zone DEFAULT now() NOT NULL, "published_at" timestamp with time zone, "attempts" integer DEFAULT 0 NOT NULL);`,
   );
   writeFileSync(
     join(dir, 'meta', '_journal.json'),
@@ -67,6 +67,8 @@ describe('outbox', () => {
       topic: 'notifications.requests',
       messageKey: userId,
       publishedAt: null,
+      // No active trace here: nothing to carry (packages/messaging tests the traced case).
+      headers: {},
     });
     expect(row!.envelope).toMatchObject({
       correlationId: 'req-42',

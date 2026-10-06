@@ -51,6 +51,10 @@ Installed with the cluster (Terraform, Phase 16), not by this chart:
   (IRSA, read-only on `cse/<environment>/*` and `AmazonMSK_cse-<environment>_*`).
 - **Network policy enforcement** (VPC CNI with network policies enabled).
 - A namespace per environment labelled `pod-security.kubernetes.io/enforce: restricted`.
+- The **OpenTelemetry collector** at `global.telemetry.endpoint` (namespace `observability`).
+  Every component gets `OTEL_SERVICE_NAME` (its name), `SERVICE_VERSION` (the image tag) and
+  `DEPLOYMENT_ENVIRONMENT`; production samples 25% of new traces (`tracesSampleRatio`). An
+  empty endpoint turns telemetry off ([observability](../../docs/observability.md)).
 
 ## Secrets
 

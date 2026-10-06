@@ -28,6 +28,9 @@ Infrastructure ports are bound to `127.0.0.1` only: PostgreSQL `5432` (`postgres
 `postgres-dev-password`; each service has its own database and role, `<db>-dev-password`), Redis
 `6379`, Kafka `9094`, object storage `9000`.
 
+Traces, metrics and logs: `docker compose --profile observability up -d`, then Grafana on
+http://localhost:3001 ([observability](observability.md)).
+
 Images and the Dockerfiles are described in [infrastructure/docker](../infrastructure/docker/README.md);
 the reasoning in [ADR-017](adr/ADR-017-containers-and-local-environment.md).
 

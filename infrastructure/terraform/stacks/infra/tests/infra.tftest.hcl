@@ -26,6 +26,19 @@ mock_provider "aws" {
   mock_data "aws_iam_openid_connect_provider" {
     defaults = { arn = "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com" }
   }
+  mock_resource "aws_sns_topic" {
+    defaults = { arn = "arn:aws:sns:eu-central-1:123456789012:cse-production-alerts" }
+  }
+  mock_resource "aws_prometheus_workspace" {
+    defaults = {
+      id                  = "ws-00000000-0000-0000-0000-000000000000"
+      arn                 = "arn:aws:aps:eu-central-1:123456789012:workspace/ws-00000000-0000-0000-0000-000000000000"
+      prometheus_endpoint = "https://aps-workspaces.eu-central-1.amazonaws.com/workspaces/ws-00000000-0000-0000-0000-000000000000/"
+    }
+  }
+  mock_resource "aws_grafana_workspace" {
+    defaults = { id = "g-0123456789", endpoint = "g-0123456789.grafana-workspace.eu-central-1.amazonaws.com" }
+  }
   mock_resource "aws_kms_key" {
     defaults = { arn = "arn:aws:kms:eu-central-1:123456789012:key/00000000-0000-0000-0000-000000000000" }
   }
@@ -140,6 +153,8 @@ mock_provider "tls" {
 }
 
 variables {
+  alert_email             = "ops@example.com"
+  grafana                 = { enabled = true, admin_group_ids = ["group-1"] }
   environment             = "production"
   vpc_cidr                = "10.30.0.0/16"
   domain                  = "csekeyboards.com"
@@ -191,6 +206,16 @@ run "builds_a_whole_environment" {
   assert {
     condition     = !strcontains(output.helm_values, "password") && !strcontains(output.helm_values, "secret_string")
     error_message = "Helm values must not contain secrets."
+  }
+
+  assert {
+    condition     = output.observability.grafana_endpoint == "https://g-0123456789.grafana-workspace.eu-central-1.amazonaws.com" && endswith(output.observability.prometheus_endpoint, "/")
+    error_message = "The collector writes to the environment's Prometheus workspace; Grafana is reachable."
+  }
+
+  assert {
+    condition     = module.observability.log_group_name == "/cse/cse-production/application"
+    error_message = "Application logs go to the environment's log group."
   }
 
   assert {

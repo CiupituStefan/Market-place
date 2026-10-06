@@ -201,6 +201,33 @@ jobs:
           gh api "repos/$GITHUB_REPOSITORY/deployments/$id/statuses" \
             -f state=success -f environment_url="$WEB" >/dev/null
 
+      # Dashboards are code: each deploy puts the deployed commit's dashboards into Amazon
+      # Managed Grafana. A 15-minute token, deleted afterwards; a failure here does not undo
+      # the deployment.
+      - name: Sync Grafana dashboards
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          if ! settings="$(aws ssm get-parameter --name "/cse/$ENVIRONMENT/grafana" \
+            --query Parameter.Value --output text 2>/dev/null)"; then
+            echo "No Amazon Managed Grafana for $ENVIRONMENT; skipping."
+            exit 0
+          fi
+          workspace="$(jq -r .workspaceId <<<"$settings")"
+          account="$(jq -r .serviceAccountId <<<"$settings")"
+          token_json="$(aws grafana create-workspace-service-account-token \
+            --workspace-id "$workspace" --service-account-id "$account" \
+            --name "deploy-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" --seconds-to-live 900)"
+          token_id="$(jq -r .serviceAccountToken.id <<<"$token_json")"
+          trap 'aws grafana delete-workspace-service-account-token --workspace-id "$workspace" \
+            --service-account-id "$account" --token-id "$token_id" >/dev/null' EXIT
+          GRAFANA_TOKEN="$(jq -r .serviceAccountToken.key <<<"$token_json")"
+          echo "::add-mask::$GRAFANA_TOKEN"
+          GRAFANA_URL="$(jq -r .url <<<"$settings")" \
+          PROMETHEUS_URL="$(jq -r .prometheusEndpoint <<<"$settings")" \
+          GRAFANA_TOKEN="$GRAFANA_TOKEN" \
+            scripts/grafana-sync.sh
+
       - name: Summary
         if: always()
         env:

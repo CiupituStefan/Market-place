@@ -1,3 +1,4 @@
+import { domainMetrics } from '@market/telemetry';
 import { randomUUID } from 'node:crypto';
 import { enqueueEvent, isUniqueViolation } from '@market/db';
 import {
@@ -199,7 +200,7 @@ export class PaymentService {
     const { intent } = event;
     const amountMatches =
       intent.amountReceived === payment.amount && intent.currency === payment.currency;
-    await this.db.transaction(async (tx) => {
+    const succeeded = await this.db.transaction(async (tx) => {
       const [updated] = await tx
         .update(payments)
         .set({
@@ -224,7 +225,9 @@ export class PaymentService {
           { producer: SERVICE_NAME, aggregateId: updated.orderId },
         );
       }
+      return updated !== undefined;
     });
+    if (succeeded) domainMetrics.payment('succeeded');
 
     if (!amountMatches) {
       // Never ship an order that was not paid in full: give the money back.
@@ -276,6 +279,7 @@ export class PaymentService {
         { producer: SERVICE_NAME, aggregateId: payment.orderId },
       );
     });
+    domainMetrics.payment('failed');
     await this.orders.paymentFailed(payment.orderId, intent.lastError);
   }
 
@@ -467,6 +471,7 @@ export class PaymentService {
           { producer: SERVICE_NAME, aggregateId: payment.orderId },
         );
       });
+      domainMetrics.payment('refunded');
     }
     await this.notifyOrder(refundId);
   }

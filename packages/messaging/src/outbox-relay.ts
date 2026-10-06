@@ -1,5 +1,14 @@
 import { outboxEvents, type Database } from '@market/db';
 import type { Logger } from '@market/logger';
+import {
+  contextFrom,
+  domainMetrics,
+  failSpan,
+  SpanKind,
+  startSpan,
+  traceContextOf,
+  type Span,
+} from '@market/telemetry';
 import { and, asc, inArray, isNotNull, isNull, lt, sql } from 'drizzle-orm';
 import type { MessagePublisher } from './publisher.js';
 
@@ -71,27 +80,56 @@ export class OutboxRelay {
           .limit(this.options.batchSize);
         if (rows.length === 0) return 0;
 
-        await this.publisher.publish(
-          rows.map((row) => {
-            const envelope = row.envelope as {
-              eventId: string;
-              eventType: string;
-              eventVersion: number;
-              correlationId: string;
-            };
-            return {
-              topic: row.topic,
-              key: row.messageKey,
-              value: JSON.stringify(envelope),
-              headers: {
-                eventId: envelope.eventId,
-                eventType: envelope.eventType,
-                eventVersion: String(envelope.eventVersion),
-                correlationId: envelope.correlationId,
-              },
-            };
-          }),
-        );
+        // One PRODUCER span per message, child of the request that wrote the event; its
+        // context travels in the message headers so the consumer's span continues the trace.
+        const spans: Span[] = [];
+        const messages = rows.map((row) => {
+          const envelope = row.envelope as {
+            eventId: string;
+            eventType: string;
+            eventVersion: number;
+            correlationId: string;
+          };
+          const span = startSpan(`publish ${row.topic}`, {
+            kind: SpanKind.PRODUCER,
+            parent: contextFrom(row.headers),
+            attributes: {
+              'messaging.system': 'kafka',
+              'messaging.operation.type': 'send',
+              'messaging.destination.name': row.topic,
+              'messaging.message.id': envelope.eventId,
+              'messaging.kafka.message.key': row.messageKey,
+              'cse.event.type': envelope.eventType,
+              'request.id': envelope.correlationId,
+            },
+          });
+          spans.push(span);
+          return {
+            topic: row.topic,
+            key: row.messageKey,
+            value: JSON.stringify(envelope),
+            headers: {
+              eventId: envelope.eventId,
+              eventType: envelope.eventType,
+              eventVersion: String(envelope.eventVersion),
+              correlationId: envelope.correlationId,
+              ...traceContextOf(span),
+            },
+          };
+        });
+        try {
+          await this.publisher.publish(messages);
+        } catch (error) {
+          for (const span of spans) failSpan(span, error);
+          throw error;
+        } finally {
+          for (const span of spans) span.end();
+        }
+        const now = Date.now();
+        for (const row of rows) {
+          domainMetrics.eventPublished(row.topic);
+          domainMetrics.outboxLag(row.topic, (now - row.createdAt.getTime()) / 1000);
+        }
         await tx
           .update(outboxEvents)
           .set({ publishedAt: new Date() })

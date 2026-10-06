@@ -137,6 +137,21 @@ apply; External Secrets refreshes within an hour (or annotate the ExternalSecret
 `force-sync=$(date +%s)`), then restart the deployments. A cache token change is immediate, so
 rotate it in a quiet window. RDS rotates the master password itself.
 
+## Observability
+
+`infra` creates the backends (module `observability`):
+
+- an Amazon Managed Service for Prometheus workspace, with the alert rules from
+  `infrastructure/observability/prometheus/alerts.yml` and an Alertmanager that publishes to an
+  encrypted SNS topic. Set `alert_email` and confirm the subscription email;
+- the CloudWatch log group `/cse/cse-<env>/application` (30 days, 90 in production);
+- Amazon Managed Grafana (`grafana.enabled`). It needs IAM Identity Center in the account; put
+  the operators' group IDs in `grafana.admin_group_ids`. The deploy pipeline syncs dashboards
+  into it.
+
+X-Ray needs no resource. `platform` runs the OpenTelemetry collector, whose IRSA role may only
+write to these. See [docs/observability.md](../../docs/observability.md).
+
 ## Kafka topics and ACLs
 
 Services create the topics they use at startup. The MSK configuration sets

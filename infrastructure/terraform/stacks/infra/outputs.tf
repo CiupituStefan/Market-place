@@ -64,3 +64,15 @@ output "helm_values_parameter" {
 output "deployers_group" {
   value = local.deployers_group
 }
+
+# For the platform stack's OpenTelemetry collector.
+output "observability" {
+  value = {
+    prometheus_endpoint      = module.observability.prometheus_endpoint
+    prometheus_workspace_arn = module.observability.prometheus_workspace_arn
+    log_group_name           = module.observability.log_group_name
+    log_group_arn            = module.observability.log_group_arn
+    alerts_topic_arn         = module.observability.alerts_topic_arn
+    grafana_endpoint         = module.observability.grafana_endpoint
+  }
+}

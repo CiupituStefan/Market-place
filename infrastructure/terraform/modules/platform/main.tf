@@ -3,6 +3,7 @@
 #   External Secrets Operator    — Secrets Manager → Kubernetes Secrets (read-only, this env)
 #   ExternalDNS                  — Route 53 records for the ingress hosts (this zone only)
 #   metrics-server               — CPU metrics for the HPAs
+#   OpenTelemetry collector      — traces, metrics, logs → X-Ray, AMP, CloudWatch (observability.tf)
 # plus the application namespace, enforcing the "restricted" Pod Security Standard.
 terraform {
   required_version = ">= 1.11.0"

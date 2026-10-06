@@ -144,3 +144,30 @@ tests:
     asserts:
       - equal: { path: data.API_INTERNAL_URL, value: http://api-gateway:4000 }
       - notExists: { path: data.KAFKA_BROKERS }
+
+  - it: sends every component's telemetry to the collector, named and versioned
+    template: configmap.yaml
+    documentSelector: { path: metadata.name, value: order-service-config }
+    asserts:
+      - equal:
+          path: data.OTEL_EXPORTER_OTLP_ENDPOINT
+          value: http://otel-collector.observability.svc.cluster.local:4318
+      - equal: { path: data.OTEL_SERVICE_NAME, value: order-service }
+      - equal: { path: data.SERVICE_VERSION, value: 3f9c2e1 }
+      - equal: { path: data.DEPLOYMENT_ENVIRONMENT, value: production }
+      - equal: { path: data.OTEL_TRACES_SAMPLER, value: parentbased_traceidratio }
+      - equal: { path: data.OTEL_TRACES_SAMPLER_ARG, value: '0.25' }
+
+  - it: instruments the web app too, although it gets no shared settings
+    template: configmap.yaml
+    documentSelector: { path: metadata.name, value: web-config }
+    asserts:
+      - equal: { path: data.OTEL_SERVICE_NAME, value: web }
+      - notExists: { path: data.KAFKA_BROKERS }
+
+  - it: turns telemetry off with an empty endpoint
+    template: configmap.yaml
+    documentSelector: { path: metadata.name, value: order-service-config }
+    set: { global.telemetry.endpoint: '' }
+    asserts:
+      - notExists: { path: data.OTEL_EXPORTER_OTLP_ENDPOINT }

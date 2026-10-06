@@ -1,3 +1,4 @@
+import { recordError } from '@market/telemetry';
 import { getRequestContext, type Logger } from '@market/logger';
 import {
   ApiErrorBodySchema,
@@ -51,6 +52,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     if (status >= 500) {
       this.logger.error({ err: exception, request_id: requestId, status }, 'unhandled error');
+      recordError(exception);
     }
     if (res.headersSent) {
       // Response already streaming (e.g. proxied body): the only option is to abort it.

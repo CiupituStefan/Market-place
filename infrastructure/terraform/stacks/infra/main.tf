@@ -6,6 +6,7 @@ locals {
   deployers_group = "cse-deployers"
   # Helm values for the deploy pipeline (no secrets): read by the deploy role, not from state.
   helm_values_parameter = "/cse/${var.environment}/helm-values"
+  grafana_parameter     = "/cse/${var.environment}/grafana"
   registry              = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.region}.amazonaws.com"
   # Every deployable unit; services are also Kafka users and have a secrets entry.
   services = [
@@ -34,6 +35,21 @@ data "aws_iam_policy_document" "kms" {
     principals {
       type        = "AWS"
       identifiers = ["arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:root"]
+    }
+  }
+  # Amazon Managed Prometheus publishes alerts to the encrypted SNS topic.
+  statement {
+    sid       = "PrometheusAlertsToEncryptedTopic"
+    actions   = ["kms:GenerateDataKey*", "kms:Decrypt"]
+    resources = ["*"]
+    principals {
+      type        = "Service"
+      identifiers = ["aps.amazonaws.com"]
+    }
+    condition {
+      test     = "StringEquals"
+      variable = "aws:SourceAccount"
+      values   = [data.aws_caller_identity.current.account_id]
     }
   }
   # CloudWatch Logs encrypts the cluster, flow, MSK and WAF log groups with this key.
@@ -265,6 +281,12 @@ module "github" {
             Resource = "arn:${data.aws_partition.current.partition}:ecr:${var.region}:${data.aws_caller_identity.current.account_id}:repository/cse/*"
           },
           {
+            Sid      = "ReadTheGrafanaSettings"
+            Effect   = "Allow"
+            Action   = ["ssm:GetParameter"]
+            Resource = "arn:${data.aws_partition.current.partition}:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:parameter${local.grafana_parameter}"
+          },
+          {
             Sid      = "RegistryLogin"
             Effect   = "Allow"
             Action   = ["ecr:GetAuthorizationToken"]
@@ -335,4 +357,48 @@ resource "aws_ssm_parameter" "helm_values" {
   # Standard tier while the YAML fits in 4 KB; moves to advanced on its own if it grows.
   tier  = "Intelligent-Tiering"
   value = local.helm_values
+}
+
+# ── observability ─────────────────────────────────────────────────────────────
+
+module "observability" {
+  source             = "../../modules/observability"
+  name               = local.name
+  region             = var.region
+  kms_key_arn        = aws_kms_key.this.arn
+  alert_rules        = file("${path.module}/../../../observability/prometheus/alerts.yml")
+  alert_email        = var.alert_email
+  log_retention_days = var.environment == "production" ? 90 : 30
+  grafana            = var.grafana
+}
+
+# The deploy pipeline syncs dashboards into Amazon Managed Grafana with 15-minute tokens.
+resource "aws_ssm_parameter" "grafana" {
+  #checkov:skip=CKV2_AWS_34:Not a secret (workspace and service account IDs, endpoints).
+  count       = var.grafana.enabled ? 1 : 0
+  name        = local.grafana_parameter
+  description = "Amazon Managed Grafana workspace for ${local.name} dashboards (no secrets)"
+  type        = "String"
+  value = jsonencode({
+    workspaceId        = module.observability.grafana_workspace_id
+    serviceAccountId   = module.observability.grafana_sync_service_account_id
+    url                = module.observability.grafana_endpoint
+    prometheusEndpoint = module.observability.prometheus_endpoint
+  })
+}
+
+resource "aws_iam_role_policy" "deploy_grafana" {
+  count = var.grafana.enabled ? 1 : 0
+  name  = "sync-dashboards"
+  # Role name from its ARN (arn:aws:iam::<account>:role/<name>).
+  role = element(split("/", module.github.role_arns["${local.name}-deploy"]), 1)
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid      = "ShortLivedDashboardTokens"
+      Effect   = "Allow"
+      Action   = ["grafana:CreateWorkspaceServiceAccountToken", "grafana:DeleteWorkspaceServiceAccountToken"]
+      Resource = module.observability.grafana_workspace_arn
+    }]
+  })
 }

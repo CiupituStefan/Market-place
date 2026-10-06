@@ -10,6 +10,9 @@ global:
     keyPrefix: cse/production
   env:
     LOG_LEVEL: info
+  telemetry:
+    # Errors and slow requests matter most; a quarter of traces keeps the cost bounded.
+    tracesSampleRatio: 0.25
 
 components:
   web:

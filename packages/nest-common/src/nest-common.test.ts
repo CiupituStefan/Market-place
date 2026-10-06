@@ -240,7 +240,7 @@ describe('runMain', () => {
     runMain('test-service', () => Promise.reject(new Error('broker unreachable')), exit);
     await vi.advanceTimersByTimeAsync(0);
     expect(exit).not.toHaveBeenCalled();
-    vi.advanceTimersByTime(100);
+    await vi.advanceTimersByTimeAsync(100);
     expect(exit).toHaveBeenCalledWith(1);
     vi.useRealTimers();
   });

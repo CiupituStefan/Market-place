@@ -11,3 +11,4 @@ onlyBuiltDependencies:
 # Packages whose install scripts are deliberately blocked (telemetry).
 ignoredBuiltDependencies:
   - '@scarf/scarf'
+  - protobufjs # postinstall only checks peer versions

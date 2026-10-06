@@ -87,4 +87,5 @@ module "platform" {
   domain               = var.domain
   app_namespace        = local.infra.app_namespace
   deployers_group      = local.infra.deployers_group
+  observability        = local.infra.observability
 }

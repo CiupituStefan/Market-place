@@ -1,4 +1,5 @@
 import { resolveRequestId, runWithContext, type Logger } from '@market/logger';
+import { tagActiveSpan } from '@market/telemetry';
 import { REQUEST_ID_HEADER } from '@market/types';
 import type { NextFunction, Request, Response } from 'express';
 
@@ -19,6 +20,8 @@ export function requestContextMiddleware(logger: Logger) {
     // Downstream code (filters, the gateway proxy) reads the normalised header.
     req.headers[REQUEST_ID_HEADER] = requestId;
     res.setHeader(REQUEST_ID_HEADER, requestId);
+    // Traces are searchable by the same ID support sees in error bodies and logs.
+    tagActiveSpan({ 'request.id': requestId });
 
     // Captured now: Express rewrites req.url/req.path while routing through mounted prefixes.
     const path = req.originalUrl.split('?')[0] ?? req.path;

@@ -1,3 +1,4 @@
+import { setHttpRoute } from '@market/telemetry';
 import { DomainError, ErrorCode } from '@market/types';
 import { All, Controller, Req, Res, UseGuards } from '@nestjs/common';
 import { ApiExcludeController } from '@nestjs/swagger';
@@ -18,6 +19,8 @@ export class ProxyController {
   async handle(@Req() req: Request, @Res() res: Response): Promise<void> {
     const route = resolveRoute(req.path);
     if (!route) throw new DomainError(ErrorCode.NOT_FOUND, 'Route not found');
+    // Spans and request metrics per upstream route, not one catch-all "/api/v1/*path".
+    setHttpRoute(route.prefix);
     await this.proxy.forward(req, res, route);
   }
 }
