@@ -49,3 +49,6 @@ test-results/
 # next.js generated
 next-env.d.ts
 dump.rdb
+
+# code scanning reports (CI, scripts/security-scan.sh with SARIF_DIR)
+.sarif/

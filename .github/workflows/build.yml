@@ -30,7 +30,9 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read # checkout
-      id-token: write # OIDC to AWS; the build role trusts main only, so pull requests cannot push
+      id-token: write # OIDC to AWS (the build role trusts main only) and Sigstore signing
+      attestations: write # build provenance and SBOM attestations (main only)
+      security-events: write # image scan results to code scanning
     strategy:
       fail-fast: false
       matrix:
@@ -110,9 +112,22 @@ jobs:
         env:
           REF: ${{ steps.meta.outputs.ref }}
         run: |
+          mkdir -p .sarif
+          status=0
           trivy image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed \
-            --scanners vuln,secret --no-progress "$REF"
+            --scanners vuln,secret --no-progress --format json --output scan.json "$REF" || status=$?
+          trivy convert --format table scan.json
+          trivy convert --format sarif --output .sarif/image.sarif scan.json
           trivy image --format cyclonedx --output sbom.cdx.json --quiet "$REF"
+          exit "$status"
+
+      - name: Publish the scan to code scanning
+        # Fork pull requests get a read-only token; their results stay in the job log.
+        if: always() && hashFiles('.sarif/image.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          sarif_file: .sarif/image.sarif
+          category: trivy-image-${{ matrix.image }}${{ matrix.environment && format('-{0}', matrix.environment) || '' }}
 
       - name: Keep the SBOM
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -135,22 +150,47 @@ jobs:
 
       - name: Push (tags are immutable; a re-run skips images already pushed)
         if: env.PUSH == 'true'
+        id: push
         env:
           REGISTRY: ${{ steps.ecr.outputs.registry }}
           REF: ${{ steps.meta.outputs.ref }}
           TAG: ${{ steps.meta.outputs.tag }}
         run: |
           set -euo pipefail
-          if aws ecr describe-images --repository-name "cse/$IMAGE" --image-ids "imageTag=$TAG" >/dev/null 2>&1; then
-            echo "::notice::cse/$IMAGE:$TAG already in ECR"
-            exit 0
+          attest=true
+          if digest="$(aws ecr describe-images --repository-name "cse/$IMAGE" --image-ids "imageTag=$TAG" \
+            --query 'imageDetails[0].imageDigest' --output text 2>/dev/null)"; then
+            # Pushed (and attested) by an earlier run of this commit; this rebuild is not that image.
+            echo "::notice::cse/$IMAGE:$TAG already in ECR; keeping its original attestations"
+            attest=false
+          else
+            docker tag "$REF" "$REGISTRY/$REF"
+            docker push "$REGISTRY/$REF"
+            digest="$(docker inspect --format '{{index .RepoDigests 0}}' "$REGISTRY/$REF")"
+            digest="${digest#*@}"
           fi
-          docker tag "$REF" "$REGISTRY/$REF"
-          docker push "$REGISTRY/$REF"
-          {
-            echo "### cse/$IMAGE:$TAG"
-            docker inspect --format '{{index .RepoDigests 0}}' "$REGISTRY/$REF"
-          } >> "$GITHUB_STEP_SUMMARY"
+          echo "name=$REGISTRY/cse/$IMAGE" >> "$GITHUB_OUTPUT"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "attest=$attest" >> "$GITHUB_OUTPUT"
+          echo "### cse/$IMAGE:$TAG ($digest)" >> "$GITHUB_STEP_SUMMARY"
+
+      # Signed statements (Sigstore, public transparency log) that this digest was built by this
+      # workflow from this commit on main, and of what it contains. The deploy refuses images
+      # without them.
+      - name: Attest build provenance
+        if: env.PUSH == 'true' && steps.push.outputs.attest == 'true'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ steps.push.outputs.name }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+
+      - name: Attest the SBOM
+        if: env.PUSH == 'true' && steps.push.outputs.attest == 'true'
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
+        with:
+          subject-name: ${{ steps.push.outputs.name }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          sbom-path: sbom.cdx.json
 
   # One stable name for branch protection and for the deploy workflow to wait on.
   built:
@@ -177,5 +217,6 @@ jobs:
       contents: read # checkout
       id-token: write # OIDC to the staging deploy role
       deployments: write # smoke-tested record
+      attestations: read # image provenance checks
     with:
       sha: ${{ github.sha }}

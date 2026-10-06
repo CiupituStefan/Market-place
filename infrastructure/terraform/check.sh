@@ -32,5 +32,7 @@ tflint --init --config "$root/.tflint.hcl" >/dev/null
 tflint --recursive --config "$root/.tflint.hcl"
 
 echo "── checkov"
+# With SARIF_DIR set, also writes $SARIF_DIR/results_sarif.sarif for GitHub code scanning.
 checkov --directory "$root" --framework terraform --quiet --compact \
-  --skip-path '\.terraform' --download-external-modules false
+  --skip-path '\.terraform' --download-external-modules false \
+  ${SARIF_DIR:+--output cli --output sarif --output-file-path "$SARIF_DIR"}

@@ -70,23 +70,32 @@ Security controls by layer. Items marked _(Phase N)_ land in that phase.
 - Known gap: Kafka topics have no per-topic ACLs yet (any authenticated service may use any
   topic).
 
-## Supply chain ([CI](ci.md))
+## Supply chain ([CI](ci.md), [repository settings](repository-settings.md))
 
-- Every pull request: gitleaks over the whole history, Trivy on the lockfile and on every built
-  image (fixable HIGH/CRITICAL fail the build), Semgrep, checkov, actionlint and zizmor.
-- Images are scanned before they are pushed, pushed only from `main` through an OIDC role, and
-  tagged with the commit SHA in immutable ECR repositories; each has a CycloneDX SBOM.
-- Actions pinned to commit SHAs, tools to checksums, service images to digests; read-only
-  workflow permissions; Dependabot weekly with a cooldown.
+- Every pull request: CodeQL (`security-extended`), Semgrep, gitleaks over the whole history,
+  Trivy on the lockfile and on every built image (fixable HIGH/CRITICAL fail the build),
+  dependency review (new advisories, license allow-list), checkov, actionlint and zizmor; all
+  results in code scanning. The `main` ruleset blocks merges that add CodeQL errors or
+  high/critical alerts.
+- Secret scanning with push protection; Dependabot alerts, security and weekly version
+  updates; private vulnerability reporting ([SECURITY.md](../SECURITY.md)); OpenSSF Scorecard.
+- Images are scanned before they are pushed, pushed only from `main` through an OIDC role,
+  tagged with the commit SHA in immutable ECR repositories, and carry Sigstore-signed SLSA
+  provenance and SBOM attestations that the deploy verifies.
+- Actions allow-listed and pinned to commit SHAs (enforced), tools to checksums, service images
+  to digests; read-only workflow tokens by default; outside contributors' workflows need
+  approval; code owners review workflows, infrastructure, payments, auth and the gateway.
 
 ## Deployment ([deployment](deployment.md))
 
 - Production receives only commits deployed and smoke-tested on staging, after a reviewer
   approves (self-review prevented); automatic rollback on a failed rollout or smoke test.
 - The deploy role has no access to Secrets, Terraform state or IAM: a namespaced Kubernetes
-  Role for the chart's kinds, its environment's SSM parameter, ECR image lookups.
+  Role for the chart's kinds, its environment's SSM parameter, read-only ECR lookups.
+- Only images with valid signed provenance from `build.yml` on `main` at the deployed commit
+  are deployed.
 
 ## Still to come _(Phase 20)_
 
-Image signing and admission verification, Kubernetes RBAC review, CSP with nonces on the
+Provenance verification at admission (in-cluster policy), Kubernetes RBAC review, CSP with nonces on the
 storefront.

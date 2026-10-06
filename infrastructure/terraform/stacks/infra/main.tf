@@ -257,11 +257,28 @@ module "github" {
             Resource = "arn:${data.aws_partition.current.partition}:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:parameter${local.helm_values_parameter}"
           },
           {
-            # Refuse to deploy a commit whose images are missing.
-            Sid      = "CheckTheImagesExist"
+            # Refuse to deploy a commit whose images are missing or lack verified provenance:
+            # read image metadata and manifests (digests); never push.
+            Sid      = "InspectTheImages"
             Effect   = "Allow"
-            Action   = ["ecr:DescribeImages"]
+            Action   = ["ecr:DescribeImages", "ecr:BatchGetImage"]
             Resource = "arn:${data.aws_partition.current.partition}:ecr:${var.region}:${data.aws_caller_identity.current.account_id}:repository/cse/*"
+          },
+          {
+            Sid      = "RegistryLogin"
+            Effect   = "Allow"
+            Action   = ["ecr:GetAuthorizationToken"]
+            Resource = "*"
+          },
+          {
+            # The repositories are encrypted with the global stack's key; only through ECR.
+            Sid      = "ReadEncryptedManifests"
+            Effect   = "Allow"
+            Action   = ["kms:Decrypt"]
+            Resource = "arn:${data.aws_partition.current.partition}:kms:${var.region}:${data.aws_caller_identity.current.account_id}:key/*"
+            Condition = {
+              StringEquals = { "kms:ViaService" = "ecr.${var.region}.amazonaws.com" }
+            }
           },
         ]
       })

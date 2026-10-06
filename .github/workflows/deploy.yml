@@ -42,6 +42,7 @@ jobs:
       contents: read # checkout
       id-token: write # OIDC to the environment's deploy role
       deployments: write # records "smoke-tested" for the commit (production requires it)
+      attestations: read # verify image provenance before deploying
     env:
       ENVIRONMENT: ${{ inputs.environment }}
       SHA: ${{ inputs.sha }}
@@ -83,23 +84,47 @@ jobs:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Every image of this commit is in ECR
+      - name: Log in to ECR (read-only, to resolve image digests)
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@03f1aad4c6c7ffd436567f42f9384779290529bd # v2.1.7
+
+      # Each image must exist and carry signed attestations that it was built by build.yml on
+      # main from exactly this commit on a GitHub-hosted runner, with its SBOM. An image
+      # pushed by anyone or anything else (even with the right tag) is refused.
+      - name: Every image of this commit is in ECR, with verified provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
         run: |
-          set -euo pipefail
-          missing=0
+          set -uo pipefail
+          failed=0
           for component in $(yq -er '.components | keys | .[]' "$CHART/values.yaml"); do
             tag="$SHA"
             if [ "$(yq -r ".components.\"$component\".imagePerEnvironment // false" "$CHART/values.yaml")" = true ]; then
               tag="$SHA-$ENVIRONMENT"
             fi
-            if aws ecr describe-images --repository-name "cse/$component" --image-ids "imageTag=$tag" >/dev/null 2>&1; then
-              echo "found   cse/$component:$tag"
-            else
+            image="oci://$REGISTRY/cse/$component:$tag"
+            if ! aws ecr describe-images --repository-name "cse/$component" --image-ids "imageTag=$tag" >/dev/null 2>&1; then
               echo "::error::missing cse/$component:$tag (did build.yml succeed for this commit?)"
-              missing=1
+              failed=1
+              continue
             fi
+            for predicate in https://slsa.dev/provenance/v1 https://cyclonedx.org/bom; do
+              if gh attestation verify "$image" \
+                --repo "$GITHUB_REPOSITORY" \
+                --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/build.yml" \
+                --source-ref refs/heads/main \
+                --source-digest "$SHA" \
+                --deny-self-hosted-runners \
+                --predicate-type "$predicate" >/dev/null; then
+                echo "verified cse/$component:$tag ($predicate)"
+              else
+                echo "::error::cse/$component:$tag has no valid $predicate attestation from build.yml at $SHA"
+                failed=1
+              fi
+            done
           done
-          exit "$missing"
+          exit "$failed"
 
       - name: Account-specific values (written by Terraform, no secrets)
         run: |

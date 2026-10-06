@@ -1,6 +1,7 @@
 # ADR-021: Continuous deployment: staging on every merge, approved promotion, smoke-tested Helm
 
-- Status: Accepted
+- Status: Accepted; amended by [ADR-022](ADR-022-public-repository-security.md) (provenance
+  verified before deploying, environments and ruleset applied by script)
 - Date: 2026-10-06
 
 ## Context

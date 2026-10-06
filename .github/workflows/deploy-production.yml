@@ -69,6 +69,7 @@ jobs:
       contents: read # checkout
       id-token: write # OIDC to the production deploy role
       deployments: write # the smoke-tested record
+      attestations: read # image provenance checks
     with:
       environment: production
       sha: ${{ needs.staged.outputs.sha }}

@@ -125,6 +125,9 @@ jobs:
     name: Terraform (format, validate, tests, tflint, checkov)
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read # checkout
+      security-events: write # checkov results to code scanning
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -150,12 +153,26 @@ jobs:
         env:
           # tflint --init downloads the AWS ruleset from GitHub releases.
           GITHUB_TOKEN: ${{ github.token }}
+          SARIF_DIR: ${{ github.workspace }}/.sarif
         run: infrastructure/terraform/check.sh
+
+      - name: Publish checkov results to code scanning
+        # Fork pull requests get a read-only token; their results stay in the job log.
+        if: always() && hashFiles('.sarif/results_sarif.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          sarif_file: .sarif/results_sarif.sarif
+          category: checkov
 
   security:
     name: Security (secrets, dependencies, static analysis)
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read # checkout
+      security-events: write # results to code scanning
+    env:
+      SARIF_DIR: ${{ github.workspace }}/.sarif
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -181,14 +198,59 @@ jobs:
       - name: Secrets in the Git history (gitleaks)
         run: scripts/security-scan.sh secrets
       - name: Vulnerable dependencies with a fix available (Trivy, lockfile)
+        if: always()
         run: scripts/security-scan.sh dependencies
       - name: Static analysis (Semgrep)
+        if: always()
         run: scripts/security-scan.sh code
+
+      - name: Publish gitleaks results to code scanning
+        # Fork pull requests get a read-only token; their results stay in the job log.
+        if: always() && hashFiles('.sarif/secrets.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          sarif_file: .sarif/secrets.sarif
+          category: gitleaks
+
+      - name: Publish trivy-lockfile results to code scanning
+        # Fork pull requests get a read-only token; their results stay in the job log.
+        if: always() && hashFiles('.sarif/dependencies.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          sarif_file: .sarif/dependencies.sarif
+          category: trivy-lockfile
+
+      - name: Publish semgrep results to code scanning
+        # Fork pull requests get a read-only token; their results stay in the job log.
+        if: always() && hashFiles('.sarif/code.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          sarif_file: .sarif/code.sarif
+          category: semgrep
+
+  dependency-review:
+    name: Dependency review (new vulnerabilities, licenses)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read # read the dependency graph diff
+      pull-requests: write # summary comment when the review fails
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          config-file: ./.github/dependency-review-config.yml
 
   workflows:
     name: Workflow lint (actionlint, zizmor)
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read # checkout
+      security-events: write # zizmor results to code scanning
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -204,13 +266,25 @@ jobs:
       - run: pip install zizmor==1.30.1
       - run: actionlint
       - name: Workflow security (zizmor)
-        run: zizmor --offline .github
+        run: |
+          mkdir -p .sarif
+          zizmor --offline --format sarif .github > "$GITHUB_WORKSPACE/.sarif/zizmor.sarif" || status=$?
+          zizmor --offline .github
+          exit "${status:-0}"
+
+      - name: Publish zizmor results to code scanning
+        # Fork pull requests get a read-only token; their results stay in the job log.
+        if: always() && hashFiles('.sarif/zizmor.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          sarif_file: .sarif/zizmor.sarif
+          category: zizmor
 
   # One stable name for branch protection ("CI passed"), whatever jobs are added later.
   passed:
     name: CI passed
     if: always()
-    needs: [verify, helm, terraform, security, workflows]
+    needs: [verify, helm, terraform, security, workflows, dependency-review]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
@@ -219,4 +293,5 @@ jobs:
           RESULTS: ${{ join(needs.*.result, ' ') }}
         run: |
           echo "$RESULTS"
-          for result in $RESULTS; do [ "$result" = success ] || exit 1; done
+          # dependency-review runs on pull requests only; skipped elsewhere.
+          for result in $RESULTS; do [ "$result" = success ] || [ "$result" = skipped ] || exit 1; done

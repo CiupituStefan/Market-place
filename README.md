@@ -1,5 +1,10 @@
 # Market-place — mechanical keyboard store
 
+[![CI](https://github.com/CiupituStefan/Market-place/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/CiupituStefan/Market-place/actions/workflows/ci.yml)
+[![Build images](https://github.com/CiupituStefan/Market-place/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/CiupituStefan/Market-place/actions/workflows/build.yml)
+[![CodeQL](https://github.com/CiupituStefan/Market-place/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/CiupituStefan/Market-place/actions/workflows/codeql.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/CiupituStefan/Market-place/badge)](https://scorecard.dev/viewer/?uri=github.com/CiupituStefan/Market-place)
+
 A production-oriented e-commerce platform for mechanical and custom keyboards, keycaps, switches,
 stabilizers, cables, desk mats and accessories. Built as TypeScript microservices (NestJS) with a
 Next.js storefront, PostgreSQL, Redis, Kafka and Stripe, deployed to Kubernetes on AWS.
@@ -171,9 +176,13 @@ Kubernetes (Helm) · Terraform · AWS (EKS, RDS, ElastiCache, MSK, ECR, WAF) · 
 - [Local development](docs/local-development.md)
 - [Continuous integration](docs/ci.md)
 - [Deployment](docs/deployment.md)
+- [Repository settings](docs/repository-settings.md)
+- [Security policy](SECURITY.md) (report vulnerabilities privately)
 - [Storefront (apps/web)](apps/web/README.md)
 
 ## Security
 
 Never commit secrets. `.env` files are git-ignored; each service ships a `.env.example` with
 non-secret defaults only.
+
+Found a vulnerability? Please report it privately, see [SECURITY.md](SECURITY.md).

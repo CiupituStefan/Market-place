@@ -1,6 +1,7 @@
 # ADR-020: GitHub Actions CI: scan before push, SHA-pinned everything, OIDC to ECR
 
-- Status: Accepted
+- Status: Accepted; amended by [ADR-022](ADR-022-public-repository-security.md) (public repository:
+  CodeQL, dependency review, code scanning, signed provenance)
 - Date: 2026-10-06
 
 ## Context

@@ -24,6 +24,7 @@ ADRs are immutable once accepted; a changed decision gets a new ADR that superse
 | [ADR-019](ADR-019-aws-infrastructure.md)               | AWS infrastructure in Terraform: three stacks, managed data services      | Accepted |
 | [ADR-020](ADR-020-continuous-integration.md)           | GitHub Actions CI: scan before push, SHA-pinned everything, OIDC to ECR   | Accepted |
 | [ADR-021](ADR-021-continuous-deployment.md)            | CD: staging on every merge, approved promotion, smoke-tested Helm         | Accepted |
+| [ADR-022](ADR-022-public-repository-security.md)       | Public repository: GitHub-native security, signed provenance, settings    | Accepted |
 
 ADR-005 and ADR-006 were reserved for Kubernetes and AWS; those decisions are recorded in ADR-018
 and ADR-019, written in the phases that implemented them.

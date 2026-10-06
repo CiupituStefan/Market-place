@@ -1,12 +1,18 @@
 # Continuous integration
 
-Two workflows run on every pull request and on `main`. Each one ends in a single summary
-check, and branch protection requires those two checks.
+Three workflows run on every pull request and on `main`; the `main` ruleset requires their
+checks ([repository settings](repository-settings.md)). Every scanner also publishes its
+results to **code scanning** (the repository's Security tab and annotations on the pull
+request), so findings are tracked, triaged and dismissed with a reason in one place.
 
-| Workflow                                      | Jobs                                                   | Required check |
-| --------------------------------------------- | ------------------------------------------------------ | -------------- |
-| [`ci.yml`](../.github/workflows/ci.yml)       | `verify`, `helm`, `terraform`, `security`, `workflows` | `CI passed`    |
-| [`build.yml`](../.github/workflows/build.yml) | one `image` job per image (12), then the summary       | `Images built` |
+| Workflow                                        | Jobs                                                                           | Required checks                                        |
+| ----------------------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------ |
+| [`ci.yml`](../.github/workflows/ci.yml)         | `verify`, `helm`, `terraform`, `security`, `workflows`, `dependency-review`    | `CI passed`                                            |
+| [`build.yml`](../.github/workflows/build.yml)   | one `image` job per image (12), then the summary                               | `Images built`                                         |
+| [`codeql.yml`](../.github/workflows/codeql.yml) | CodeQL for TypeScript and for the workflows (`security-extended`), also weekly | `Analyze (javascript-typescript)`, `Analyze (actions)` |
+
+[`scorecard.yml`](../.github/workflows/scorecard.yml) runs the OpenSSF Scorecard weekly and on
+`main` (supply-chain posture of the repository itself; published score in the README).
 
 ## What runs
 
@@ -33,6 +39,15 @@ It needs no AWS credentials.
 - **Trivy** checks the lockfile for HIGH/CRITICAL vulnerabilities that have a fixed version.
 - **Semgrep** runs the TypeScript, Node.js, React and Next.js rule packs.
 
+**dependency-review** (pull requests) — what the pull request adds to the lockfile: fails on
+HIGH/CRITICAL advisories in any scope and on licenses outside the allow-list
+([config](../.github/dependency-review-config.yml)), and shows the OpenSSF score of new
+packages.
+
+**CodeQL** — data-flow analysis (user input reaching queries, redirects, file paths, HTML,
+logs...), complementing Semgrep's patterns. The ruleset blocks merging a pull request that
+introduces a CodeQL error or a high/critical security alert.
+
 **workflows** — actionlint, plus zizmor in its strictest (`auditor`) mode for workflow
 security:
 
@@ -49,6 +64,11 @@ security:
 3. Keep a CycloneDX SBOM for 90 days.
 4. **On `main` only:** assume the build role through GitHub OIDC and push the image to ECR
    under the commit SHA.
+5. **On `main` only:** sign two attestations for the pushed digest with Sigstore (recorded in
+   the public transparency log): SLSA **build provenance** (this workflow, this commit, `main`,
+   a GitHub-hosted runner) and the **SBOM**. The deploy verifies both before anything runs
+   ([deployment](deployment.md)). Anyone can check an image:
+   `gh attestation verify oci://<registry>/cse/<image>:<sha> --repo CiupituStefan/Market-place`.
 
 The scanned image is the one that gets pushed. The `latest` tag is never used.
 
@@ -71,22 +91,19 @@ the matching tag (`imagePerEnvironment`).
 - **Least privilege.** Workflows default to `contents: read`. Checkouts do not persist the
   token. Only the image job gets an OIDC token, and the AWS role behind it trusts `main` alone,
   so a pull request (including one from a fork) cannot push images.
+- **Forks.** Pull requests from forks run with a read-only token and no secrets, and outside
+  contributors' workflows wait for a maintainer's approval. Their scan results stay in the
+  job log, because a read-only token cannot publish to code scanning.
 - **Service images are pinned by digest.**
 - **Dependabot runs weekly** for npm, Actions, Docker base images and Terraform providers, with
   a 7-day cooldown on new releases.
 
-## Repository settings (once)
+## Repository settings
 
-- **Variable** `AWS_BUILD_ROLE_ARN`: the `build_role_arn` output of
-  `infrastructure/terraform/stacks/global`. This is not a secret.
-- **Branch protection on `main`:**
-  - require pull requests;
-  - require the checks `CI passed` and `Images built`;
-  - require branches to be up to date;
-  - no force pushes.
-- **Actions settings:**
-  - allow only actions pinned to a full commit SHA;
-  - set the default workflow permissions to read.
+Applied by [`scripts/configure-github.sh`](../scripts/configure-github.sh) and explained in
+[repository settings](repository-settings.md): the `main` ruleset, secret scanning with push
+protection, the Actions allow-list with SHA pinning, approval for outside contributors'
+workflows, and the `AWS_BUILD_ROLE_ARN` variable.
 
 ## Running the same checks locally
 

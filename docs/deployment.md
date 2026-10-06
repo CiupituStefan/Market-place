@@ -7,7 +7,7 @@ long-lived AWS key exists anywhere.
 ```
 push to main
   └─ build.yml       build + scan 12 images ─► ECR (tag = commit SHA)
-       └─ staging    deploy-staging.yml ─► deploy.yml: images exist? ─► helm --atomic ─► smoke tests
+       └─ staging    deploy-staging.yml ─► deploy.yml: images + signed provenance? ─► helm --atomic ─► smoke tests
                                                        (failure: helm rolls back / we roll back)
                                                        └─ record "smoke-tested on staging"
 deploy-production.yml (starts when the build run succeeds)
@@ -26,8 +26,12 @@ deploy-production.yml (starts when the build run succeeds)
 1. Check out the commit being deployed, so the chart and values match the images.
 2. Assume the environment's deploy role through GitHub OIDC. The role trusts only jobs bound
    to that GitHub environment.
-3. **Refuse missing images.** Every component's image for that SHA must be in ECR. The web
-   app's tag is `<sha>-<environment>`.
+3. **Refuse missing or unproven images.** Every component's image for that SHA must be in
+   ECR (the web app's tag is `<sha>-<environment>`). Each must carry Sigstore-signed
+   attestations, a SLSA build provenance and an SBOM, proving it was built by `build.yml` on
+   `main`, from exactly this commit, on a GitHub-hosted runner. An image pushed by anything
+   else is refused, even with the right tag. If a build pushed an image but failed before
+   attesting it, delete that tag in ECR and re-run the build.
 4. Read the account-specific Helm values that Terraform wrote to SSM (`/cse/<env>/helm-values`).
    They contain no secrets.
 5. **Never move backwards by accident.** An automatic run fails if the deployed commit is newer.
@@ -76,7 +80,7 @@ The deploy role can:
 
 - describe the cluster;
 - read its environment's SSM parameter;
-- check that images exist in ECR;
+- read image metadata in ECR (existence, digests for provenance checks), never push;
 - inside the cluster, through the Role `cse-deployer` in its namespace only, manage the kinds
   the chart renders: Deployments, Services, ConfigMaps, ServiceAccounts, HPAs, PDBs,
   NetworkPolicies, Ingresses and ExternalSecrets;
@@ -86,13 +90,10 @@ It has **no access to Secrets**. Helm keeps its release records in ConfigMaps, a
 `helm/check.sh` fails if the chart ever renders a kind outside that list. It cannot push
 images, read Terraform state or change IAM.
 
-## Repository settings (once)
+## Repository settings
 
-- **Environments** `staging` and `production`, each with:
-  - the variable `AWS_DEPLOY_ROLE_ARN`, set to the `deploy_role_arn` output of that
-    environment's `infra` stack;
-  - deployment branches limited to `main`.
-- **`production` also needs:**
-  - required reviewers;
-  - "Prevent self-review", so the author of a change cannot approve its release.
-- The repository variable `AWS_BUILD_ROLE_ARN` ([CI](ci.md)).
+[`scripts/configure-github.sh`](../scripts/configure-github.sh) creates the `staging` and
+`production` environments. Both deploy from `main` only, and production has required
+reviewers. The script also sets their `AWS_DEPLOY_ROLE_ARN` variables (the `deploy_role_arn`
+output of each environment's `infra` stack). Details are in
+[repository settings](repository-settings.md).

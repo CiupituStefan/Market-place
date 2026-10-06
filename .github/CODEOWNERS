@@ -1,0 +1,12 @@
+# Changes to these paths need the owner's review (enforced by the main ruleset, see
+# docs/repository-settings.md). They decide what runs in CI with tokens, what reaches
+# production, and with which permissions.
+/.github/                    @CiupituStefan
+/infrastructure/             @CiupituStefan
+/scripts/                    @CiupituStefan
+/docker-compose.yml          @CiupituStefan
+/pnpm-lock.yaml              @CiupituStefan
+# Money and identity.
+/apps/payment-service/       @CiupituStefan
+/apps/auth-service/          @CiupituStefan
+/apps/api-gateway/           @CiupituStefan
