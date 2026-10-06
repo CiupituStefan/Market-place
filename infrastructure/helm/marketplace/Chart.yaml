@@ -7,4 +7,4 @@ type: application
 version: 0.1.0
 appVersion: '0.0.0'
 kubeVersion: '>=1.30.0-0'
-home: https://github.com/ciupitustefan/market-place
+home: https://github.com/CiupituStefan/Market-place

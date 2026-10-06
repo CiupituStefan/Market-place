@@ -5,6 +5,7 @@ global:
   domains:
     web: staging.csekeyboards.com
     api: api.staging.csekeyboards.com
+    cdn: cdn.staging.csekeyboards.com
   externalSecrets:
     keyPrefix: cse/staging
   env:

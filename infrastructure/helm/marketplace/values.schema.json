@@ -25,7 +25,11 @@
         "domains": {
           "type": "object",
           "additionalProperties": false,
-          "properties": { "web": { "type": "string" }, "api": { "type": "string" } }
+          "properties": {
+            "web": { "type": "string" },
+            "api": { "type": "string" },
+            "cdn": { "type": "string" }
+          }
         },
         "env": {
           "type": "object",
@@ -57,6 +61,7 @@
           "database": { "type": "boolean" },
           "secrets": { "type": "boolean" },
           "redis": { "type": "boolean" },
+          "imagePerEnvironment": { "type": "boolean" },
           "sharedEnv": { "type": "boolean" },
           "public": { "enum": ["web", "api"] },
           "allowFrom": { "type": "array", "items": { "type": "string" } },

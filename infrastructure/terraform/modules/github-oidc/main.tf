@@ -8,8 +8,14 @@ terraform {
 }
 
 variable "repository" {
-  description = "owner/name"
+  # The token's `sub` claim carries the name exactly as GitHub displays it, and the trust
+  # policy comparison is case-sensitive: "Owner/Repo", not "owner/repo".
+  description = "owner/name, with GitHub's capitalisation."
   type        = string
+  validation {
+    condition     = can(regex("^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$", var.repository))
+    error_message = "repository must be owner/name."
+  }
 }
 
 variable "create_provider" {

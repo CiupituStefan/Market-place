@@ -1,0 +1,33 @@
+# Pinned versions only stay safe if they move: weekly grouped pull requests, each verified by
+# CI and the image build. A cooldown lets the ecosystem catch a compromised release first.
+version: 2
+updates:
+  - package-ecosystem: npm # pnpm workspace (pnpm-lock.yaml)
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    cooldown: { default-days: 7 }
+    open-pull-requests-limit: 10
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions # updates the SHA pins and their version comments
+    directories: [/, /.github/actions/*]
+    schedule: { interval: weekly, day: monday }
+    cooldown: { default-days: 7 }
+    groups:
+      actions:
+        patterns: ['*']
+
+  - package-ecosystem: docker
+    directory: /infrastructure/docker
+    schedule: { interval: weekly, day: monday }
+    cooldown: { default-days: 7 }
+
+  - package-ecosystem: terraform
+    directories: [/infrastructure/terraform/stacks/*, /infrastructure/terraform/bootstrap]
+    schedule: { interval: weekly, day: monday }
+    cooldown: { default-days: 7 }
+    groups:
+      providers:
+        patterns: ['*']

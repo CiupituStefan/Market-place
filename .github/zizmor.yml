@@ -1,0 +1,5 @@
+rules:
+  # Suggests the `$/` self-repository syntax for local actions; actionlint does not accept it
+  # yet. `./` is equivalent for actions in this repository.
+  self-repository:
+    disable: true

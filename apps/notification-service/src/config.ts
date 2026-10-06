@@ -4,6 +4,8 @@ import { z } from 'zod';
 
 export const SERVICE_NAME = 'notification-service';
 
+// Development default only; the schema refuses it when NODE_ENV=production.
+// nosemgrep: ajinabraham.njsscan.generic.hardcoded_secrets.node_secret
 const DEV_UNSUBSCRIBE_SECRET = 'local-development-unsubscribe-secret-not-for-production';
 
 export const ConfigSchema = baseServiceEnv

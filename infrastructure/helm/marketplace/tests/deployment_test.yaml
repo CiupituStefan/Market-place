@@ -15,6 +15,14 @@ tests:
           path: spec.template.spec.containers[0].image
           value: 123456789012.dkr.ecr.eu-central-1.amazonaws.com/cse/order-service:3f9c2e1
 
+  - it: runs the web image built for this environment
+    template: deployment.yaml
+    documentSelector: { path: metadata.name, value: web }
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: 123456789012.dkr.ecr.eu-central-1.amazonaws.com/cse/web:3f9c2e1-production
+
   # The values schema rejects `latest` before rendering; the template check is the second
   # line of defence (any capitalisation, or --skip-schema-validation).
   - it: refuses latest

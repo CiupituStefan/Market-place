@@ -39,7 +39,7 @@ RUN pnpm turbo run build --filter=@market/web
 
 FROM ${NODE_IMAGE} AS runtime
 LABEL org.opencontainers.image.title="cse-web" \
-      org.opencontainers.image.source="https://github.com/ciupitustefan/market-place"
+      org.opencontainers.image.source="https://github.com/CiupituStefan/Market-place"
 RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
       /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /opt/yarn* \
       /usr/local/bin/yarn /usr/local/bin/yarnpkg

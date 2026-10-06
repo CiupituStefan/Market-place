@@ -1,0 +1,3 @@
+# Reviewed false positives (gitleaks fingerprints: commit:file:rule:line).
+# A deliberately forged unsubscribe token in a test.
+ad4d2f77029c263885e5176f0949506f21a68c35:apps/notification-service/test/notifications.test.ts:generic-api-key:437

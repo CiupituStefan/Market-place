@@ -13,7 +13,9 @@ docker build -f infrastructure/docker/web.Dockerfile \
   --build-arg NEXT_PUBLIC_API_URL=https://api.example.com -t cse/web:$(git rev-parse --short HEAD) .
 ```
 
-Production tags are Git SHAs, never `latest` (CI/CD, Phases 17–18).
+Production tags are Git SHAs, never `latest`: CI ([build.yml](../../.github/workflows/build.yml))
+builds, scans and pushes `<sha>`, and `web:<sha>-<environment>` because the storefront compiles
+its public URLs in ([docs/ci.md](../../docs/ci.md)).
 
 ## What every image does
 

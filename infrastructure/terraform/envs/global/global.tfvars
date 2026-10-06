@@ -1,1 +1,1 @@
-github_repository = "ciupitustefan/market-place"
+github_repository = "CiupituStefan/Market-place"

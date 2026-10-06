@@ -1,0 +1,165 @@
+name: Build images
+
+# Every pull request builds and scans every image (proves the Dockerfiles and catches
+# vulnerable base layers before merge); main also pushes them to ECR, tagged with the commit
+# SHA. Deployment (Phase 18) starts from a successful run of this workflow on main.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read # checkout only; the image job adds the OIDC token it needs
+
+concurrency:
+  group: build-${{ github.ref }}
+  # Superseded pull request builds are pointless; a main build always finishes.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  AWS_REGION: eu-central-1
+  PUSH: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+
+jobs:
+  image:
+    name: ${{ matrix.image }}${{ matrix.environment && format(' ({0})', matrix.environment) || '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read # checkout
+      id-token: write # OIDC to AWS; the build role trusts main only, so pull requests cannot push
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { image: api-gateway, port: 4000 }
+          - { image: auth-service, port: 4001 }
+          - { image: product-service, port: 4002 }
+          - { image: inventory-service, port: 4003 }
+          - { image: cart-service, port: 4004 }
+          - { image: order-service, port: 4005 }
+          - { image: payment-service, port: 4006 }
+          - { image: notification-service, port: 4007 }
+          - { image: review-service, port: 4008 }
+          - { image: admin-service, port: 4009 }
+          # Public URLs are compiled into the web bundle: one image per environment.
+          - { image: web, environment: staging }
+          - { image: web, environment: production }
+    env:
+      IMAGE: ${{ matrix.image }}
+      ENVIRONMENT: ${{ matrix.environment }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Tag and build arguments
+        id: meta
+        env:
+          PORT: ${{ matrix.port }}
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_SHA}${ENVIRONMENT:+-$ENVIRONMENT}"
+          if [ "$IMAGE" = web ]; then
+            # Single source for the public hosts: the environment's Helm values.
+            values="infrastructure/helm/marketplace/values-$ENVIRONMENT.yaml"
+            dockerfile=infrastructure/docker/web.Dockerfile
+            args="NEXT_PUBLIC_SITE_URL=https://$(yq -er '.global.domains.web' "$values")
+          NEXT_PUBLIC_API_URL=https://$(yq -er '.global.domains.api' "$values")
+          NEXT_PUBLIC_ASSET_BASE_URL=https://$(yq -er '.global.domains.cdn' "$values")"
+          else
+            dockerfile=infrastructure/docker/service.Dockerfile
+            args="SERVICE=$IMAGE
+          PORT=$PORT"
+          fi
+          {
+            echo "tag=$tag"
+            echo "ref=cse/$IMAGE:$tag"
+            echo "dockerfile=$dockerfile"
+            printf 'args<<ARGS\n%s\nARGS\n' "$args"
+          } >> "$GITHUB_OUTPUT"
+          printf 'Build arguments:\n%s\n' "$args"
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: ${{ steps.meta.outputs.dockerfile }}
+          build-args: ${{ steps.meta.outputs.args }}
+          tags: ${{ steps.meta.outputs.ref }}
+          labels: org.opencontainers.image.revision=${{ github.sha }}
+          # Into the local daemon: the image that is scanned is the image that is pushed.
+          load: true
+          push: false
+          provenance: false
+          cache-from: type=gha,scope=${{ matrix.image }}${{ matrix.environment }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}${{ matrix.environment }}
+
+      - uses: ./.github/actions/install-tool
+        with:
+          url: https://github.com/aquasecurity/trivy/releases/download/v0.69.3/trivy_0.69.3_Linux-64bit.tar.gz
+          sha256: 1816b632dfe529869c740c0913e36bd1629cb7688bd5634f4a858c1d57c88b75
+          binary: trivy
+
+      - name: Scan the image (fail on fixable HIGH/CRITICAL)
+        env:
+          REF: ${{ steps.meta.outputs.ref }}
+        run: |
+          trivy image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed \
+            --scanners vuln,secret --no-progress "$REF"
+          trivy image --format cyclonedx --output sbom.cdx.json --quiet "$REF"
+
+      - name: Keep the SBOM
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sbom-${{ matrix.image }}${{ matrix.environment && format('-{0}', matrix.environment) || '' }}
+          path: sbom.cdx.json
+          retention-days: 90
+
+      - name: AWS credentials (GitHub OIDC, no stored keys)
+        if: env.PUSH == 'true'
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_BUILD_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to ECR
+        if: env.PUSH == 'true'
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@03f1aad4c6c7ffd436567f42f9384779290529bd # v2.1.7
+
+      - name: Push (tags are immutable; a re-run skips images already pushed)
+        if: env.PUSH == 'true'
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          REF: ${{ steps.meta.outputs.ref }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if aws ecr describe-images --repository-name "cse/$IMAGE" --image-ids "imageTag=$TAG" >/dev/null 2>&1; then
+            echo "::notice::cse/$IMAGE:$TAG already in ECR"
+            exit 0
+          fi
+          docker tag "$REF" "$REGISTRY/$REF"
+          docker push "$REGISTRY/$REF"
+          {
+            echo "### cse/$IMAGE:$TAG"
+            docker inspect --format '{{index .RepoDigests 0}}' "$REGISTRY/$REF"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # One stable name for branch protection and for the deploy workflow to wait on.
+  built:
+    name: Images built
+    if: always()
+    needs: [image]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Every image built, passed the scan (and was pushed on main)
+        env:
+          RESULT: ${{ needs.image.result }}
+        run: test "$RESULT" = success

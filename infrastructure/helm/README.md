@@ -34,7 +34,8 @@ helm upgrade --install marketplace infrastructure/helm/marketplace \
 ARNs, VPC CIDR, MSK brokers, secret names, image bucket, IRSA role ARNs):
 `terraform -chdir=infrastructure/terraform/stacks/infra output -raw helm_values`. The ECR
 registry comes from the global stack (`--set global.image.registry=...`). The CD pipeline does
-both (Phase 18). Images are always tagged with the Git SHA: the chart refuses an empty tag and
+both (Phase 18). The web app runs `web:<sha>-<environment>` (`imagePerEnvironment`: its public URLs
+are compiled in). Images are always tagged with the Git SHA: the chart refuses an empty tag and
 `latest`. `--atomic` rolls back automatically when the rollout does not become ready; a manual
 rollback is `helm -n cse-staging rollback marketplace`.
 

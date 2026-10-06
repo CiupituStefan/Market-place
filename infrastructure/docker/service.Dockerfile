@@ -51,7 +51,7 @@ FROM ${NODE_IMAGE} AS runtime
 ARG SERVICE
 ARG PORT=4000
 LABEL org.opencontainers.image.title="cse-${SERVICE}" \
-      org.opencontainers.image.source="https://github.com/ciupitustefan/market-place"
+      org.opencontainers.image.source="https://github.com/CiupituStefan/Market-place"
 ENV NODE_ENV=production \
     PORT=${PORT} \
     SERVICE_NAME=${SERVICE}

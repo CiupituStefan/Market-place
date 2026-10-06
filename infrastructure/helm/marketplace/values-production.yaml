@@ -5,6 +5,7 @@ global:
   domains:
     web: www.csekeyboards.com
     api: api.csekeyboards.com
+    cdn: cdn.csekeyboards.com
   externalSecrets:
     keyPrefix: cse/production
   env:

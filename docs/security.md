@@ -70,7 +70,16 @@ Security controls by layer. Items marked _(Phase N)_ land in that phase.
 - Known gap: Kafka topics have no per-topic ACLs yet (any authenticated service may use any
   topic).
 
-## Supply chain and platform _(Phases 17–20)_
+## Supply chain ([CI](ci.md))
 
-Dependency and container scanning in CI, image signing, Kubernetes RBAC review, CSP with nonces
-on the storefront.
+- Every pull request: gitleaks over the whole history, Trivy on the lockfile and on every built
+  image (fixable HIGH/CRITICAL fail the build), Semgrep, checkov, actionlint and zizmor.
+- Images are scanned before they are pushed, pushed only from `main` through an OIDC role, and
+  tagged with the commit SHA in immutable ECR repositories; each has a CycloneDX SBOM.
+- Actions pinned to commit SHAs, tools to checksums, service images to digests; read-only
+  workflow permissions; Dependabot weekly with a cooldown.
+
+## Still to come _(Phase 20)_
+
+Image signing and admission verification, Kubernetes RBAC review, CSP with nonces on the
+storefront.

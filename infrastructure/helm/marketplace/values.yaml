@@ -19,6 +19,7 @@ global:
   domains:
     web: '' # e.g. shop.example.com
     api: '' # e.g. api.example.com
+    cdn: '' # product images (CloudFront); compiled into the web image
 
   # Non-secret settings every service gets (secrets come from <component>-secrets).
   env:
@@ -97,6 +98,8 @@ components:
     replicas: 2
     secrets: false
     database: false
+    # Public URLs are compiled into the browser bundle: image tag <sha>-<environment>.
+    imagePerEnvironment: true
     # The web app talks to the gateway only: no service-wide settings (Kafka, JWT...).
     sharedEnv: false
     public: web

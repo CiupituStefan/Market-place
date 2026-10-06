@@ -146,7 +146,7 @@ variables {
   web_host                = "www.csekeyboards.com"
   api_host                = "api.csekeyboards.com"
   cdn_host                = "cdn.csekeyboards.com"
-  github_repository       = "ciupitustefan/market-place"
+  github_repository       = "CiupituStefan/Market-place"
   cluster_admin_role_arns = ["arn:aws:iam::123456789012:role/AWSReservedSSO_Admin"]
   dmarc_report_address    = "dmarc@csekeyboards.com"
   sizing = {

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { PGlite, type Extensions } from '@electric-sql/pglite';
 import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
@@ -33,7 +34,7 @@ export async function createPostgresTestDatabase<TSchema extends Record<string, 
   const { drizzle: drizzlePg } = await import('drizzle-orm/node-postgres');
   const { migrate: migratePg } = await import('drizzle-orm/node-postgres/migrator');
 
-  const name = `test_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+  const name = `test_${Date.now().toString(36)}_${randomUUID().slice(0, 8)}`;
   const admin = new pg.Client({ connectionString: options.adminUrl });
   await admin.connect();
   await admin.query(`CREATE DATABASE ${name}`);

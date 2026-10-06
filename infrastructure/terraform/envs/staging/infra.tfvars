@@ -4,7 +4,7 @@ domain            = "csekeyboards.com"
 web_host          = "staging.csekeyboards.com"
 api_host          = "api.staging.csekeyboards.com"
 cdn_host          = "cdn.staging.csekeyboards.com"
-github_repository = "ciupitustefan/market-place"
+github_repository = "CiupituStefan/Market-place"
 # SSO permission set role(s) for operators; set per account.
 cluster_admin_role_arns = []
 dmarc_report_address    = "dmarc@csekeyboards.com"

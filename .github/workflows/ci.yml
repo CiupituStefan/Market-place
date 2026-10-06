@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: read # checkout only: CI never writes to the repository or reaches AWS
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -17,10 +17,11 @@ jobs:
     name: Format, lint, typecheck, test, build
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # Same versions as docker-compose.yml, pinned by digest.
     services:
       # Real PostgreSQL to prove the committed migrations apply cleanly.
       postgres:
-        image: postgres:16-alpine
+        image: public.ecr.aws/docker/library/postgres:16.15-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
         env:
           POSTGRES_USER: auth
           POSTGRES_PASSWORD: ci-only-password
@@ -30,23 +31,25 @@ jobs:
           --health-cmd "pg_isready -U auth" --health-interval 5s --health-timeout 3s --health-retries 10
       # Real Redis for the gateway's rate-limit store integration tests.
       redis:
-        image: redis:7-alpine
+        image: public.ecr.aws/docker/library/redis:7.4-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499
         ports: ['6379:6379']
         options: >-
           --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10
       # Real Kafka (single KRaft node) for the outbox → Kafka → consumer → DLQ tests.
       kafka:
-        image: apache/kafka:4.1.0
+        image: apache/kafka:4.3.1@sha256:77e3df9054047a88b520d0cc46e16696d3b22022e1d580aeccd2632df6532837
         ports: ['9092:9092']
         options: >-
           --health-cmd "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092"
           --health-interval 10s --health-timeout 10s --health-retries 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .nvmrc
           cache: pnpm
@@ -92,24 +95,28 @@ jobs:
     name: Helm chart (lint, unit tests, schema, best practices)
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    env:
-      HELM_VERSION: v3.19.0
-      HELM_UNITTEST_VERSION: v1.0.3
-      KUBECONFORM_VERSION: v0.7.0
-      KUBE_LINTER_VERSION: v0.7.6
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      - name: Install helm, helm-unittest, kubeconform and kube-linter (pinned)
-        run: |
-          mkdir -p "$HOME/bin" && echo "$HOME/bin" >> "$GITHUB_PATH"
-          curl -sSfL "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz" \
-            | tar xz -C "$HOME/bin" --strip-components=1 linux-amd64/helm
-          "$HOME/bin/helm" plugin install https://github.com/helm-unittest/helm-unittest --version "$HELM_UNITTEST_VERSION"
-          curl -sSfL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" \
-            | tar xz -C "$HOME/bin" kubeconform
-          curl -sSfL "https://github.com/stackrox/kube-linter/releases/download/${KUBE_LINTER_VERSION}/kube-linter-linux.tar.gz" \
-            | tar xz -C "$HOME/bin" kube-linter
+      - uses: ./.github/actions/install-tool
+        with:
+          url: https://get.helm.sh/helm-v3.19.0-linux-amd64.tar.gz
+          sha256: a7f81ce08007091b86d8bd696eb4d86b8d0f2e1b9f6c714be62f82f96a594496
+          binary: helm
+      - uses: ./.github/actions/install-tool
+        with:
+          url: https://github.com/yannh/kubeconform/releases/download/v0.7.0/kubeconform-linux-amd64.tar.gz
+          sha256: c31518ddd122663b3f3aa874cfe8178cb0988de944f29c74a0b9260920d115d3
+          binary: kubeconform
+      - uses: ./.github/actions/install-tool
+        with:
+          url: https://github.com/stackrox/kube-linter/releases/download/v0.7.6/kube-linter-linux.tar.gz
+          sha256: cb6128997162b8b7e6962284313635643434421b4e9b4f86545af7a4976e0139
+          binary: kube-linter
+      - name: helm-unittest plugin (pinned tag)
+        run: helm plugin install https://github.com/helm-unittest/helm-unittest --version v1.0.3
 
       - name: Check the chart
         run: infrastructure/helm/check.sh
@@ -119,19 +126,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       # No AWS credentials: no backend, mock providers in the tests.
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
           terraform_version: 1.16.5
           terraform_wrapper: false
 
-      - uses: terraform-linters/setup-tflint@v4
+      - uses: terraform-linters/setup-tflint@6ffdbaa3be476b3431f7275c26966ef32ff60337 # v6.3.2
         with:
           tflint_version: v0.59.1
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.12'
 
@@ -142,3 +151,72 @@ jobs:
           # tflint --init downloads the AWS ruleset from GitHub releases.
           GITHUB_TOKEN: ${{ github.token }}
         run: infrastructure/terraform/check.sh
+
+  security:
+    name: Security (secrets, dependencies, static analysis)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # Whole history: a secret committed and later deleted is still leaked.
+          fetch-depth: 0
+
+      - uses: ./.github/actions/install-tool
+        with:
+          url: https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+          sha256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+          binary: gitleaks
+      - uses: ./.github/actions/install-tool
+        with:
+          url: https://github.com/aquasecurity/trivy/releases/download/v0.69.3/trivy_0.69.3_Linux-64bit.tar.gz
+          sha256: 1816b632dfe529869c740c0913e36bd1629cb7688bd5634f4a858c1d57c88b75
+          binary: trivy
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+      - run: pip install semgrep==1.179.0
+
+      - name: Secrets in the Git history (gitleaks)
+        run: scripts/security-scan.sh secrets
+      - name: Vulnerable dependencies with a fix available (Trivy, lockfile)
+        run: scripts/security-scan.sh dependencies
+      - name: Static analysis (Semgrep)
+        run: scripts/security-scan.sh code
+
+  workflows:
+    name: Workflow lint (actionlint, zizmor)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/install-tool
+        with:
+          url: https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          sha256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+          binary: actionlint
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+      - run: pip install zizmor==1.30.1
+      - run: actionlint
+      - name: Workflow security (zizmor)
+        run: zizmor --offline .github
+
+  # One stable name for branch protection ("CI passed"), whatever jobs are added later.
+  passed:
+    name: CI passed
+    if: always()
+    needs: [verify, helm, terraform, security, workflows]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Every job succeeded
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "$RESULTS"
+          for result in $RESULTS; do [ "$result" = success ] || exit 1; done

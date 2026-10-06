@@ -22,6 +22,7 @@ ADRs are immutable once accepted; a changed decision gets a new ADR that superse
 | [ADR-017](ADR-017-containers-and-local-environment.md) | Container images and the Docker Compose development environment           | Accepted |
 | [ADR-018](ADR-018-kubernetes-deployment.md)            | One Helm chart, migrations in init containers, External Secrets           | Accepted |
 | [ADR-019](ADR-019-aws-infrastructure.md)               | AWS infrastructure in Terraform: three stacks, managed data services      | Accepted |
+| [ADR-020](ADR-020-continuous-integration.md)           | GitHub Actions CI: scan before push, SHA-pinned everything, OIDC to ECR   | Accepted |
 
 ADR-005 and ADR-006 were reserved for Kubernetes and AWS; those decisions are recorded in ADR-018
 and ADR-019, written in the phases that implemented them.

@@ -1,0 +1,31 @@
+name: Install a pinned tool
+description: >-
+  Downloads a release archive, refuses it unless its SHA-256 matches, and puts one binary
+  from it in /usr/local/bin. Pinning the checksum (not just the version) means a re-published or
+  tampered release cannot run in CI.
+inputs:
+  url:
+    description: Release archive (.tar.gz).
+    required: true
+  sha256:
+    description: Expected SHA-256 of the archive.
+    required: true
+  binary:
+    description: Name of the executable inside the archive.
+    required: true
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        URL: ${{ inputs.url }}
+        SHA256: ${{ inputs.sha256 }}
+        BINARY: ${{ inputs.binary }}
+      run: |
+        set -euo pipefail
+        dir="$RUNNER_TEMP/tool-$BINARY"
+        mkdir -p "$dir"
+        curl -sSfL --retry 3 "$URL" -o "$dir/archive.tar.gz"
+        echo "$SHA256  $dir/archive.tar.gz" | sha256sum -c -
+        tar xzf "$dir/archive.tar.gz" -C "$dir"
+        sudo install -m 0755 "$(find "$dir" -type f -name "$BINARY" | head -n 1)" "/usr/local/bin/$BINARY"
