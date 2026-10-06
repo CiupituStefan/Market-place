@@ -21,9 +21,10 @@ ADRs are immutable once accepted; a changed decision gets a new ADR that superse
 | [ADR-016](ADR-016-admin-dashboard.md)                  | Admin dashboard: owning services for operations, event-built analytics    | Accepted |
 | [ADR-017](ADR-017-containers-and-local-environment.md) | Container images and the Docker Compose development environment           | Accepted |
 | [ADR-018](ADR-018-kubernetes-deployment.md)            | One Helm chart, migrations in init containers, External Secrets           | Accepted |
+| [ADR-019](ADR-019-aws-infrastructure.md)               | AWS infrastructure in Terraform: three stacks, managed data services      | Accepted |
 
-Planned: ADR-005 Kubernetes, ADR-006 AWS —
-written in the phase that implements each decision.
+ADR-005 and ADR-006 were reserved for Kubernetes and AWS; those decisions are recorded in ADR-018
+and ADR-019, written in the phases that implemented them.
 
 ## Template
 

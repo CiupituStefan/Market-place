@@ -34,6 +34,11 @@
             "not": { "pattern": "(SECRET|PASSWORD|TOKEN|PRIVATE_KEY|DATABASE_URL)" }
           }
         },
+        "database": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "caFile": { "type": "string", "pattern": "^files/.+\\.pem$" } }
+        },
         "externalSecrets": { "type": "object" },
         "ingress": { "type": "object" },
         "networkPolicy": { "type": "object" },
@@ -51,6 +56,7 @@
           "replicas": { "type": "integer", "minimum": 1 },
           "database": { "type": "boolean" },
           "secrets": { "type": "boolean" },
+          "redis": { "type": "boolean" },
           "sharedEnv": { "type": "boolean" },
           "public": { "enum": ["web", "api"] },
           "allowFrom": { "type": "array", "items": { "type": "string" } },

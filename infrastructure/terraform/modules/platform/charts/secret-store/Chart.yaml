@@ -1,0 +1,4 @@
+apiVersion: v2
+name: secret-store
+description: ClusterSecretStore for AWS Secrets Manager (installed after the External Secrets CRDs)
+version: 0.1.0

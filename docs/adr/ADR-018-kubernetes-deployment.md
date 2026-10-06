@@ -23,8 +23,8 @@ database must migrate before new code serves traffic, without secrets in Git (ru
    expand/contract so the previous release keeps working during a rollout.
 3. **Secrets via External Secrets Operator**: one Secrets Manager JSON per component and
    environment, synced into `<component>-secrets`; the chart only references them.
-4. **Kafka topics are created by the services** that use them (MSK ACLs grant CreateTopic per
-   topic), not by Terraform.
+4. **Kafka topics are created by the services** that use them, not by Terraform. (Correction,
+   Phase 16: per-topic MSK ACLs are not applied yet; see ADR-019.)
 5. **Validation without a cluster**: values schema, helm-unittest, kubeconform against the
    Kubernetes and CRD schemas, kube-linter — in CI on every pull request.
 

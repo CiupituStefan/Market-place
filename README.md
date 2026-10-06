@@ -4,7 +4,7 @@ A production-oriented e-commerce platform for mechanical and custom keyboards, k
 stabilizers, cables, desk mats and accessories. Built as TypeScript microservices (NestJS) with a
 Next.js storefront, PostgreSQL, Redis, Kafka and Stripe, deployed to Kubernetes on AWS.
 
-> **Status: Phases 1–15 of 21 — Helm chart for EKS: probes, autoscaling, network policies, External Secrets, migrations.** Phase 16 (Terraform + AWS) is next.
+> **Status: Phases 1–16 of 21 — AWS infrastructure in Terraform: VPC, EKS, RDS, ElastiCache, MSK, S3/CloudFront, WAF, SES, GitHub OIDC.** Phase 17 (GitHub Actions CI) is next.
 > See the [roadmap](#roadmap).
 
 ## Architecture at a glance
@@ -58,8 +58,8 @@ packages/
   eslint-config/          shared flat ESLint configs
   tsconfig/               shared strict tsconfigs
 infrastructure/
-  terraform/              AWS (Phase 16)
-  helm/                   Kubernetes charts (Phase 15)
+  terraform/              AWS: bootstrap, stacks (global, infra, platform), modules
+  helm/                   Kubernetes chart
 docs/
   adr/                    Architecture Decision Records
 scripts/
@@ -153,7 +153,7 @@ Kubernetes (Helm) · Terraform · AWS (EKS, RDS, ElastiCache, MSK, ECR, WAF) · 
 | 13  | Admin dashboard                                | ✅     |
 | 14  | Docker Compose                                 | ✅     |
 | 15  | Kubernetes + Helm                              | ✅     |
-| 16  | Terraform + AWS                                |        |
+| 16  | Terraform + AWS                                | ✅     |
 | 17  | GitHub Actions CI                              |        |
 | 18  | GitHub Actions CD                              |        |
 | 19  | Observability                                  |        |

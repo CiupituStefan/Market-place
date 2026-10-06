@@ -1,0 +1,18 @@
+{{- /*
+Amazon RDS root certificates, so services verify the database's certificate
+(DATABASE_URL ...?sslmode=verify-full&sslrootcert=/etc/ssl/rds/ca.pem). Public certificates
+from https://truststore.pki.rds.amazonaws.com/<region>/<region>-bundle.pem, committed in files/.
+*/}}
+{{- $any := false }}
+{{- range $c := .Values.components }}{{ if $c.database }}{{ $any = true }}{{ end }}{{ end }}
+{{- if $any }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rds-ca
+  labels:
+    {{- include "marketplace.labels" (dict "name" "rds-ca" "root" $) | nindent 4 }}
+data:
+  ca.pem: |
+    {{- required "global.database.caFile must name a file in files/" (.Files.Get .Values.global.database.caFile) | nindent 4 }}
+{{- end }}

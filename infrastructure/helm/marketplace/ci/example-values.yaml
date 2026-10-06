@@ -4,6 +4,9 @@ global:
   image:
     registry: 123456789012.dkr.ecr.eu-central-1.amazonaws.com
     tag: 3f9c2e1
+  externalSecrets:
+    kafkaSecretPrefix: AmazonMSK_cse-production_
+    redisSecretKey: cse/production/redis
   ingress:
     certificateArn: arn:aws:acm:eu-central-1:123456789012:certificate/00000000-0000-0000-0000-000000000000
     wafAclArn: arn:aws:wafv2:eu-central-1:123456789012:regional/webacl/cse/00000000-0000-0000-0000-000000000000

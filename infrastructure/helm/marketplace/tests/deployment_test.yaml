@@ -2,6 +2,7 @@ suite: deployments
 templates:
   - deployment.yaml
   - configmap.yaml
+  - rds-ca.yaml
 values:
   - ../values-production.yaml
   - ../ci/example-values.yaml
@@ -44,12 +45,34 @@ tests:
             valueFrom:
               secretKeyRef: { name: order-service-secrets, key: DATABASE_MIGRATION_URL }
 
+  - it: verifies the database certificate against the RDS roots, in both containers
+    template: deployment.yaml
+    documentSelector: { path: metadata.name, value: order-service }
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content: { name: rds-ca, configMap: { name: rds-ca } }
+      - contains:
+          path: spec.template.spec.initContainers[0].volumeMounts
+          content: { name: rds-ca, mountPath: /etc/ssl/rds, readOnly: true }
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content: { name: rds-ca, mountPath: /etc/ssl/rds, readOnly: true }
+
+  - it: ships the RDS root certificates
+    template: rds-ca.yaml
+    asserts:
+      - matchRegex: { path: 'data["ca.pem"]', pattern: 'BEGIN CERTIFICATE' }
+
   - it: runs the web app without migrations or secrets
     template: deployment.yaml
     documentSelector: { path: metadata.name, value: web }
     asserts:
       - notExists: { path: spec.template.spec.initContainers }
       - lengthEqual: { path: 'spec.template.spec.containers[0].envFrom', count: 1 }
+      - notContains:
+          path: spec.template.spec.volumes
+          content: { name: rds-ca, configMap: { name: rds-ca } }
       - equal:
           path: spec.template.spec.containers[0].readinessProbe.httpGet.path
           value: /api/health

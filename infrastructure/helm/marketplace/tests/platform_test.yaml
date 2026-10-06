@@ -10,6 +10,37 @@ tests:
       - equal: { path: 'spec.dataFrom[0].extract.key', value: cse/production/auth-service }
       - equal: { path: spec.target.name, value: auth-service-secrets }
 
+  - it: reads the generated Kafka and Redis credentials from their own entries
+    template: externalsecret.yaml
+    documentSelector: { path: metadata.name, value: api-gateway-secrets }
+    asserts:
+      - equal:
+          path: 'spec.data[0]'
+          value:
+            secretKey: KAFKA_SASL_USERNAME
+            remoteRef: { key: AmazonMSK_cse-production_api-gateway, property: username }
+      - equal:
+          path: 'spec.data[1].remoteRef'
+          value: { key: AmazonMSK_cse-production_api-gateway, property: password }
+      - equal:
+          path: 'spec.data[2]'
+          value: { secretKey: REDIS_URL, remoteRef: { key: cse/production/redis, property: url } }
+
+  - it: gives REDIS_URL only to components that use Redis
+    template: externalsecret.yaml
+    documentSelector: { path: metadata.name, value: order-service-secrets }
+    asserts:
+      - lengthEqual: { path: spec.data, count: 2 }
+
+  - it: leaves every key to the component's entry when Terraform values are absent
+    template: externalsecret.yaml
+    documentSelector: { path: metadata.name, value: api-gateway-secrets }
+    set:
+      global.externalSecrets.kafkaSecretPrefix: ''
+      global.externalSecrets.redisSecretKey: ''
+    asserts:
+      - notExists: { path: spec.data }
+
   - it: creates no secret for the web app
     template: externalsecret.yaml
     asserts:

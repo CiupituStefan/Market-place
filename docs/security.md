@@ -55,10 +55,22 @@ Security controls by layer. Items marked _(Phase N)_ land in that phase.
 - Logs are JSON with automatic redaction of passwords, tokens, cookies and auth headers.
 - Card data never touches our systems: Stripe Payment Element (PCI SAQ A); payment status comes
   only from signature-verified, deduplicated Stripe webhooks (see [payments](payments.md)).
-- Database roles per service, no public database/Redis/Kafka endpoints _(Phase 16)_.
+- An owner role (migrations) and a data-only role per service database.
+
+## AWS ([terraform](../infrastructure/terraform/README.md))
+
+- PostgreSQL, Redis and Kafka live in subnets with no route out of the VPC, accept connections
+  only from the EKS cluster, and require TLS; services verify the RDS certificate.
+- Encryption at rest with a per-environment KMS key; generated credentials (cache token, Kafka
+  passwords) are written to Secrets Manager with write-only arguments, never to Terraform state.
+- AWS WAF in front of the load balancer (managed rule groups, rate limits on sign-in and
+  checkout); CloudFront serves images from a private bucket.
+- GitHub Actions reaches AWS through OIDC roles (no access keys); pods through per-service IRSA
+  roles; nodes enforce IMDSv2 with hop limit 1.
+- Known gap: Kafka topics have no per-topic ACLs yet (any authenticated service may use any
+  topic).
 
 ## Supply chain and platform _(Phases 17–20)_
 
-Dependency and container scanning in CI, GitHub OIDC to AWS (no long-lived keys), least-privilege
-IAM, Kubernetes RBAC and NetworkPolicies, secrets from AWS Secrets Manager, CSP with nonces on the
-storefront, WAF managed rules.
+Dependency and container scanning in CI, image signing, Kubernetes RBAC review, CSP with nonces
+on the storefront.

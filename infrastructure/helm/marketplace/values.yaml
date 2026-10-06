@@ -31,11 +31,14 @@ global:
     KAFKA_BROKERS: ''
     KAFKA_SSL: 'true'
     KAFKA_SASL_MECHANISM: SCRAM-SHA-512
-    # Each service creates the topics it uses (and their dead-letter topics) if missing;
-    # its MSK user is granted CreateTopic on those topics only.
+    # Each service creates the topics it uses (and their dead-letter topics) if missing.
     KAFKA_CREATE_TOPICS: 'true'
     KAFKA_REPLICATION_FACTOR: '3'
     KAFKA_TOPIC_PARTITIONS: '6'
+
+  database:
+    # RDS root certificates mounted at /etc/ssl/rds/ca.pem for services with a database.
+    caFile: files/rds-ca-eu-central-1.pem
 
   externalSecrets:
     enabled: true
@@ -45,6 +48,11 @@ global:
       kind: ClusterSecretStore
     # Secrets Manager entries are JSON objects at <prefix>/<component>.
     keyPrefix: cse/staging
+    # Set from Terraform outputs: Kafka SCRAM credentials from AmazonMSK_<cluster>_<component>,
+    # REDIS_URL from the cache's secret (components with `redis: true`). Empty: both come from
+    # the component's own entry.
+    kafkaSecretPrefix: ''
+    redisSecretKey: ''
     refreshInterval: 1h
 
   ingress:
@@ -105,6 +113,7 @@ components:
     port: 4000
     replicas: 2
     database: false
+    redis: true
     public: api
     allowFrom: [web]
     resources:

@@ -113,3 +113,32 @@ jobs:
 
       - name: Check the chart
         run: infrastructure/helm/check.sh
+
+  terraform:
+    name: Terraform (format, validate, tests, tflint, checkov)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      # No AWS credentials: no backend, mock providers in the tests.
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.16.5
+          terraform_wrapper: false
+
+      - uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: v0.59.1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - run: pip install checkov==3.3.23
+
+      - name: Check the Terraform code
+        env:
+          # tflint --init downloads the AWS ruleset from GitHub releases.
+          GITHUB_TOKEN: ${{ github.token }}
+        run: infrastructure/terraform/check.sh

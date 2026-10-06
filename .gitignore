@@ -18,14 +18,20 @@ coverage/
 .env.*
 !.env.example
 *.pem
+# public Amazon RDS root certificates (no private keys)
+!infrastructure/helm/marketplace/files/rds-ca-*.pem
 *.key
 
 # terraform
 **/.terraform/*
+# modules are locked by the stacks that use them
+infrastructure/terraform/modules/**/.terraform.lock.hcl
 *.tfstate
 *.tfstate.*
 *.tfvars
 !*.tfvars.example
+# Environment settings (sizes, domains, CIDRs): reviewed, never secrets.
+!infrastructure/terraform/envs/**/*.tfvars
 crash.log
 
 # OS / editor
