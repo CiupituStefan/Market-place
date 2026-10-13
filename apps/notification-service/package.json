@@ -16,7 +16,7 @@
     "db:migrate": "node dist/db/migrate-cli.js"
   },
   "dependencies": {
-    "@aws-sdk/client-sesv2": "^3.1146.0",
+    "@aws-sdk/client-sesv2": "^3.1147.0",
     "@market/config": "workspace:*",
     "@market/db": "workspace:*",
     "@market/events": "workspace:*",
@@ -30,7 +30,7 @@
     "@nestjs/platform-express": "^12.1.2",
     "@nestjs/swagger": "^12.0.2",
     "drizzle-orm": "^0.45.3",
-    "nodemailer": "^10.0.14",
+    "nodemailer": "^10.0.15",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "zod": "^4.6.5"
