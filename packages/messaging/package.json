@@ -27,23 +27,23 @@
     "@market/events": "workspace:*",
     "@market/logger": "workspace:*",
     "@market/telemetry": "workspace:*",
-    "@platformatic/kafka": "^2.13.0",
-    "drizzle-orm": "^0.45.3",
-    "zod": "^4.6.5"
+    "@platformatic/kafka": "^2.14.0",
+    "drizzle-orm": "^0.45.4",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "^0.5.8",
+    "@electric-sql/pglite": "^0.5.9",
     "@market/eslint-config": "workspace:*",
     "@market/tsconfig": "workspace:*",
     "@market/types": "workspace:*",
     "@opentelemetry/api": "^1.9.1",
-    "@opentelemetry/context-async-hooks": "^2.11.0",
-    "@opentelemetry/core": "^2.11.0",
-    "@opentelemetry/sdk-trace-base": "^2.11.0",
+    "@opentelemetry/context-async-hooks": "^2.12.0",
+    "@opentelemetry/core": "^2.12.0",
+    "@opentelemetry/sdk-trace-base": "^2.12.0",
     "@types/node": "^22.19.0",
     "drizzle-kit": "^0.31.11",
     "eslint": "^10.12.0",
     "typescript": "~6.0.3",
-    "vitest": "^5.0.3"
+    "vitest": "^5.0.4"
   }
 }
