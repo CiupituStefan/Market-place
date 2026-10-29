@@ -1,4 +1,7 @@
+'use client';
+
 import { StarIcon } from 'lucide-react';
+import { useI18n } from '@/components/i18n/provider';
 import { cn } from '@/lib/utils';
 
 interface RatingProps {
@@ -9,6 +12,7 @@ interface RatingProps {
 }
 
 export function Rating({ value, count, className, size = 'sm' }: RatingProps) {
+  const { t, number } = useI18n();
   const rounded = Math.round(value * 2) / 2;
   const star = size === 'sm' ? 'size-3.5' : 'size-4.5';
   return (
@@ -31,14 +35,14 @@ export function Rating({ value, count, className, size = 'sm' }: RatingProps) {
         ))}
       </div>
       <span className="text-xs text-muted-foreground">
-        <span className="sr-only">Rated </span>
+        <span className="sr-only">{t.product.rated} </span>
         {value.toFixed(1)}
-        <span className="sr-only"> out of 5</span>
+        <span className="sr-only"> {t.product.outOf5}</span>
         {count !== undefined && (
           <span>
             {' '}
-            ({count.toLocaleString('en')}
-            <span className="sr-only"> reviews</span>)
+            ({number(count)}
+            <span className="sr-only"> {t.product.reviews}</span>)
           </span>
         )}
       </span>

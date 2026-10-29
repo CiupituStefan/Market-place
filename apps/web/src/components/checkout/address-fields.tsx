@@ -1,10 +1,12 @@
+'use client';
+
 import { SHIPPING_COUNTRIES } from '@market/types';
 import { useId } from 'react';
 import { FormField } from '@/components/auth/form-field';
+import { useI18n } from '@/components/i18n/provider';
 import { Label } from '@/components/ui/label';
+import { LOCALE_INFO } from '@/lib/i18n/config';
 import type { FieldErrors } from '@/lib/auth/validation';
-
-const COUNTRIES = Object.entries(SHIPPING_COUNTRIES).sort((a, b) => a[1].localeCompare(b[1]));
 
 /** Address inputs named `${prefix}.field`; errors are keyed the same way. */
 export function AddressFields({
@@ -17,6 +19,14 @@ export function AddressFields({
   defaultCountry?: string;
 }) {
   const countryId = useId();
+  const { t, locale } = useI18n();
+  const copy = t.checkout.address;
+  // Country names in the page's language, sorted for it.
+  const intl = LOCALE_INFO[locale].intl;
+  const names = new Intl.DisplayNames([intl], { type: 'region' });
+  const countries = Object.entries(SHIPPING_COUNTRIES)
+    .map(([code, english]) => [code, names.of(code) ?? english] as const)
+    .sort((a, b) => a[1].localeCompare(b[1], intl));
   const name = (field: string) => `${prefix}.${field}`;
   const auto = (token: string) =>
     `${prefix === 'billingAddress' ? 'billing' : 'shipping'} ${token}`;
@@ -24,14 +34,14 @@ export function AddressFields({
     <div className="grid gap-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <FormField
-          label="First name"
+          label={copy.firstName}
           name={name('firstName')}
           autoComplete={auto('given-name')}
           required
           error={errors[name('firstName')]}
         />
         <FormField
-          label="Last name"
+          label={copy.lastName}
           name={name('lastName')}
           autoComplete={auto('family-name')}
           required
@@ -39,34 +49,34 @@ export function AddressFields({
         />
       </div>
       <FormField
-        label="Company (optional)"
+        label={copy.company}
         name={name('company')}
         autoComplete={auto('organization')}
         error={errors[name('company')]}
       />
       <FormField
-        label="Address"
+        label={copy.line1}
         name={name('line1')}
         autoComplete={auto('address-line1')}
         required
         error={errors[name('line1')]}
       />
       <FormField
-        label="Apartment, suite, etc. (optional)"
+        label={copy.line2}
         name={name('line2')}
         autoComplete={auto('address-line2')}
         error={errors[name('line2')]}
       />
       <div className="grid gap-4 sm:grid-cols-[1fr_10rem]">
         <FormField
-          label="City"
+          label={copy.city}
           name={name('city')}
           autoComplete={auto('address-level2')}
           required
           error={errors[name('city')]}
         />
         <FormField
-          label="Postal code"
+          label={copy.postalCode}
           name={name('postalCode')}
           autoComplete={auto('postal-code')}
           required
@@ -75,7 +85,7 @@ export function AddressFields({
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="grid gap-2">
-          <Label htmlFor={countryId}>Country</Label>
+          <Label htmlFor={countryId}>{copy.country}</Label>
           <select
             id={countryId}
             name={name('country')}
@@ -83,7 +93,7 @@ export function AddressFields({
             defaultValue={defaultCountry}
             className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/40"
           >
-            {COUNTRIES.map(([code, label]) => (
+            {countries.map(([code, label]) => (
               <option key={code} value={code}>
                 {label}
               </option>
@@ -91,11 +101,11 @@ export function AddressFields({
           </select>
         </div>
         <FormField
-          label="Phone (optional)"
+          label={copy.phone}
           name={name('phone')}
           type="tel"
           autoComplete={auto('tel')}
-          hint="Only shared with the courier"
+          hint={copy.phoneHint}
           error={errors[name('phone')]}
         />
       </div>

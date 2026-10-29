@@ -1,9 +1,12 @@
+'use client';
+
 import { TruckIcon } from 'lucide-react';
 import type { Cart } from '@/lib/api/cart';
-import { formatMoney } from '@/lib/format';
+import { useI18n } from '@/components/i18n/provider';
 
 /** Display only: the shipping amount itself comes from cart-service. */
 export function FreeShippingProgress({ cart }: { cart: Cart }) {
+  const { t, money } = useI18n();
   const threshold = cart.freeShippingThreshold.amount;
   if (threshold <= 0) return null;
   const counted = cart.subtotal.amount - cart.discount.amount;
@@ -14,13 +17,15 @@ export function FreeShippingProgress({ cart }: { cart: Cart }) {
       <p className="flex items-center gap-2">
         <TruckIcon className="size-4 text-brand" aria-hidden="true" />
         {remaining === 0 || cart.shipping.amount === 0
-          ? 'Your order ships free.'
-          : `Add ${formatMoney({ amount: remaining, currency: cart.subtotal.currency })} more for free shipping.`}
+          ? t.cart.freeShipping
+          : t.cart.addForFreeShipping(
+              money({ amount: remaining, currency: cart.subtotal.currency }),
+            )}
       </p>
       <div
         className="h-1.5 overflow-hidden rounded-full bg-border"
         role="progressbar"
-        aria-label="Progress to free shipping"
+        aria-label={t.cart.freeShippingProgress}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={Math.round(progress * 100)}

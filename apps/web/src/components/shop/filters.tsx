@@ -4,6 +4,7 @@ import { useId, useState, type SubmitEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import { useI18n } from '@/components/i18n/provider';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { FILTER_KEYS, type CatalogQuery, type FilterKey } from '@/lib/catalog/query';
@@ -20,6 +21,7 @@ function isFilterKey(key: string): key is FilterKey {
 }
 
 export function Filters({ query, facets }: FiltersProps) {
+  const { t } = useI18n();
   const { navigate, isPending } = useCatalogNavigation(query);
   const baseId = useId();
   const [minPrice, setMinPrice] = useState(query.minPrice?.toString() ?? '');
@@ -52,7 +54,7 @@ export function Filters({ query, facets }: FiltersProps) {
             navigate({ inStock: checked === true });
           }}
         />
-        <Label htmlFor={`${baseId}-instock`}>In stock only</Label>
+        <Label htmlFor={`${baseId}-instock`}>{t.listing.inStockOnly}</Label>
       </div>
 
       {facets.map((facet) => {
@@ -61,7 +63,9 @@ export function Filters({ query, facets }: FiltersProps) {
         return (
           <fieldset key={key}>
             <Separator className="mb-6" />
-            <legend className="mb-3 text-sm font-semibold">{facet.label}</legend>
+            <legend className="mb-3 text-sm font-semibold">
+              {t.listing.facets[key] ?? facet.label}
+            </legend>
             <ul className="flex flex-col gap-2.5">
               {facet.values.map(({ value, count }) => {
                 const id = `${baseId}-${key}-${value}`;
@@ -77,7 +81,7 @@ export function Filters({ query, facets }: FiltersProps) {
                       }}
                     />
                     <Label htmlFor={id} className="flex-1 justify-between font-normal">
-                      {value}
+                      {t.listing.values[value] ?? value}
                       <span className="font-mono text-xs text-muted-foreground">{count}</span>
                     </Label>
                   </li>
@@ -91,12 +95,12 @@ export function Filters({ query, facets }: FiltersProps) {
       <form onSubmit={applyPrice}>
         <Separator className="mb-6" />
         <fieldset>
-          <legend className="mb-3 text-sm font-semibold">Price (€)</legend>
+          <legend className="mb-3 text-sm font-semibold">{t.listing.price}</legend>
           <div className="flex items-center gap-2">
             <Input
-              aria-label="Minimum price"
+              aria-label={t.listing.minPrice}
               inputMode="numeric"
-              placeholder="Min"
+              placeholder={t.listing.min}
               value={minPrice}
               onChange={(e) => {
                 setMinPrice(e.target.value.replace(/\D/g, ''));
@@ -104,9 +108,9 @@ export function Filters({ query, facets }: FiltersProps) {
             />
             <span className="text-muted-foreground">–</span>
             <Input
-              aria-label="Maximum price"
+              aria-label={t.listing.maxPrice}
               inputMode="numeric"
-              placeholder="Max"
+              placeholder={t.listing.max}
               value={maxPrice}
               onChange={(e) => {
                 setMaxPrice(e.target.value.replace(/\D/g, ''));
@@ -114,7 +118,7 @@ export function Filters({ query, facets }: FiltersProps) {
             />
           </div>
           <Button type="submit" variant="outline" size="sm" className="mt-3 w-full">
-            Apply price
+            {t.listing.applyPrice}
           </Button>
         </fieldset>
       </form>

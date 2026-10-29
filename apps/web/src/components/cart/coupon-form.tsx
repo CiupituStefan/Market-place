@@ -2,6 +2,7 @@
 
 import { TagIcon, XIcon } from 'lucide-react';
 import { useState } from 'react';
+import { useI18n } from '@/components/i18n/provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useApplyCoupon, useRemoveCoupon } from '@/lib/api/cart';
@@ -9,6 +10,7 @@ import { userMessage } from '@/lib/api/errors';
 
 /** Sends only the code; whether it applies and how much it takes off is decided by cart-service. */
 export function CouponForm({ couponCode }: { couponCode: string | null }) {
+  const { t } = useI18n();
   const [code, setCode] = useState('');
   const apply = useApplyCoupon();
   const remove = useRemoveCoupon();
@@ -23,7 +25,7 @@ export function CouponForm({ couponCode }: { couponCode: string | null }) {
           variant="ghost"
           size="icon"
           className="size-7"
-          aria-label={`Remove code ${couponCode}`}
+          aria-label={t.cart.coupon.remove(couponCode)}
           disabled={remove.isPending}
           onClick={() => {
             remove.mutate(undefined);
@@ -49,7 +51,7 @@ export function CouponForm({ couponCode }: { couponCode: string | null }) {
       }}
     >
       <label htmlFor="coupon" className="text-sm font-medium">
-        Discount code
+        {t.cart.coupon.label}
       </label>
       <div className="flex gap-2">
         <Input
@@ -67,12 +69,12 @@ export function CouponForm({ couponCode }: { couponCode: string | null }) {
           aria-describedby={apply.isError ? 'coupon-error' : undefined}
         />
         <Button type="submit" variant="outline" disabled={apply.isPending || !code.trim()}>
-          Apply
+          {t.cart.coupon.apply}
         </Button>
       </div>
       {apply.isError && (
         <p id="coupon-error" role="alert" className="text-sm text-destructive">
-          {userMessage(apply.error)}
+          {userMessage(apply.error, t)}
         </p>
       )}
     </form>

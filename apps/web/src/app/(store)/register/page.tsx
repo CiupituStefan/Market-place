@@ -1,23 +1,25 @@
-import Link from 'next/link';
+import { getI18n } from '@/lib/i18n/server';
+import Link from '@/components/i18n/link';
 import { AuthCard } from '@/components/auth/auth-card';
 import { RegisterForm } from '@/components/auth/register-form';
-import { privatePage } from '@/lib/seo/private';
+import { localPrivatePage } from '@/lib/seo/private';
 
-export const metadata = privatePage('Create account');
+export const generateMetadata = localPrivatePage((t) => t.pages.createAccount);
 
-export default function RegisterPage() {
+export default async function RegisterPage() {
+  const { t } = await getI18n();
   return (
     <AuthCard
-      title="Create your account"
-      description="Save your builds, track orders and get early access to drops."
+      title={t.pages.register.title}
+      description={t.pages.register.description}
       footer={
         <>
-          Already have an account?{' '}
+          {t.pages.register.haveAccount}{' '}
           <Link
             href="/login"
             className="font-medium text-foreground underline-offset-4 hover:underline"
           >
-            Sign in
+            {t.pages.register.signIn}
           </Link>
         </>
       }

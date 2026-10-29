@@ -1,6 +1,7 @@
 'use client';
 
 import { SlidersHorizontalIcon } from 'lucide-react';
+import { useI18n } from '@/components/i18n/provider';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -23,17 +24,19 @@ export function MobileFilters({
   facets: Facet[];
   activeCount: number;
 }) {
+  const { t } = useI18n();
   return (
     <Sheet>
       <SheetTrigger asChild>
         <Button variant="outline" size="sm" className="lg:hidden">
-          <SlidersHorizontalIcon /> Filters{activeCount > 0 && ` (${activeCount})`}
+          <SlidersHorizontalIcon /> {t.listing.filters}
+          {activeCount > 0 && ` (${String(activeCount)})`}
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>Filters</SheetTitle>
-          <SheetDescription>Results update as you select.</SheetDescription>
+          <SheetTitle>{t.listing.filters}</SheetTitle>
+          <SheetDescription>{t.listing.filtersHint}</SheetDescription>
         </SheetHeader>
         <div className="px-5 pb-8">
           <Filters query={query} facets={facets} />

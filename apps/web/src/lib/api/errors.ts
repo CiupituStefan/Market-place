@@ -28,12 +28,32 @@ export async function toApiError(response: Response): Promise<ApiError> {
   return new ApiError(response.status, body, `Request failed with status ${response.status}`);
 }
 
-/** Message safe to show to a shopper. Server-side details stay in the logs. */
-export function userMessage(error: unknown): string {
+/** The part of the dictionary error messages come from. */
+interface ErrorMessages {
+  errors: {
+    preferServerMessage: boolean;
+    server: string;
+    offline: string;
+    generic: string;
+    codes: Partial<Record<string, string>>;
+  };
+}
+
+/**
+ * Message safe to show to a shopper, in their language. Server-side details stay in the logs.
+ * Without a dictionary (back office), the API's English message is used.
+ */
+export function userMessage(error: unknown, t?: ErrorMessages): string {
+  const messages = t?.errors;
   if (error instanceof ApiError) {
-    if (error.status >= 500) return 'Something went wrong on our side. Please try again.';
-    return error.message;
+    if (error.status >= 500) {
+      return messages?.server ?? 'Something went wrong on our side. Please try again.';
+    }
+    if (!messages || messages.preferServerMessage) return error.message;
+    return messages.codes[error.code] ?? messages.generic;
   }
-  if (error instanceof TypeError) return 'We could not reach the store. Check your connection.';
-  return 'Something went wrong. Please try again.';
+  if (error instanceof TypeError) {
+    return messages?.offline ?? 'We could not reach the store. Check your connection.';
+  }
+  return messages?.generic ?? 'Something went wrong. Please try again.';
 }

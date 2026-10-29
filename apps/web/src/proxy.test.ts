@@ -42,9 +42,44 @@ describe('proxy', () => {
   });
 
   it('runs on pages but not on static assets or health checks', () => {
-    const source = new RegExp(`^${config.matcher[0]!.source}$`);
+    const source = new RegExp(`^${config.matcher[0]!}$`);
     expect(source.test('/product/cse-forge-75')).toBe(true);
     expect(source.test('/_next/static/chunks/main.js')).toBe(false);
     expect(source.test('/api/health')).toBe(false);
+  });
+
+  describe('language', () => {
+    const request = (path: string, headers: Record<string, string> = {}) =>
+      proxy(new NextRequest(`http://localhost:3000${path}`, { headers }));
+
+    it('sends visitors in Romania to the Romanian page, keeping the query', () => {
+      const response = request('/shop?sort=price', { 'x-vercel-ip-country': 'RO' });
+      expect(response.status).toBe(307);
+      expect(new URL(response.headers.get('location')!).pathname).toBe('/ro/shop');
+      expect(new URL(response.headers.get('location')!).search).toBe('?sort=price');
+    });
+
+    it('keeps everyone else on English', () => {
+      const response = request('/shop', { 'x-vercel-ip-country': 'DE' });
+      expect(response.status).toBe(200);
+      expect(response.headers.get('x-middleware-request-x-locale')).toBe('en');
+    });
+
+    it('renders /ro pages as Romanian, from the same page', () => {
+      const response = request('/ro/shop');
+      expect(response.headers.get('x-middleware-rewrite')).toBe('http://localhost:3000/shop');
+      expect(response.headers.get('x-middleware-request-x-locale')).toBe('ro');
+    });
+
+    it('lets an explicit choice win over the country', () => {
+      const response = request('/', { 'x-vercel-ip-country': 'RO', cookie: 'cse_locale=en' });
+      expect(response.status).toBe(200);
+    });
+
+    it('sends Romanian visitors without a session to the Romanian sign-in', () => {
+      const location = new URL(request('/ro/account').headers.get('location')!);
+      expect(location.pathname).toBe('/ro/login');
+      expect(location.searchParams.get('next')).toBe('/ro/account');
+    });
   });
 });

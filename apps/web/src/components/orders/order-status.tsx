@@ -1,3 +1,6 @@
+'use client';
+
+import { useI18n } from '@/components/i18n/provider';
 import type { OrderStatus } from '@market/types';
 import { Badge } from '@/components/ui/badge';
 
@@ -18,6 +21,7 @@ export function orderStatusLabel(status: OrderStatus): string {
 }
 
 export function OrderStatusBadge({ status }: { status: OrderStatus }) {
+  const { t } = useI18n();
   const variant =
     status === 'CANCELLED' || status === 'FAILED'
       ? 'destructive'
@@ -26,5 +30,5 @@ export function OrderStatusBadge({ status }: { status: OrderStatus }) {
         : status === 'DELIVERED' || status === 'SHIPPED'
           ? 'brand'
           : 'outline';
-  return <Badge variant={variant}>{LABELS[status]}</Badge>;
+  return <Badge variant={variant}>{t.orders.status[status]}</Badge>;
 }

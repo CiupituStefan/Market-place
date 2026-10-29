@@ -1,7 +1,9 @@
 'use client';
 
 import { CloudOffIcon, LockIcon } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/components/i18n/link';
+import { useI18n } from '@/components/i18n/provider';
+import { splitLocale } from '@/lib/i18n/config';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { EmptyState } from '@/components/empty-state';
@@ -15,12 +17,13 @@ import { useSession, type SessionUser } from '@/lib/api/session';
  * API gateway and services; this component never decides what data a user may see.
  */
 export function RequireSession({ children }: { children: (user: SessionUser) => ReactNode }) {
-  const pathname = usePathname();
+  const { t, path } = useI18n();
+  const pathname = path(splitLocale(usePathname()).path);
   const session = useSession();
 
   if (session.isPending) {
     return (
-      <div className="grid gap-4" aria-busy="true" aria-label="Loading">
+      <div className="grid gap-4" aria-busy="true" aria-label={t.account.loading}>
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-32 w-full" />
       </div>
@@ -30,11 +33,11 @@ export function RequireSession({ children }: { children: (user: SessionUser) => 
     return (
       <EmptyState
         icon={CloudOffIcon}
-        title="We couldn’t load your account"
-        description={userMessage(session.error)}
+        title={t.account.loadFailed}
+        description={userMessage(session.error, t)}
         action={
           <Button variant="outline" onClick={() => void session.refetch()}>
-            Try again
+            {t.common.tryAgain}
           </Button>
         }
       />
@@ -44,17 +47,17 @@ export function RequireSession({ children }: { children: (user: SessionUser) => 
     return (
       <EmptyState
         icon={LockIcon}
-        title="Sign in to continue"
-        description="Your orders, addresses and wishlist live in your account."
+        title={t.account.signInTitle}
+        description={t.account.signInBody}
         action={
           <div className="flex gap-3">
             <Button asChild>
               <Link href={`/login?next=${encodeURIComponent(pathname)}`} prefetch={false}>
-                Sign in
+                {t.account.signIn}
               </Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/register">Create account</Link>
+              <Link href="/register">{t.account.createAccount}</Link>
             </Button>
           </div>
         }

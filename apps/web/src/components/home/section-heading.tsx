@@ -1,5 +1,5 @@
 import { ArrowRightIcon } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/components/i18n/link';
 import type { ReactNode } from 'react';
 
 interface SectionHeadingProps {
@@ -7,6 +7,7 @@ interface SectionHeadingProps {
   title: string;
   description?: ReactNode;
   href?: string;
+  /** Required with `href` (localised by the caller). */
   linkLabel?: string;
   id?: string;
 }
@@ -33,7 +34,7 @@ export function SectionHeading({
           href={href}
           className="group inline-flex shrink-0 items-center gap-1.5 text-sm font-medium"
         >
-          {linkLabel ?? 'View all'}
+          {linkLabel}
           <ArrowRightIcon className="size-4 transition-transform group-hover:translate-x-0.5" />
         </Link>
       )}

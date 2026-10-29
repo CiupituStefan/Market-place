@@ -18,6 +18,9 @@ import {
 } from '@/components/ui/accordion';
 import { catalog, categoryTrail } from '@/lib/catalog';
 import { defaultSelection } from '@/lib/catalog/variants';
+import { localizePath } from '@/lib/i18n/config';
+import { getI18n } from '@/lib/i18n/server';
+import { localizedAlternates } from '@/lib/seo/alternates';
 import { categoryCrumbs, productJsonLd } from '@/lib/seo/structured-data';
 
 /**
@@ -29,18 +32,19 @@ export const dynamic = 'force-dynamic';
 
 export async function generateMetadata(props: PageProps<'/product/[slug]'>): Promise<Metadata> {
   const { slug } = await props.params;
-  const product = await catalog.getProduct(slug);
+  const { locale } = await getI18n();
+  const product = await catalog.getProduct(locale, slug);
   if (!product) return {};
   const description = `${product.tagline}. ${product.description[0] ?? ''}`.slice(0, 160);
   return {
     title: product.name,
     description,
     // Variant query strings (?variant=SKU) all canonicalise to the product URL.
-    alternates: { canonical: `/product/${product.slug}` },
+    alternates: localizedAlternates(`/product/${product.slug}`, locale),
     openGraph: {
       title: product.name,
       description,
-      url: `/product/${product.slug}`,
+      url: localizePath(`/product/${product.slug}`, locale),
       ...(product.images[0]
         ? { images: [{ url: product.images[0].url, alt: product.images[0].alt }] }
         : {}),
@@ -50,21 +54,22 @@ export async function generateMetadata(props: PageProps<'/product/[slug]'>): Pro
 
 export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
   const { slug } = await props.params;
-  const product = await catalog.getProduct(slug);
+  const { t, locale } = await getI18n();
+  const product = await catalog.getProduct(locale, slug);
   if (!product) notFound();
 
   const [categories, related] = await Promise.all([
-    catalog.getCategories(),
-    catalog.getRelated(product),
+    catalog.getCategories(locale),
+    catalog.getRelated(locale, product),
   ]);
   const crumbs = [
-    ...categoryCrumbs(categoryTrail(categories, product.categorySlug)),
+    ...categoryCrumbs(categoryTrail(categories, product.categorySlug), t),
     { name: product.name, href: `/product/${product.slug}` },
   ];
 
   return (
     <div className="container-page py-8">
-      <JsonLd data={productJsonLd(product)} />
+      <JsonLd data={productJsonLd(product, locale)} />
       <Breadcrumbs crumbs={crumbs} />
 
       <div className="mt-6">
@@ -77,15 +82,15 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
         </Suspense>
       </div>
 
-      <section aria-label="Product information" className="mt-24">
+      <section aria-label={t.product.tabs.label} className="mt-24">
         <ProductDetails product={product} />
       </section>
 
       <section id="reviews" aria-labelledby="reviews-title" className="mt-24 scroll-mt-28">
         <div className="mb-8">
-          <p className="eyebrow">Reviews</p>
+          <p className="eyebrow">{t.product.reviewsTitle}</p>
           <h2 id="reviews-title" className="mt-3 text-3xl font-semibold tracking-tight">
-            What owners say
+            {t.product.reviewsHeading}
           </h2>
         </div>
         <ReviewsSection productId={product.id} />
@@ -94,9 +99,9 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
       {product.faq.length > 0 && (
         <section aria-labelledby="faq-title" className="mt-24 grid gap-8 md:grid-cols-[1fr_2fr]">
           <div>
-            <p className="eyebrow">FAQ</p>
+            <p className="eyebrow">{t.product.faq}</p>
             <h2 id="faq-title" className="mt-3 text-3xl font-semibold tracking-tight">
-              Good questions
+              {t.product.faqHeading}
             </h2>
           </div>
           <Accordion type="single" collapsible>
@@ -112,7 +117,7 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
 
       <section aria-labelledby="related-title" className="mt-24">
         <h2 id="related-title" className="mb-10 text-3xl font-semibold tracking-tight">
-          You might also like
+          {t.product.related}
         </h2>
         <ProductGrid products={related} />
       </section>

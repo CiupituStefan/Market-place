@@ -1,3 +1,5 @@
+import type { Locale } from '@/lib/i18n/config';
+
 /**
  * Static informational pages. Legal texts are placeholders that must be reviewed
  * by counsel before launch; they will move to a CMS later.
@@ -87,4 +89,91 @@ export const contentPages: Record<string, ContentPage> = {
       },
     ],
   },
+};
+
+const contentPagesRo: Record<string, ContentPage> = {
+  shipping: {
+    title: 'Livrare',
+    description: 'Termene, costuri și urmărirea coletelor pentru comenzile CSE Keyboards.',
+    sections: [
+      {
+        heading: 'Expediere',
+        body: 'Comenzile plasate până la ora 15:00 (ora României) în zilele lucrătoare pleacă în aceeași zi. Precomenzile se expediază când sosește stocul; data estimată apare pe pagina produsului.',
+      },
+      {
+        heading: 'Costuri',
+        body: 'Livrarea cu urmărire este gratuită în UE pentru comenzile de peste 99 €. Sub această sumă, și pentru livrarea express, costul exact se calculează la finalizarea comenzii, înainte de plată.',
+      },
+      {
+        heading: 'Urmărire',
+        body: 'Primești pe email un link de urmărire imediat ce coletul pleacă din depozit. Îl poți urmări și din contul tău, la Comenzi.',
+      },
+    ],
+  },
+  returns: {
+    title: 'Retur și garanție',
+    description: 'Retur în 30 de zile și garanție 2 ani pentru fiecare tastatură.',
+    sections: [
+      {
+        heading: 'Retur în 30 de zile',
+        body: 'Produsele nefolosite, în ambalajul original, pot fi returnate în 30 de zile de la livrare. Începe returul din pagina comenzii și îți trimitem pe email o etichetă de transport plătită.',
+      },
+      {
+        heading: 'Rambursări',
+        body: 'Banii revin pe metoda de plată inițială în 5 zile lucrătoare de la verificarea produsului returnat.',
+      },
+      {
+        heading: 'Garanție',
+        body: 'Tastaturile au garanție 2 ani pentru defecte de fabricație. Scrie-ne cu numărul comenzii și o scurtă descriere sau un video al problemei.',
+      },
+    ],
+  },
+  about: {
+    title: 'Despre CSE Keyboards',
+    description: 'Cine suntem și cum ne construim tastaturile.',
+    sections: [
+      {
+        heading: 'Făcute de oameni care tastează',
+        body: 'CSE Keyboards a pornit pe un banc de lucru, cu un ciocan de lipit și prea multe switch-uri. Astăzi proiectăm, reglăm și testăm fiecare tastatură în atelierul nostru înainte de livrare.',
+      },
+      {
+        heading: 'Cum lucrăm',
+        body: 'Fiecare tastatură este lubrifiată, amortizată și testată acustic. Folosim PCB-uri hot-swap și firmware deschis, ca tastatura ta să poată evolua odată cu tine.',
+      },
+    ],
+  },
+  privacy: {
+    title: 'Politica de confidențialitate',
+    description: 'Cum prelucrează CSE Keyboards datele tale personale.',
+    sections: [
+      {
+        heading: 'Ce date colectăm',
+        body: 'Colectăm informațiile necesare pentru a-ți procesa comenzile și a-ți administra contul: nume, email, adresă de livrare și istoricul comenzilor. Datele cardului se introduc direct la Stripe și nu sunt stocate niciodată pe serverele noastre.',
+      },
+      {
+        heading: 'Drepturile tale',
+        body: 'Conform GDPR, poți oricând să accesezi, să corectezi, să exporți sau să ștergi datele tale. Scrie-ne ca să îți exerciți aceste drepturi.',
+      },
+    ],
+  },
+  terms: {
+    title: 'Termeni și condiții de vânzare',
+    description: 'Condițiile care se aplică achizițiilor de la CSE Keyboards.',
+    sections: [
+      {
+        heading: 'Comenzi',
+        body: 'O comandă este confirmată după ce plata a fost procesată cu succes. Prețurile includ TVA acolo unde se aplică; suma finală apare la finalizarea comenzii.',
+      },
+      {
+        heading: 'Disponibilitate',
+        body: 'Stocul se rezervă când începi plata. Dacă rezervarea expiră înainte de finalizarea plății, produsele revin în stoc.',
+      },
+    ],
+  },
+};
+
+/** Informational pages per language; the URL slug is the same in every language. */
+export const contentPagesByLocale: Record<Locale, Record<string, ContentPage>> = {
+  en: contentPages,
+  ro: contentPagesRo,
 };

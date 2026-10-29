@@ -1,16 +1,15 @@
+import { getI18n } from '@/lib/i18n/server';
 import { Suspense } from 'react';
 import { AuthCard } from '@/components/auth/auth-card';
 import { ConfirmNewsletterPanel } from '@/components/notifications/email-link-panels';
-import { privatePage } from '@/lib/seo/private';
+import { localPrivatePage } from '@/lib/seo/private';
 
-export const metadata = privatePage('Confirm your subscription');
+export const generateMetadata = localPrivatePage((t) => t.pages.confirmSubscription);
 
-export default function ConfirmNewsletterPage() {
+export default async function ConfirmNewsletterPage() {
+  const { t } = await getI18n();
   return (
-    <AuthCard
-      title="Confirm your subscription"
-      description="One email a month: restocks, new boards and build guides."
-    >
+    <AuthCard title={t.pages.confirmSubscription} description={t.pages.newsletter.description}>
       <Suspense>
         <ConfirmNewsletterPanel />
       </Suspense>

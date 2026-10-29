@@ -1,7 +1,8 @@
 'use client';
 
 import { CloudOffIcon, PackageIcon } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/components/i18n/link';
+import { useI18n } from '@/components/i18n/provider';
 import { useState } from 'react';
 import { EmptyState } from '@/components/empty-state';
 import { OrderDetail } from '@/components/orders/order-detail';
@@ -11,7 +12,6 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { userMessage } from '@/lib/api/errors';
 import { useMyOrders } from '@/lib/api/orders';
-import { formatDate, formatMoney, pluralize } from '@/lib/format';
 import { RequireSession } from './require-session';
 
 /** Order history of the signed-in user (order-service scopes it to the token's user). */
@@ -20,12 +20,14 @@ export function OrdersView() {
 }
 
 function OrderList() {
+  const { t, money, date } = useI18n();
+  const copy = t.account.orders;
   const [page, setPage] = useState(1);
   const orders = useMyOrders(page);
 
   if (orders.isPending) {
     return (
-      <div className="grid gap-4" aria-busy="true" aria-label="Loading orders">
+      <div className="grid gap-4" aria-busy="true" aria-label={copy.loading}>
         <Skeleton className="h-24" />
         <Skeleton className="h-24" />
       </div>
@@ -35,11 +37,11 @@ function OrderList() {
     return (
       <EmptyState
         icon={CloudOffIcon}
-        title="We couldn’t load your orders"
-        description={userMessage(orders.error)}
+        title={copy.loadFailed}
+        description={userMessage(orders.error, t)}
         action={
           <Button variant="outline" onClick={() => void orders.refetch()}>
-            Try again
+            {t.common.tryAgain}
           </Button>
         }
       />
@@ -49,11 +51,11 @@ function OrderList() {
     return (
       <EmptyState
         icon={PackageIcon}
-        title="No orders yet"
-        description="When you place an order, you can track it here."
+        title={copy.emptyTitle}
+        description={copy.emptyBody}
         action={
           <Button asChild>
-            <Link href="/shop">Start shopping</Link>
+            <Link href="/shop">{copy.startShopping}</Link>
           </Button>
         }
       />
@@ -82,17 +84,17 @@ function OrderList() {
               <div className="min-w-0 flex-1">
                 <p className="font-mono text-sm">{order.number}</p>
                 <p className="text-sm text-muted-foreground">
-                  {formatDate(order.createdAt)} · {pluralize(order.itemCount, 'item')}
+                  {date(order.createdAt)} · {copy.items(order.itemCount)}
                 </p>
               </div>
               <OrderStatusBadge status={order.status} />
-              <span className="font-medium tabular-nums">{formatMoney(order.total)}</span>
+              <span className="font-medium tabular-nums">{money(order.total)}</span>
             </Link>
           </li>
         ))}
       </ul>
       {orders.data.totalPages > 1 && (
-        <nav aria-label="Pagination" className="flex items-center justify-center gap-3">
+        <nav aria-label={t.listing.pagination} className="flex items-center justify-center gap-3">
           <Button
             variant="outline"
             disabled={page <= 1}
@@ -100,10 +102,10 @@ function OrderList() {
               setPage((p) => p - 1);
             }}
           >
-            Previous
+            {copy.previous}
           </Button>
           <span className="text-sm text-muted-foreground">
-            Page {page} of {orders.data.totalPages}
+            {copy.pageOf(page, orders.data.totalPages)}
           </span>
           <Button
             variant="outline"
@@ -112,7 +114,7 @@ function OrderList() {
               setPage((p) => p + 1);
             }}
           >
-            Next
+            {copy.next}
           </Button>
         </nav>
       )}

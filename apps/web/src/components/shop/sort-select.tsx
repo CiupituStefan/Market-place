@@ -1,17 +1,19 @@
 'use client';
 
 import { useId } from 'react';
+import { useI18n } from '@/components/i18n/provider';
 import type { CatalogQuery } from '@/lib/catalog/query';
 import { SORT_OPTIONS, type SortOption } from '@/lib/catalog/schemas';
 import { useCatalogNavigation } from './use-catalog-navigation';
 
 export function SortSelect({ query }: { query: CatalogQuery }) {
   const id = useId();
+  const { t } = useI18n();
   const { navigate } = useCatalogNavigation(query);
   return (
     <div className="flex items-center gap-2 text-sm">
       <label htmlFor={id} className="text-muted-foreground">
-        Sort by
+        {t.listing.sortBy}
       </label>
       <select
         id={id}
@@ -23,7 +25,7 @@ export function SortSelect({ query }: { query: CatalogQuery }) {
       >
         {SORT_OPTIONS.map((option) => (
           <option key={option.value} value={option.value}>
-            {option.label}
+            {t.listing.sort[option.value]}
           </option>
         ))}
       </select>

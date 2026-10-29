@@ -1,29 +1,14 @@
 import { PackageCheckIcon, ShieldCheckIcon, SlidersHorizontalIcon, WrenchIcon } from 'lucide-react';
+import { getI18n } from '@/lib/i18n/server';
 
-const reasons = [
-  {
-    icon: SlidersHorizontalIcon,
-    title: 'Tuned in-house',
-    body: 'Every board is lubed, dampened and sound-tested by our team before it ships.',
-  },
-  {
-    icon: WrenchIcon,
-    title: 'Hot-swap everything',
-    body: 'Change switches in seconds. No soldering, no voided warranty.',
-  },
-  {
-    icon: ShieldCheckIcon,
-    title: '2-year warranty',
-    body: 'Real people answer support. Repairs and replacements are handled in the EU.',
-  },
-  {
-    icon: PackageCheckIcon,
-    title: 'Fast EU shipping',
-    body: 'Free over €99, dispatched in 1–2 business days with tracking on every order.',
-  },
-];
+const ICONS = [SlidersHorizontalIcon, WrenchIcon, ShieldCheckIcon, PackageCheckIcon];
 
-export function WhyUs() {
+export async function WhyUs() {
+  const { t } = await getI18n();
+  const reasons = t.home.why.reasons.map((reason, index) => ({
+    ...reason,
+    icon: ICONS[index] ?? PackageCheckIcon,
+  }));
   return (
     <ul className="grid gap-px overflow-hidden rounded-3xl border bg-border sm:grid-cols-2 lg:grid-cols-4">
       {reasons.map(({ icon: Icon, title, body }) => (

@@ -1,28 +1,35 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { contentPages } from '@/lib/content';
+import { contentPagesByLocale } from '@/lib/content';
+import type { Locale } from '@/lib/i18n/config';
+import { getI18n } from '@/lib/i18n/server';
+import { localizedAlternates } from '@/lib/seo/alternates';
 
 /** Own keys only: `/constructor` or `/toString` must be a 404, not a prototype method. */
-const contentOf = (page: string) =>
-  Object.hasOwn(contentPages, page) ? contentPages[page] : undefined;
+const contentOf = (page: string, locale: Locale) => {
+  const pages = contentPagesByLocale[locale];
+  return Object.hasOwn(pages, page) ? pages[page] : undefined;
+};
 
 /** Per request, like every page: see the CSP nonce note in product/[slug]/page.tsx. */
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata(props: PageProps<'/[page]'>): Promise<Metadata> {
   const { page } = await props.params;
-  const content = contentOf(page);
+  const { locale } = await getI18n();
+  const content = contentOf(page, locale);
   if (!content) return {};
   return {
     title: content.title,
     description: content.description,
-    alternates: { canonical: `/${page}` },
+    alternates: localizedAlternates(`/${page}`, locale),
   };
 }
 
 export default async function ContentPage(props: PageProps<'/[page]'>) {
   const { page } = await props.params;
-  const content = contentOf(page);
+  const { locale } = await getI18n();
+  const content = contentOf(page, locale);
   if (!content) notFound();
   return (
     <article className="container-page max-w-3xl py-16">

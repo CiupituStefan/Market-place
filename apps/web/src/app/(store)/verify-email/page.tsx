@@ -1,13 +1,15 @@
+import { getI18n } from '@/lib/i18n/server';
 import { Suspense } from 'react';
 import { AuthCard } from '@/components/auth/auth-card';
 import { VerifyEmailPanel } from '@/components/auth/verify-email-panel';
-import { privatePage } from '@/lib/seo/private';
+import { localPrivatePage } from '@/lib/seo/private';
 
-export const metadata = privatePage('Confirm your email');
+export const generateMetadata = localPrivatePage((t) => t.pages.confirmEmail);
 
-export default function VerifyEmailPage() {
+export default async function VerifyEmailPage() {
+  const { t } = await getI18n();
   return (
-    <AuthCard title="Confirm your email" description="One click and your account is fully set up.">
+    <AuthCard title={t.pages.confirmEmail} description={t.pages.verify.description}>
       <Suspense>
         <VerifyEmailPanel />
       </Suspense>

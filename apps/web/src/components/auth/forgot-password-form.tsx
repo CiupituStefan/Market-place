@@ -1,5 +1,6 @@
 'use client';
 
+import { useI18n } from '@/components/i18n/provider';
 import { useMutation } from '@tanstack/react-query';
 import { useState, type SubmitEvent } from 'react';
 import { z } from 'zod';
@@ -9,6 +10,7 @@ import { userMessage } from '@/lib/api/errors';
 import { FormField } from './form-field';
 
 export function ForgotPasswordForm() {
+  const { t } = useI18n();
   const [error, setError] = useState<string>();
   const request = useMutation({
     mutationFn: (email: string) =>
@@ -19,7 +21,7 @@ export function ForgotPasswordForm() {
     event.preventDefault();
     const parsed = z.email().safeParse(new FormData(event.currentTarget).get('email'));
     if (!parsed.success) {
-      setError('Enter a valid email address.');
+      setError(t.auth.invalidEmail);
       return;
     }
     setError(undefined);
@@ -30,7 +32,7 @@ export function ForgotPasswordForm() {
     // Same message whether or not the account exists (no account enumeration).
     return (
       <p role="status" className="text-sm">
-        If an account exists for that email, a reset link is on its way.
+        {t.auth.resetSent}
       </p>
     );
   }
@@ -38,7 +40,7 @@ export function ForgotPasswordForm() {
   return (
     <form onSubmit={onSubmit} noValidate className="grid gap-5">
       <FormField
-        label="Email"
+        label={t.auth.email}
         name="email"
         type="email"
         autoComplete="email"
@@ -47,11 +49,11 @@ export function ForgotPasswordForm() {
       />
       {request.isError && (
         <p role="alert" className="text-sm text-destructive">
-          {userMessage(request.error)}
+          {userMessage(request.error, t)}
         </p>
       )}
       <Button type="submit" size="lg" disabled={request.isPending}>
-        {request.isPending ? 'Sending…' : 'Send reset link'}
+        {request.isPending ? t.auth.sending : t.auth.sendReset}
       </Button>
     </form>
   );

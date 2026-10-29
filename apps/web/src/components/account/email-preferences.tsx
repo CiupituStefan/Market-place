@@ -1,5 +1,6 @@
 'use client';
 
+import { useI18n } from '@/components/i18n/provider';
 import { useId } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -12,14 +13,16 @@ import {
 
 /** Optional emails only: security and order receipts are always sent. */
 export function EmailPreferences() {
+  const { t } = useI18n();
   const preferences = useNotificationPreferences();
   const update = useUpdateNotificationPreferences();
   const orderUpdatesId = useId();
   const newsletterId = useId();
 
-  if (preferences.isPending) return <Skeleton className="h-32" aria-label="Loading preferences" />;
+  if (preferences.isPending)
+    return <Skeleton className="h-32" aria-label={t.account.preferences.loading} />;
   if (preferences.isError) {
-    return <p className="text-sm text-destructive">{userMessage(preferences.error)}</p>;
+    return <p className="text-sm text-destructive">{userMessage(preferences.error, t)}</p>;
   }
   const { orderUpdates, newsletter } = preferences.data;
   const newsletterOn = newsletter === 'SUBSCRIBED' || newsletter === 'PENDING';
@@ -28,11 +31,9 @@ export function EmailPreferences() {
     <section aria-labelledby="email-preferences" className="grid gap-5 rounded-2xl border p-6">
       <div>
         <h2 id="email-preferences" className="font-semibold">
-          Email preferences
+          {t.account.preferences.title}
         </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Order confirmations, receipts and security emails are always sent.
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground">{t.account.preferences.always}</p>
       </div>
       <div className="flex items-start gap-3">
         <Checkbox
@@ -44,10 +45,8 @@ export function EmailPreferences() {
           }}
         />
         <div className="grid gap-1">
-          <Label htmlFor={orderUpdatesId}>Shipping updates</Label>
-          <p className="text-sm text-muted-foreground">
-            Tracking number when your order ships, and a note when it arrives.
-          </p>
+          <Label htmlFor={orderUpdatesId}>{t.account.preferences.shipping}</Label>
+          <p className="text-sm text-muted-foreground">{t.account.preferences.shippingBody}</p>
         </div>
       </div>
       <div className="flex items-start gap-3">
@@ -60,17 +59,17 @@ export function EmailPreferences() {
           }}
         />
         <div className="grid gap-1">
-          <Label htmlFor={newsletterId}>Newsletter</Label>
+          <Label htmlFor={newsletterId}>{t.account.preferences.newsletter}</Label>
           <p className="text-sm text-muted-foreground">
             {newsletter === 'PENDING'
-              ? 'Check your inbox: confirm the link we sent to start receiving it.'
-              : 'One email a month with restocks, new boards and build guides.'}
+              ? t.account.preferences.newsletterPending
+              : t.account.preferences.newsletterBody}
           </p>
         </div>
       </div>
       {update.isError && (
         <p role="alert" className="text-sm text-destructive">
-          {userMessage(update.error)}
+          {userMessage(update.error, t)}
         </p>
       )}
     </section>

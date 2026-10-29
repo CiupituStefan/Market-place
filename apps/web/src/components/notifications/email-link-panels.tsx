@@ -1,9 +1,10 @@
 'use client';
 
 import { CheckCircle2Icon } from 'lucide-react';
-import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import type { ReactNode } from 'react';
+import Link from '@/components/i18n/link';
+import { useI18n } from '@/components/i18n/provider';
 import { Button } from '@/components/ui/button';
 import { userMessage } from '@/lib/api/errors';
 import { useConfirmNewsletter, useUnsubscribe } from '@/lib/api/notifications';
@@ -29,13 +30,10 @@ function EmailLinkAction({
   pendingLabel: string;
   done: ReactNode;
 }) {
+  const { t } = useI18n();
   const token = useSearchParams().get('token');
   if (!token) {
-    return (
-      <p className="text-sm text-destructive">
-        This link is incomplete. Open the link from your email again.
-      </p>
-    );
+    return <p className="text-sm text-destructive">{t.emailLinks.incomplete}</p>;
   }
   if (action.isSuccess) {
     return (
@@ -49,7 +47,7 @@ function EmailLinkAction({
     <div className="grid gap-4">
       {action.isError && (
         <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
-          {userMessage(action.error)}
+          {userMessage(action.error, t)}
         </p>
       )}
       <Button
@@ -66,17 +64,19 @@ function EmailLinkAction({
 }
 
 export function ConfirmNewsletterPanel() {
+  const { t } = useI18n();
+  const copy = t.emailLinks;
   const confirm = useConfirmNewsletter();
   return (
     <EmailLinkAction
       action={confirm}
-      label="Confirm my subscription"
-      pendingLabel="Confirming…"
+      label={copy.confirm}
+      pendingLabel={copy.confirming}
       done={
         <>
-          <p className="font-medium">You are subscribed. Welcome aboard!</p>
+          <p className="font-medium">{copy.subscribed}</p>
           <Button asChild>
-            <Link href="/shop">Browse keyboards</Link>
+            <Link href="/shop">{copy.browse}</Link>
           </Button>
         </>
       }
@@ -85,22 +85,22 @@ export function ConfirmNewsletterPanel() {
 }
 
 export function UnsubscribePanel() {
+  const { t } = useI18n();
+  const copy = t.emailLinks;
   const unsubscribe = useUnsubscribe();
   const what =
-    unsubscribe.data?.scope === 'order-updates'
-      ? 'You will no longer get shipping and delivery emails. Order confirmations and receipts are still sent.'
-      : 'You will no longer receive the newsletter.';
+    unsubscribe.data?.scope === 'order-updates' ? copy.noOrderUpdates : copy.noNewsletter;
   return (
     <EmailLinkAction
       action={unsubscribe}
-      label="Unsubscribe"
-      pendingLabel="Unsubscribing…"
+      label={copy.unsubscribe}
+      pendingLabel={copy.unsubscribing}
       done={
         <>
-          <p className="font-medium">You are unsubscribed.</p>
+          <p className="font-medium">{copy.unsubscribed}</p>
           <p className="text-sm text-muted-foreground">{what}</p>
           <Button asChild variant="outline">
-            <Link href="/account">Manage email preferences</Link>
+            <Link href="/account">{copy.manage}</Link>
           </Button>
         </>
       }

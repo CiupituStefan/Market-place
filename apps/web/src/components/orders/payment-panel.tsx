@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { userMessage } from '@/lib/api/errors';
 import { useMockConfirm, usePaymentSession } from '@/lib/api/payments';
-import { formatMoney } from '@/lib/format';
+import { useI18n } from '@/components/i18n/provider';
 
 const stripePromises = new Map<string, Promise<Stripe | null>>();
 
@@ -31,13 +31,14 @@ function stripeFor(publishableKey: string): Promise<Stripe | null> {
  * webhook says so, which the order page picks up by polling.
  */
 export function PaymentPanel({ order, onSubmitted }: { order: Order; onSubmitted: () => void }) {
+  const { t } = useI18n();
   const session = usePaymentSession(order.id, true);
 
-  if (session.isPending) return <Skeleton className="h-48" aria-label="Loading payment form" />;
+  if (session.isPending) return <Skeleton className="h-48" aria-label={t.orders.loadingPayment} />;
   if (session.isError) {
     return (
       <p role="alert" className="text-sm text-destructive">
-        {userMessage(session.error)}
+        {userMessage(session.error, t)}
       </p>
     );
   }
@@ -56,11 +57,14 @@ function StripePaymentForm({
   onSubmitted: () => void;
 }) {
   const { resolvedTheme } = useTheme();
+  const { locale } = useI18n();
   return (
     <Elements
       stripe={stripeFor(session.publishableKey)}
       options={{
         clientSecret: session.clientSecret,
+        // Stripe's own form (labels, card errors) in the page's language.
+        locale,
         appearance: {
           theme: resolvedTheme === 'dark' ? 'night' : 'stripe',
           variables: { borderRadius: '10px', fontFamily: 'inherit' },
@@ -79,6 +83,7 @@ function StripeForm({
   session: PaymentSession;
   onSubmitted: () => void;
 }) {
+  const { t, money } = useI18n();
   const stripe = useStripe();
   const elements = useElements();
   const [error, setError] = useState<string | null>(null);
@@ -97,7 +102,7 @@ function StripeForm({
     });
     setSubmitting(false);
     if (result.error) {
-      setError(result.error.message ?? 'Your payment could not be completed.');
+      setError(result.error.message ?? t.orders.paymentFailed);
       return;
     }
     onSubmitted();
@@ -112,7 +117,7 @@ function StripeForm({
         </p>
       )}
       <Button type="submit" size="lg" disabled={!stripe || submitting}>
-        <LockIcon /> {submitting ? 'Processing…' : `Pay ${formatMoney(session.amount)}`}
+        <LockIcon /> {submitting ? t.orders.processing : t.orders.pay(money(session.amount))}
       </Button>
     </form>
   );
@@ -126,23 +131,23 @@ function MockPaymentForm({
   session: PaymentSession;
   onSubmitted: () => void;
 }) {
+  const { t, money } = useI18n();
   const confirm = useMockConfirm();
   const [declined, setDeclined] = useState(false);
   return (
     <div className="grid gap-4">
       <p className="flex items-center gap-2 rounded-xl border border-dashed p-3 text-sm text-muted-foreground">
         <FlaskConicalIcon className="size-4 shrink-0" aria-hidden="true" />
-        Test mode: no real payment is taken. Stripe’s card form appears here when Stripe keys are
-        configured.
+        {t.orders.testMode}
       </p>
       {declined && (
         <p role="alert" className="text-sm text-destructive">
-          Your card was declined. Try again.
+          {t.orders.declined}
         </p>
       )}
       {confirm.isError && (
         <p role="alert" className="text-sm text-destructive">
-          {userMessage(confirm.error)}
+          {userMessage(confirm.error, t)}
         </p>
       )}
       <div className="flex flex-wrap gap-3">
@@ -158,8 +163,8 @@ function MockPaymentForm({
             );
           }}
         >
-          {confirm.isPending ? <LoaderIcon className="animate-spin" /> : <LockIcon />} Pay{' '}
-          {formatMoney(session.amount)} (test)
+          {confirm.isPending ? <LoaderIcon className="animate-spin" /> : <LockIcon />}{' '}
+          {t.orders.payTest(money(session.amount))}
         </Button>
         <Button
           size="lg"
@@ -176,7 +181,7 @@ function MockPaymentForm({
             );
           }}
         >
-          Simulate decline
+          {t.orders.simulateDecline}
         </Button>
       </div>
     </div>

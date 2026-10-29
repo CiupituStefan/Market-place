@@ -8,20 +8,15 @@ import {
   ShieldCheckIcon,
   TruckIcon,
 } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/components/i18n/link';
+import { useI18n } from '@/components/i18n/provider';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { needsSignIn, useAddToCart, useAddToWishlist } from '@/lib/api/cart';
 import { userMessage } from '@/lib/api/errors';
 import type { Product } from '@/lib/catalog/schemas';
-import {
-  availabilityLabel,
-  defaultSelection,
-  findVariant,
-  selectValue,
-  type Selection,
-} from '@/lib/catalog/variants';
+import { defaultSelection, findVariant, selectValue, type Selection } from '@/lib/catalog/variants';
 import { cn } from '@/lib/utils';
 import { Price } from './price';
 import { galleryImages, ProductGallery } from './product-gallery';
@@ -37,6 +32,8 @@ interface ProductExperienceProps {
 
 export function ProductExperience({ product, initialSelection }: ProductExperienceProps) {
   const router = useRouter();
+  const { t, path } = useI18n();
+  const copy = t.product;
   const [selection, setSelection] = useState<Selection>(initialSelection);
   const [quantity, setQuantity] = useState(1);
   const variant = findVariant(product, selection);
@@ -64,7 +61,7 @@ export function ProductExperience({ product, initialSelection }: ProductExperien
       { variantId: variant.id, quantity },
       {
         onSuccess: () => {
-          if (buyNow) router.push('/checkout');
+          if (buyNow) router.push(path('/checkout'));
         },
       },
     );
@@ -100,9 +97,7 @@ export function ProductExperience({ product, initialSelection }: ProductExperien
             compareAt={variant?.compareAtPrice ?? product.compareAtPrice}
             size="lg"
           />
-          <p className="mt-1 text-xs text-muted-foreground">
-            Incl. VAT. Shipping calculated at checkout.
-          </p>
+          <p className="mt-1 text-xs text-muted-foreground">{copy.vatNote}</p>
         </div>
 
         <VariantPicker product={product} selection={selection} onSelect={onSelect} />
@@ -118,12 +113,10 @@ export function ProductExperience({ product, initialSelection }: ProductExperien
             aria-live="polite"
           >
             <span className="size-2 rounded-full bg-current" aria-hidden="true" />
-            {variant
-              ? availabilityLabel(variant.availability)
-              : 'This combination is not available'}
+            {variant ? copy.availability[variant.availability] : copy.unavailableCombination}
             {variant && (
               <span className="ml-auto font-mono text-xs text-muted-foreground">
-                SKU {variant.sku}
+                {copy.sku} {variant.sku}
               </span>
             )}
           </p>
@@ -132,12 +125,12 @@ export function ProductExperience({ product, initialSelection }: ProductExperien
             <div
               className="flex h-12 items-center rounded-xl border"
               role="group"
-              aria-label="Quantity"
+              aria-label={copy.quantity}
             >
               <Button
                 variant="ghost"
                 size="icon"
-                aria-label="Decrease quantity"
+                aria-label={copy.decrease}
                 disabled={quantity <= 1}
                 onClick={() => {
                   setQuantity((q) => Math.max(1, q - 1));
@@ -151,7 +144,7 @@ export function ProductExperience({ product, initialSelection }: ProductExperien
               <Button
                 variant="ghost"
                 size="icon"
-                aria-label="Increase quantity"
+                aria-label={copy.increase}
                 disabled={quantity >= MAX_QUANTITY}
                 onClick={() => {
                   setQuantity((q) => Math.min(MAX_QUANTITY, q + 1));
@@ -170,20 +163,20 @@ export function ProductExperience({ product, initialSelection }: ProductExperien
             >
               {cart.isSuccess ? (
                 <>
-                  <CheckIcon /> Added to cart
+                  <CheckIcon /> {copy.added}
                 </>
               ) : cart.isPending ? (
-                'Adding…'
+                copy.adding
               ) : purchasable ? (
-                'Add to cart'
+                copy.addToCart
               ) : (
-                'Sold out'
+                copy.soldOut
               )}
             </Button>
             <Button
               size="lg"
               variant="outline"
-              aria-label="Add to wishlist"
+              aria-label={copy.addToWishlist}
               aria-pressed={wishlist.isSuccess}
               disabled={!variant || wishlist.isPending}
               onClick={() => {
@@ -201,11 +194,11 @@ export function ProductExperience({ product, initialSelection }: ProductExperien
               onAddToCart(true);
             }}
           >
-            Buy now
+            {copy.buyNow}
           </Button>
           {cart.isError && (
             <p role="alert" className="text-sm text-destructive">
-              {userMessage(cart.error)}
+              {userMessage(cart.error, t)}
             </p>
           )}
           {wishlist.isError && (
@@ -217,12 +210,12 @@ export function ProductExperience({ product, initialSelection }: ProductExperien
                     prefetch={false}
                     className="underline"
                   >
-                    Sign in
+                    {copy.signIn}
                   </Link>{' '}
-                  to save products to your wishlist.
+                  {copy.wishlistSignIn}
                 </>
               ) : (
-                userMessage(wishlist.error)
+                userMessage(wishlist.error, t)
               )}
             </p>
           )}
@@ -231,11 +224,11 @@ export function ProductExperience({ product, initialSelection }: ProductExperien
         <ul className="grid gap-3 rounded-2xl bg-secondary/60 p-5 text-sm">
           <li className="flex gap-3">
             <TruckIcon className="size-5 shrink-0 text-brand" aria-hidden="true" />
-            <span>Free EU shipping over €99. Dispatched in 1–2 business days.</span>
+            <span>{copy.perks.shipping}</span>
           </li>
           <li className="flex gap-3">
             <ShieldCheckIcon className="size-5 shrink-0 text-brand" aria-hidden="true" />
-            <span>2-year warranty and 30-day returns.</span>
+            <span>{copy.perks.warranty}</span>
           </li>
         </ul>
 

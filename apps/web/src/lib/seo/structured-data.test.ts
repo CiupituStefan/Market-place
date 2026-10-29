@@ -11,7 +11,7 @@ describe('structured data', () => {
 
   it('describes a product group with one offer per variant', () => {
     const product = products.find((p) => p.slug === 'cse-forge-75')!;
-    const json = productJsonLd(product) as {
+    const json = productJsonLd(product, 'en') as {
       hasVariant: { sku: string; offers: { price: string; availability: string } }[];
     };
     expect(json).toMatchObject({
@@ -26,15 +26,29 @@ describe('structured data', () => {
   });
 
   it('builds absolute breadcrumb URLs', () => {
-    const json = breadcrumbJsonLd([
-      { name: 'Home', href: '/' },
-      { name: 'Shop', href: '/shop' },
-    ]) as {
+    const json = breadcrumbJsonLd(
+      [
+        { name: 'Home', href: '/' },
+        { name: 'Shop', href: '/shop' },
+      ],
+      'en',
+    ) as {
       itemListElement: { position: number; item: string }[];
     };
     expect(json.itemListElement[1]).toMatchObject({
       position: 2,
       item: 'http://localhost:3000/shop',
     });
+  });
+
+  it('points Romanian pages at their /ro URLs', () => {
+    const product = products.find((p) => p.slug === 'cse-forge-75')!;
+    expect(productJsonLd(product, 'ro')).toMatchObject({
+      url: 'http://localhost:3000/ro/product/cse-forge-75',
+    });
+    const json = breadcrumbJsonLd([{ name: 'Magazin', href: '/shop' }], 'ro') as {
+      itemListElement: { item: string }[];
+    };
+    expect(json.itemListElement[0]?.item).toBe('http://localhost:3000/ro/shop');
   });
 });

@@ -1,17 +1,13 @@
-import Link from 'next/link';
-import type { Badge as BadgeType, ProductSummary } from '@/lib/catalog/schemas';
+'use client';
+
+import Link from '@/components/i18n/link';
+import { useI18n } from '@/components/i18n/provider';
+import type { ProductSummary } from '@/lib/catalog/schemas';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Price } from './price';
 import { ProductMedia } from './product-media';
 import { Rating } from './rating';
-
-const BADGE_LABEL: Record<BadgeType, string> = {
-  NEW: 'New',
-  BESTSELLER: 'Bestseller',
-  LIMITED: 'Limited',
-  SALE: 'Sale',
-};
 
 interface ProductCardProps {
   product: ProductSummary;
@@ -20,6 +16,7 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, priority, className }: ProductCardProps) {
+  const { t } = useI18n();
   const soldOut = product.availability === 'OUT_OF_STOCK';
   return (
     <article className={cn('group relative flex flex-col', className)}>
@@ -37,10 +34,10 @@ export function ProductCard({ product, priority, className }: ProductCardProps) 
         <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
           {product.badges.map((badge) => (
             <Badge key={badge} variant={badge === 'SALE' ? 'brand' : 'outline'}>
-              {BADGE_LABEL[badge]}
+              {t.product.badges[badge]}
             </Badge>
           ))}
-          {soldOut && <Badge variant="outline">Sold out</Badge>}
+          {soldOut && <Badge variant="outline">{t.product.soldOut}</Badge>}
         </div>
       </div>
       <div className="flex flex-1 flex-col gap-1.5 pt-4">

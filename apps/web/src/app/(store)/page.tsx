@@ -8,16 +8,19 @@ import { ProductGrid } from '@/components/product/product-card';
 import { JsonLd } from '@/components/seo/json-ld';
 import { connection } from 'next/server';
 import { catalog } from '@/lib/catalog';
+import { getI18n } from '@/lib/i18n/server';
 import { organizationJsonLd, websiteJsonLd } from '@/lib/seo/structured-data';
 
 export default async function HomePage() {
   // Rendered per request from cached catalog data, so builds never need the API.
   await connection();
+  const { t, locale } = await getI18n();
+  const copy = t.home;
   const [featured, bestSellers, newArrivals, categories] = await Promise.all([
-    catalog.getFeatured(),
-    catalog.getBestSellers(4),
-    catalog.getNewArrivals(4),
-    catalog.getCategories(),
+    catalog.getFeatured(locale),
+    catalog.getBestSellers(locale, 4),
+    catalog.getNewArrivals(locale, 4),
+    catalog.getCategories(locale),
   ]);
   const tiles = [
     ...categories.filter((c) => c.slug !== 'accessories' && c.parentSlug === null),
@@ -26,7 +29,7 @@ export default async function HomePage() {
 
   return (
     <>
-      <JsonLd data={[organizationJsonLd(), websiteJsonLd()]} />
+      <JsonLd data={[organizationJsonLd(locale), websiteJsonLd(locale)]} />
       <Hero />
 
       <section
@@ -35,11 +38,11 @@ export default async function HomePage() {
       >
         <SectionHeading
           id="featured-title"
-          eyebrow="Featured"
-          title="Keyboards worth sitting down for"
-          description="Our flagship boards, from compact 65% to full-size."
+          eyebrow={copy.featured.eyebrow}
+          title={copy.featured.title}
+          description={copy.featured.description}
           href="/shop/keyboards"
-          linkLabel="All keyboards"
+          linkLabel={copy.featured.link}
         />
         <ProductGrid products={featured} />
       </section>
@@ -50,8 +53,8 @@ export default async function HomePage() {
       >
         <SectionHeading
           id="categories-title"
-          eyebrow="Shop by category"
-          title="Everything for your setup"
+          eyebrow={copy.categories.eyebrow}
+          title={copy.categories.title}
         />
         <CategoryTiles categories={tiles} />
       </section>
@@ -62,9 +65,10 @@ export default async function HomePage() {
       >
         <SectionHeading
           id="bestsellers-title"
-          eyebrow="Best sellers"
-          title="Most loved by our customers"
+          eyebrow={copy.bestSellers.eyebrow}
+          title={copy.bestSellers.title}
           href="/shop?sort=rating"
+          linkLabel={t.common.viewAll}
         />
         <ProductGrid products={bestSellers} />
       </section>
@@ -75,9 +79,10 @@ export default async function HomePage() {
       >
         <SectionHeading
           id="new-title"
-          eyebrow="New arrivals"
-          title="Fresh off the bench"
+          eyebrow={copy.newArrivals.eyebrow}
+          title={copy.newArrivals.title}
           href="/shop?sort=newest"
+          linkLabel={t.common.viewAll}
         />
         <ProductGrid products={newArrivals} />
       </section>
@@ -94,7 +99,7 @@ export default async function HomePage() {
         aria-labelledby="why-title"
         className="container-page py-16 [contain-intrinsic-size:auto_900px] [content-visibility:auto]"
       >
-        <SectionHeading id="why-title" eyebrow="Why CSE" title="Obsessive about the details" />
+        <SectionHeading id="why-title" eyebrow={copy.why.eyebrow} title={copy.why.title} />
         <WhyUs />
       </section>
 
@@ -106,13 +111,11 @@ export default async function HomePage() {
       >
         <div className="flex flex-col items-start gap-8 rounded-3xl bg-primary p-8 text-primary-foreground md:flex-row md:items-center md:justify-between md:p-14">
           <div className="max-w-lg">
-            <p className="eyebrow">Newsletter</p>
+            <p className="eyebrow">{copy.newsletter.eyebrow}</p>
             <h2 id="newsletter-title" className="mt-3 text-3xl font-semibold tracking-tight">
-              First to know about drops.
+              {copy.newsletter.title}
             </h2>
-            <p className="mt-3 opacity-75">
-              Limited runs, restocks and build guides — before they hit the site.
-            </p>
+            <p className="mt-3 opacity-75">{copy.newsletter.body}</p>
           </div>
           <div className="w-full max-w-md text-foreground [&_p:not([role=alert])]:text-primary-foreground/70">
             <NewsletterForm />

@@ -1,8 +1,9 @@
 'use client';
 
+import { useI18n } from '@/components/i18n/provider';
 import { useMutation } from '@tanstack/react-query';
 import { MailCheckIcon } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/components/i18n/link';
 import { useId, useState, type SubmitEvent } from 'react';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,7 @@ import { fieldErrors, PASSWORD_MIN, RegisterSchema, type FieldErrors } from '@/l
 import { FormField } from './form-field';
 
 export function RegisterForm() {
+  const { t } = useI18n();
   const termsId = useId();
   const [errors, setErrors] = useState<FieldErrors>({});
   const [acceptTerms, setAcceptTerms] = useState(false);
@@ -39,7 +41,7 @@ export function RegisterForm() {
       acceptTerms,
     });
     if (!parsed.success) {
-      setErrors(fieldErrors(parsed.error));
+      setErrors(fieldErrors(parsed.error, t));
       return;
     }
     setErrors({});
@@ -50,10 +52,8 @@ export function RegisterForm() {
     return (
       <div role="status" className="flex flex-col items-center gap-3 text-center">
         <MailCheckIcon className="size-8 text-brand" aria-hidden="true" />
-        <h2 className="text-lg font-semibold">Check your inbox</h2>
-        <p className="text-sm text-muted-foreground">
-          We sent you a link to verify your email address.
-        </p>
+        <h2 className="text-lg font-semibold">{t.auth.checkInbox}</h2>
+        <p className="text-sm text-muted-foreground">{t.auth.sentVerification}</p>
       </div>
     );
   }
@@ -62,14 +62,14 @@ export function RegisterForm() {
     <form onSubmit={onSubmit} noValidate className="grid gap-5">
       <div className="grid gap-5 sm:grid-cols-2">
         <FormField
-          label="First name"
+          label={t.auth.firstName}
           name="firstName"
           autoComplete="given-name"
           required
           error={errors.firstName}
         />
         <FormField
-          label="Last name"
+          label={t.auth.lastName}
           name="lastName"
           autoComplete="family-name"
           required
@@ -77,7 +77,7 @@ export function RegisterForm() {
         />
       </div>
       <FormField
-        label="Email"
+        label={t.auth.email}
         name="email"
         type="email"
         autoComplete="email"
@@ -85,16 +85,16 @@ export function RegisterForm() {
         error={errors.email}
       />
       <FormField
-        label="Password"
+        label={t.auth.password}
         name="password"
         type="password"
         autoComplete="new-password"
         required
-        hint={`At least ${PASSWORD_MIN} characters. A passphrase works great.`}
+        hint={t.auth.passwordHint(PASSWORD_MIN)}
         error={errors.password}
       />
       <FormField
-        label="Confirm password"
+        label={t.auth.confirmPassword}
         name="confirmPassword"
         type="password"
         autoComplete="new-password"
@@ -113,13 +113,13 @@ export function RegisterForm() {
           />
           <Label htmlFor={termsId} className="leading-snug font-normal">
             <span>
-              I agree to the{' '}
+              {t.auth.agree}{' '}
               <Link href="/terms" className="underline">
-                terms
+                {t.auth.terms}
               </Link>{' '}
-              and{' '}
+              {t.auth.and}{' '}
               <Link href="/privacy" className="underline">
-                privacy policy
+                {t.auth.privacy}
               </Link>
               .
             </span>
@@ -129,11 +129,11 @@ export function RegisterForm() {
       </div>
       {register.isError && (
         <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
-          {userMessage(register.error)}
+          {userMessage(register.error, t)}
         </p>
       )}
       <Button type="submit" size="lg" disabled={register.isPending}>
-        {register.isPending ? 'Creating account…' : 'Create account'}
+        {register.isPending ? t.auth.creating : t.auth.createAccount}
       </Button>
     </form>
   );

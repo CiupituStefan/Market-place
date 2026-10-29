@@ -1,4 +1,7 @@
-import Link from 'next/link';
+'use client';
+
+import Link from '@/components/i18n/link';
+import { useI18n } from '@/components/i18n/provider';
 import { cn } from '@/lib/utils';
 
 /** CSE Keyboards mark: a keycap seen from above, with an offset dished top. */
@@ -21,11 +24,12 @@ export function LogoMark({ className }: { className?: string }) {
 }
 
 export function Logo({ className }: { className?: string }) {
+  const { t } = useI18n();
   return (
     <Link
       href="/"
       className={cn('flex items-center gap-2.5 rounded-md', className)}
-      aria-label="CSE Keyboards home"
+      aria-label={t.layout.home}
     >
       <LogoMark />
       <span className="text-[0.95rem] leading-none font-semibold tracking-tight">

@@ -1,15 +1,17 @@
 'use client';
 
 import { ShoppingBagIcon } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/components/i18n/link';
+import { useI18n } from '@/components/i18n/provider';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/lib/api/cart';
 
 /** Header cart button with the live item count (from the shared ['cart'] query). */
 export function CartLink() {
+  const { t } = useI18n();
   const cart = useCart();
   const count = cart.data?.itemCount ?? 0;
-  const label = count > 0 ? `Cart, ${String(count)} item${count === 1 ? '' : 's'}` : 'Cart';
+  const label = count > 0 ? t.layout.cartWithItems(count) : t.layout.cart;
   return (
     <Button variant="ghost" size="icon" asChild className="relative">
       <Link href="/cart" aria-label={label} prefetch={false}>

@@ -31,11 +31,15 @@ export const RegisterSchema = z
 
 export type FieldErrors = Partial<Record<string, string>>;
 
-export function fieldErrors(error: z.ZodError): FieldErrors {
+/** First error per field, in the page's language when a dictionary is given. */
+export function fieldErrors(
+  error: z.ZodError,
+  t?: { validation: { translate: (issue: z.core.$ZodIssue) => string } },
+): FieldErrors {
   const errors: FieldErrors = {};
   for (const issue of error.issues) {
     const key = issue.path.join('.');
-    errors[key] ??= issue.message;
+    errors[key] ??= t ? t.validation.translate(issue) : issue.message;
   }
   return errors;
 }

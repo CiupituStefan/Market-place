@@ -1,13 +1,15 @@
 import { ChevronRightIcon } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/components/i18n/link';
+import { getI18n } from '@/lib/i18n/server';
 import { breadcrumbJsonLd, type Crumb } from '@/lib/seo/structured-data';
 import { JsonLd } from './json-ld';
 
-export function Breadcrumbs({ crumbs }: { crumbs: Crumb[] }) {
+export async function Breadcrumbs({ crumbs }: { crumbs: Crumb[] }) {
+  const { t, locale } = await getI18n();
   return (
     <>
-      <JsonLd data={breadcrumbJsonLd(crumbs)} />
-      <nav aria-label="Breadcrumb" className="text-xs text-muted-foreground">
+      <JsonLd data={breadcrumbJsonLd(crumbs, locale)} />
+      <nav aria-label={t.shop.breadcrumb} className="text-xs text-muted-foreground">
         <ol className="flex flex-wrap items-center gap-1">
           {crumbs.map((crumb, index) => {
             const last = index === crumbs.length - 1;

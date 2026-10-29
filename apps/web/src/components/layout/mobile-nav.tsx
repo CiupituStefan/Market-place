@@ -1,7 +1,9 @@
 'use client';
 
 import { MenuIcon } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/components/i18n/link';
+import { LanguageSwitcher } from '@/components/i18n/language-switcher';
+import { useI18n } from '@/components/i18n/provider';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,6 +19,7 @@ import { LogoMark } from './logo';
 import { SearchForm } from './search-form';
 
 export function MobileNav() {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const close = () => {
     setOpen(false);
@@ -24,7 +27,7 @@ export function MobileNav() {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Open menu">
+        <Button variant="ghost" size="icon" className="lg:hidden" aria-label={t.layout.openMenu}>
           <MenuIcon />
         </Button>
       </SheetTrigger>
@@ -33,12 +36,12 @@ export function MobileNav() {
           <SheetTitle className="flex items-center gap-2">
             <LogoMark className="size-6" /> CSE Keyboards
           </SheetTitle>
-          <SheetDescription className="sr-only">Site navigation</SheetDescription>
+          <SheetDescription className="sr-only">{t.layout.menuDescription}</SheetDescription>
         </SheetHeader>
         <div className="px-5" onSubmit={close}>
           <SearchForm />
         </div>
-        <nav aria-label="Mobile" className="flex flex-col px-3">
+        <nav aria-label={t.layout.menu} className="flex flex-col px-3">
           {mainNav.map((item) => (
             <Link
               key={item.href}
@@ -46,15 +49,15 @@ export function MobileNav() {
               onClick={close}
               className="rounded-lg px-3 py-3 text-lg font-medium hover:bg-accent"
             >
-              {item.title}
+              {t.layout.nav[item.key]}
             </Link>
           ))}
         </nav>
         <div className="mt-auto flex flex-col gap-1 border-t p-3 text-sm">
           {[
-            { href: '/account', label: 'Account' },
-            { href: '/account/orders', label: 'Orders' },
-            { href: '/wishlist', label: 'Wishlist' },
+            { href: '/account', label: t.layout.account },
+            { href: '/account/orders', label: t.layout.orders },
+            { href: '/wishlist', label: t.layout.wishlist },
           ].map((item) => (
             <Link
               key={item.href}
@@ -66,6 +69,7 @@ export function MobileNav() {
               {item.label}
             </Link>
           ))}
+          <LanguageSwitcher className="mt-2 self-start" />
         </div>
       </SheetContent>
     </Sheet>

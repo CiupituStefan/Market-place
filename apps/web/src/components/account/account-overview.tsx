@@ -1,37 +1,31 @@
 'use client';
 
 import { HeartIcon, MapPinIcon, PackageIcon } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/components/i18n/link';
+import { useI18n } from '@/components/i18n/provider';
 import { SignOutButton } from '@/components/auth/sign-out-button';
 import { EmailPreferences } from './email-preferences';
 import { RequireSession } from './require-session';
 
-const links = [
-  {
-    href: '/account/orders',
-    icon: PackageIcon,
-    title: 'Orders',
-    body: 'Track, return or buy again.',
-  },
-  { href: '/wishlist', icon: HeartIcon, title: 'Wishlist', body: 'Products you saved for later.' },
-  {
-    href: '/account',
-    icon: MapPinIcon,
-    title: 'Addresses',
-    body: 'Shipping and billing addresses.',
-  },
-];
+const LINKS = [
+  { key: 'orders', href: '/account/orders', icon: PackageIcon },
+  { key: 'wishlist', href: '/wishlist', icon: HeartIcon },
+  { key: 'addresses', href: '/account', icon: MapPinIcon },
+] as const;
 
 export function AccountOverview() {
+  const { t } = useI18n();
+  const links = LINKS.map((link) => ({ ...link, ...t.account.links[link.key] }));
   return (
     <RequireSession>
       {(user) => (
         <div className="grid gap-8">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <p className="text-muted-foreground">
-              Signed in as <span className="font-medium text-foreground">{user.email}</span>
+              {t.account.signedInAs}{' '}
+              <span className="font-medium text-foreground">{user.email}</span>
               {!user.emailVerified && (
-                <span className="ml-2 text-sm text-destructive">· email not confirmed</span>
+                <span className="ml-2 text-sm text-destructive">{t.account.notConfirmed}</span>
               )}
             </p>
             <SignOutButton />

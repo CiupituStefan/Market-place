@@ -1,8 +1,10 @@
 import { BadgeCheckIcon } from 'lucide-react';
+import { getI18n } from '@/lib/i18n/server';
 import { Rating } from '@/components/product/rating';
 import type { Review } from '@/lib/catalog/schemas';
 
-export function ReviewWall({ reviews }: { reviews: Review[] }) {
+export async function ReviewWall({ reviews }: { reviews: Review[] }) {
+  const { t } = await getI18n();
   return (
     <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {reviews.map((review) => (
@@ -16,7 +18,7 @@ export function ReviewWall({ reviews }: { reviews: Review[] }) {
           </div>
           {review.verifiedPurchase && (
             <p className="mt-2 flex items-center gap-1 text-xs text-success">
-              <BadgeCheckIcon className="size-3.5" aria-hidden="true" /> Verified purchase
+              <BadgeCheckIcon className="size-3.5" aria-hidden="true" /> {t.home.verifiedPurchase}
             </p>
           )}
         </li>

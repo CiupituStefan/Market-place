@@ -20,10 +20,11 @@ export function absoluteUrl(path = '/'): string {
   return new URL(path, siteConfig.url).toString();
 }
 
+/** Main navigation; titles come from the dictionary (`t.layout.nav[key]`). */
 export const mainNav = [
-  { title: 'Keyboards', href: '/shop/keyboards' },
-  { title: 'Switches', href: '/shop/switches' },
-  { title: 'Keycaps', href: '/shop/keycaps' },
-  { title: 'Accessories', href: '/shop/accessories' },
-  { title: 'Configurator', href: '/configurator' },
+  { key: 'keyboards', href: '/shop/keyboards' },
+  { key: 'switches', href: '/shop/switches' },
+  { key: 'keycaps', href: '/shop/keycaps' },
+  { key: 'accessories', href: '/shop/accessories' },
+  { key: 'configurator', href: '/configurator' },
 ] as const;

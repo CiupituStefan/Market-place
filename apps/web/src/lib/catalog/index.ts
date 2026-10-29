@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { createApiClient } from '@/lib/api/client';
 import { ApiError } from '@/lib/api/errors';
 import { serverApiUrl } from '@/lib/env';
+import type { Locale } from '@/lib/i18n/config';
 import { PAGE_SIZE, toSearchParams } from './query';
 import {
   CategorySchema,
@@ -19,7 +20,8 @@ import {
 } from './schemas';
 
 /**
- * Catalog reads for Server Components, from product-service through the gateway.
+ * Catalog reads for Server Components, from product-service through the gateway, in the page's
+ * language (product-service returns translated names and descriptions; English otherwise).
  * Responses are cached in Next's data cache for a minute (tag `catalog`), so
  * pages stay fast and the API sees a fraction of the traffic.
  */
@@ -35,6 +37,12 @@ async function orNull<T>(promise: Promise<T>): Promise<T | null> {
   }
 }
 
+/** `?locale=ro` for Romanian; English is the catalog's own language. */
+function withLocale(path: string, locale: Locale): string {
+  if (locale === 'en') return path;
+  return `${path}${path.includes('?') ? '&' : '?'}locale=${locale}`;
+}
+
 function listPath(query: Partial<CatalogQuery>, category?: string, pageSize = PAGE_SIZE): string {
   const params = toSearchParams(query);
   if (category) params.set('category', category);
@@ -43,51 +51,66 @@ function listPath(query: Partial<CatalogQuery>, category?: string, pageSize = PA
 }
 
 async function list(
+  locale: Locale,
   query: Partial<CatalogQuery>,
   category?: string,
   pageSize?: number,
 ): Promise<ProductListing> {
-  return api(listPath(query, category, pageSize), { schema: ProductListingSchema, ...cached });
+  return api(withLocale(listPath(query, category, pageSize), locale), {
+    schema: ProductListingSchema,
+    ...cached,
+  });
 }
 
 export const catalog = {
-  listProducts: (query: CatalogQuery, categorySlug?: string): Promise<ProductListing> =>
-    list(query, categorySlug),
+  listProducts: (
+    locale: Locale,
+    query: CatalogQuery,
+    categorySlug?: string,
+  ): Promise<ProductListing> => list(locale, query, categorySlug),
 
-  getProduct: (slug: string): Promise<Product | null> =>
-    orNull(api(`/products/${encodeURIComponent(slug)}`, { schema: ProductSchema, ...cached })),
+  getProduct: (locale: Locale, slug: string): Promise<Product | null> =>
+    orNull(
+      api(withLocale(`/products/${encodeURIComponent(slug)}`, locale), {
+        schema: ProductSchema,
+        ...cached,
+      }),
+    ),
 
-  getCategories: (): Promise<Category[]> =>
-    api('/categories', { schema: z.array(CategorySchema), ...cached }),
+  getCategories: (locale: Locale): Promise<Category[]> =>
+    api(withLocale('/categories', locale), { schema: z.array(CategorySchema), ...cached }),
 
-  getCategory: async (slug: string): Promise<Category | null> =>
-    (await catalog.getCategories()).find((category) => category.slug === slug) ?? null,
+  getCategory: async (locale: Locale, slug: string): Promise<Category | null> =>
+    (await catalog.getCategories(locale)).find((category) => category.slug === slug) ?? null,
 
-  getFeatured: async (): Promise<ProductSummary[]> =>
-    (await list({ sort: 'featured' }, 'keyboards', 4)).items,
+  getFeatured: async (locale: Locale): Promise<ProductSummary[]> =>
+    (await list(locale, { sort: 'featured' }, 'keyboards', 4)).items,
 
-  getBestSellers: async (limit = 4): Promise<ProductSummary[]> =>
-    (await list({ sort: 'rating' }, undefined, limit)).items,
+  getBestSellers: async (locale: Locale, limit = 4): Promise<ProductSummary[]> =>
+    (await list(locale, { sort: 'rating' }, undefined, limit)).items,
 
-  getNewArrivals: async (limit = 4): Promise<ProductSummary[]> =>
-    (await list({ sort: 'newest' }, undefined, limit)).items,
+  getNewArrivals: async (locale: Locale, limit = 4): Promise<ProductSummary[]> =>
+    (await list(locale, { sort: 'newest' }, undefined, limit)).items,
 
-  getRelated: (product: Product): Promise<ProductSummary[]> =>
-    api(`/products/${encodeURIComponent(product.slug)}/related`, {
+  getRelated: (locale: Locale, product: Product): Promise<ProductSummary[]> =>
+    api(withLocale(`/products/${encodeURIComponent(product.slug)}/related`, locale), {
       schema: z.array(ProductSummarySchema),
       ...cached,
     }),
 
-  getConfigurator: (slug: string): Promise<Configurator | null> =>
+  getConfigurator: (locale: Locale, slug: string): Promise<Configurator | null> =>
     orNull(
-      api(`/configurator/${encodeURIComponent(slug)}`, { schema: ConfiguratorSchema, ...cached }),
+      api(withLocale(`/configurator/${encodeURIComponent(slug)}`, locale), {
+        schema: ConfiguratorSchema,
+        ...cached,
+      }),
     ),
 
   /** Every published product, for the sitemap. */
   getAllProductSlugs: async (): Promise<{ slug: string; updatedAt: string }[]> => {
     const slugs: { slug: string; updatedAt: string }[] = [];
     for (let page = 1; page <= 50; page += 1) {
-      const listing = await list({ page, sort: 'newest' }, undefined, 100);
+      const listing = await list('en', { page, sort: 'newest' }, undefined, 100);
       slugs.push(...listing.items.map((item) => ({ slug: item.slug, updatedAt: item.createdAt })));
       if (page >= listing.totalPages) break;
     }

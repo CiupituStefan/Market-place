@@ -6,11 +6,12 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { api } from '@/lib/api/browser';
+import { useI18n } from '@/components/i18n/provider';
 import { userMessage } from '@/lib/api/errors';
 
-const EmailSchema = z.email('Enter a valid email address.');
-
 export function NewsletterForm() {
+  const { t } = useI18n();
+  const copy = t.home.newsletter;
   const inputId = useId();
   const [email, setEmail] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -26,9 +27,9 @@ export function NewsletterForm() {
 
   function onSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    const parsed = EmailSchema.safeParse(email.trim());
+    const parsed = z.email(copy.invalidEmail).safeParse(email.trim());
     if (!parsed.success) {
-      setValidationError(parsed.error.issues[0]?.message ?? 'Invalid email');
+      setValidationError(parsed.error.issues[0]?.message ?? copy.invalidEmail);
       return;
     }
     setValidationError(null);
@@ -38,25 +39,25 @@ export function NewsletterForm() {
   if (subscribe.isSuccess) {
     return (
       <p role="status" className="text-sm font-medium">
-        Thanks! Check your inbox to confirm your subscription.
+        {copy.thanks}
       </p>
     );
   }
 
-  const error = validationError ?? (subscribe.isError ? userMessage(subscribe.error) : null);
+  const error = validationError ?? (subscribe.isError ? userMessage(subscribe.error, t) : null);
   const errorId = `${inputId}-error`;
 
   return (
     <form onSubmit={onSubmit} noValidate className="w-full max-w-md">
       <div className="flex gap-2">
         <label htmlFor={inputId} className="sr-only">
-          Email address
+          {copy.email}
         </label>
         <Input
           id={inputId}
           type="email"
           autoComplete="email"
-          placeholder="you@example.com"
+          placeholder={copy.placeholder}
           value={email}
           onChange={(e) => {
             setEmail(e.target.value);
@@ -66,7 +67,7 @@ export function NewsletterForm() {
           className="h-11 bg-background"
         />
         <Button type="submit" size="lg" className="h-11" disabled={subscribe.isPending}>
-          {subscribe.isPending ? 'Joining…' : 'Subscribe'}
+          {subscribe.isPending ? copy.joining : copy.subscribe}
         </Button>
       </div>
       {error && (
@@ -74,7 +75,7 @@ export function NewsletterForm() {
           {error}
         </p>
       )}
-      <p className="mt-3 text-xs text-muted-foreground">One email a month. Unsubscribe anytime.</p>
+      <p className="mt-3 text-xs text-muted-foreground">{copy.fineprint}</p>
     </form>
   );
 }

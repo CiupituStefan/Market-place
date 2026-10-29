@@ -1,15 +1,14 @@
+import { getI18n } from '@/lib/i18n/server';
 import { AuthCard } from '@/components/auth/auth-card';
 import { ForgotPasswordForm } from '@/components/auth/forgot-password-form';
-import { privatePage } from '@/lib/seo/private';
+import { localPrivatePage } from '@/lib/seo/private';
 
-export const metadata = privatePage('Reset password');
+export const generateMetadata = localPrivatePage((t) => t.pages.resetPassword);
 
-export default function ForgotPasswordPage() {
+export default async function ForgotPasswordPage() {
+  const { t } = await getI18n();
   return (
-    <AuthCard
-      title="Reset your password"
-      description="We will email you a link to choose a new password."
-    >
+    <AuthCard title={t.pages.forgot.title} description={t.pages.forgot.description}>
       <ForgotPasswordForm />
     </AuthCard>
   );

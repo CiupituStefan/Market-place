@@ -1,16 +1,19 @@
 import { CheckIcon } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { Product } from '@/lib/catalog/schemas';
+import { getI18n } from '@/lib/i18n/server';
 
-export function ProductDetails({ product }: { product: Product }) {
+export async function ProductDetails({ product }: { product: Product }) {
+  const { t } = await getI18n();
+  const copy = t.product;
   return (
     <Tabs defaultValue="description">
-      <TabsList aria-label="Product information">
-        <TabsTrigger value="description">Description</TabsTrigger>
-        <TabsTrigger value="specs">Specifications</TabsTrigger>
-        <TabsTrigger value="included">What’s included</TabsTrigger>
-        <TabsTrigger value="compatibility">Compatibility</TabsTrigger>
-        <TabsTrigger value="shipping">Shipping</TabsTrigger>
+      <TabsList aria-label={copy.tabs.label}>
+        <TabsTrigger value="description">{copy.tabs.description}</TabsTrigger>
+        <TabsTrigger value="specs">{copy.tabs.specs}</TabsTrigger>
+        <TabsTrigger value="included">{copy.tabs.included}</TabsTrigger>
+        <TabsTrigger value="compatibility">{copy.tabs.compatibility}</TabsTrigger>
+        <TabsTrigger value="shipping">{copy.tabs.shipping}</TabsTrigger>
       </TabsList>
 
       {/* forceMount keeps every tab in the HTML for search engines and no-JS users. */}
@@ -65,18 +68,12 @@ export function ProductDetails({ product }: { product: Product }) {
       <TabsContent value="shipping" forceMount className="data-[state=inactive]:hidden">
         <div className="grid max-w-3xl gap-6 text-sm text-muted-foreground md:grid-cols-2">
           <div>
-            <h3 className="font-medium text-foreground">Shipping</h3>
-            <p className="mt-2">
-              Orders placed before 14:00 CET ship the same business day. Free tracked EU shipping
-              over €99; express options are shown at checkout.
-            </p>
+            <h3 className="font-medium text-foreground">{copy.shippingTitle}</h3>
+            <p className="mt-2">{copy.shippingBody}</p>
           </div>
           <div>
-            <h3 className="font-medium text-foreground">Returns & warranty</h3>
-            <p className="mt-2">
-              30-day returns on unused items in original packaging. Every keyboard is covered by a
-              2-year warranty.
-            </p>
+            <h3 className="font-medium text-foreground">{copy.returnsTitle}</h3>
+            <p className="mt-2">{copy.returnsBody}</p>
           </div>
         </div>
       </TabsContent>

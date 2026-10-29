@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/components/i18n/link';
 import { ProductArt } from '@/components/product/product-art';
 import type { Category } from '@/lib/catalog/schemas';
 import { cn } from '@/lib/utils';

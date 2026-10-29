@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type PointerEvent } from 'react';
+import { useI18n } from '@/components/i18n/provider';
 import type { ProductImage, ProductPreview } from '@/lib/catalog/schemas';
 import { cn } from '@/lib/utils';
 import { ProductMedia } from './product-media';
@@ -15,12 +16,6 @@ interface ProductGalleryProps {
   preview: ProductPreview;
 }
 
-const RENDER_SLIDES: Slide[] = [
-  { kind: 'render', view: 'front', label: 'Top view' },
-  { kind: 'render', view: 'angle', label: 'Angled view' },
-  { kind: 'render', view: 'detail', label: 'Detail' },
-];
-
 /** The selected variant's own photos, otherwise the product's (an empty list is not "none"). */
 export function galleryImages(
   product: { images: ProductImage[] },
@@ -30,10 +25,16 @@ export function galleryImages(
 }
 
 export function ProductGallery({ name, images, preview }: ProductGalleryProps) {
+  const { t } = useI18n();
+  const copy = t.product.gallery;
   const slides: Slide[] =
     images.length > 0
-      ? images.map((image, i) => ({ kind: 'image', image, label: `Image ${i + 1}` }))
-      : RENDER_SLIDES;
+      ? images.map((image, i) => ({ kind: 'image', image, label: copy.image(i + 1) }))
+      : [
+          { kind: 'render', view: 'front', label: copy.top },
+          { kind: 'render', view: 'angle', label: copy.angle },
+          { kind: 'render', view: 'detail', label: copy.detail },
+        ];
   const [active, setActive] = useState(0);
   const [zoom, setZoom] = useState<{ x: number; y: number } | null>(null);
   const slide = slides[Math.min(active, slides.length - 1)] ?? slides[0];
@@ -91,12 +92,12 @@ export function ProductGallery({ name, images, preview }: ProductGalleryProps) {
           Hover to zoom
         </p>
       </div>
-      <div className="grid grid-cols-4 gap-3" role="group" aria-label="Product images">
+      <div className="grid grid-cols-4 gap-3" role="group" aria-label={copy.images}>
         {slides.map((s, index) => (
           <button
             key={s.label}
             type="button"
-            aria-label={`Show ${s.label.toLowerCase()}`}
+            aria-label={copy.show(s.label)}
             aria-pressed={index === active}
             onClick={() => {
               setActive(index);

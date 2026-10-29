@@ -5,7 +5,9 @@ import { SHIPPING_COUNTRIES } from '@market/types';
 import { ClockIcon, CloudOffIcon, LoaderIcon, PackageIcon, TruckIcon } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import Link from '@/components/i18n/link';
+import { useI18n } from '@/components/i18n/provider';
+import { LOCALE_INFO } from '@/lib/i18n/config';
 import { useSearchParams } from 'next/navigation';
 import { EmptyState } from '@/components/empty-state';
 import { ProductArt } from '@/components/product/product-art';
@@ -14,13 +16,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ApiError, userMessage } from '@/lib/api/errors';
 import { CART_QUERY_KEY } from '@/lib/api/cart';
 import { useCancelOrder, useOrder } from '@/lib/api/orders';
-import { formatDateTime, formatMoney } from '@/lib/format';
-import { orderStatusLabel, OrderStatusBadge } from './order-status';
+import { OrderStatusBadge } from './order-status';
 import { PaymentPanel } from './payment-panel';
 
 /** One order, for its owner (session) or the guest who placed it (order token). */
 export function OrderDetail({ orderId, backHref }: { orderId: string; backHref: string | null }) {
   // Stripe redirects back here with ?redirect_status=... after 3-D Secure / bank pages.
+  const { t } = useI18n();
+  const copy = t.orders;
   const redirectStatus = useSearchParams().get('redirect_status');
   const returnedFromStripe = redirectStatus === 'succeeded' || redirectStatus === 'processing';
   const [submittedHere, setSubmitted] = useState(false);
@@ -44,7 +47,7 @@ export function OrderDetail({ orderId, backHref }: { orderId: string; backHref: 
 
   if (order.isPending) {
     return (
-      <div className="grid gap-4" aria-busy="true" aria-label="Loading order">
+      <div className="grid gap-4" aria-busy="true" aria-label={copy.loading}>
         <Skeleton className="h-24" />
         <Skeleton className="h-64" />
       </div>
@@ -55,12 +58,8 @@ export function OrderDetail({ orderId, backHref }: { orderId: string; backHref: 
     return (
       <EmptyState
         icon={missing ? PackageIcon : CloudOffIcon}
-        title={missing ? 'Order not found' : 'We couldn’t load this order'}
-        description={
-          missing
-            ? 'Sign in with the account that placed it, or use the link in your confirmation email.'
-            : userMessage(order.error)
-        }
+        title={missing ? copy.notFound : copy.loadFailed}
+        description={missing ? copy.notFoundHint : userMessage(order.error, t)}
         action={
           missing ? (
             <Button asChild>
@@ -68,12 +67,12 @@ export function OrderDetail({ orderId, backHref }: { orderId: string; backHref: 
                 href={`/login?next=${encodeURIComponent(`/order/${orderId}`)}`}
                 prefetch={false}
               >
-                Sign in
+                {copy.signIn}
               </Link>
             </Button>
           ) : (
             <Button variant="outline" onClick={() => void order.refetch()}>
-              Try again
+              {t.common.tryAgain}
             </Button>
           )
         }
@@ -103,24 +102,27 @@ function OrderView({
   paymentSubmitted: boolean;
   onPaymentSubmitted: () => void;
 }) {
+  const { t, locale, money, dateTime } = useI18n();
+  const copy = t.orders;
+  const summary = t.cart.summary;
   const cancel = useCancelOrder(order.id);
   const rows = [
-    { label: 'Subtotal', value: formatMoney(order.subtotal) },
+    { label: summary.subtotal, value: money(order.subtotal) },
     ...(order.discount.amount > 0
       ? [
           {
-            label: `Discount${order.couponCode ? ` (${order.couponCode})` : ''}`,
-            value: `−${formatMoney(order.discount)}`,
+            label: summary.discount(order.couponCode),
+            value: `−${money(order.discount)}`,
           },
         ]
       : []),
     {
-      label: 'Shipping',
-      value: order.shipping.amount === 0 ? 'Free' : formatMoney(order.shipping),
+      label: summary.shipping,
+      value: order.shipping.amount === 0 ? summary.free : money(order.shipping),
     },
     {
-      label: `Incl. VAT ${(order.vatRateBps / 100).toLocaleString('en-IE')}%`,
-      value: formatMoney(order.tax),
+      label: copy.vat((order.vatRateBps / 100).toLocaleString(LOCALE_INFO[locale].intl)),
+      value: money(order.tax),
     },
   ];
 
@@ -128,9 +130,9 @@ function OrderView({
     <div className="grid gap-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="font-mono text-sm text-muted-foreground">Order {order.number}</p>
+          <p className="font-mono text-sm text-muted-foreground">{copy.number(order.number)}</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Placed {formatDateTime(order.createdAt)} · {order.email}
+            {copy.placed(dateTime(order.createdAt), order.email)}
           </p>
         </div>
         <OrderStatusBadge status={order.status} />
@@ -138,17 +140,16 @@ function OrderView({
 
       {order.status === 'PENDING_PAYMENT' && (
         <section
-          aria-label="Payment"
+          aria-label={copy.payment}
           className="grid gap-5 rounded-2xl border border-brand/30 bg-brand-soft/40 p-5"
         >
           <div className="flex flex-wrap items-center gap-4">
             <ClockIcon className="size-5 text-brand" aria-hidden="true" />
             <div className="flex-1 text-sm">
-              <p className="font-medium">Awaiting payment</p>
+              <p className="font-medium">{copy.awaitingPayment}</p>
               {order.paymentDueAt && (
                 <p className="text-muted-foreground">
-                  Your items are held until {formatDateTime(order.paymentDueAt)}. Unpaid orders are
-                  cancelled automatically after that.
+                  {copy.heldUntil(dateTime(order.paymentDueAt))}
                 </p>
               )}
             </div>
@@ -160,19 +161,18 @@ function OrderView({
                   cancel.mutate();
                 }}
               >
-                Cancel order
+                {copy.cancel}
               </Button>
             )}
           </div>
           {cancel.isError && (
             <p role="alert" className="text-sm text-destructive">
-              {userMessage(cancel.error)}
+              {userMessage(cancel.error, t)}
             </p>
           )}
           {paymentSubmitted ? (
             <p role="status" className="flex items-center gap-2 text-sm">
-              <LoaderIcon className="size-4 animate-spin" aria-hidden="true" /> Confirming your
-              payment with the bank… this page updates by itself.
+              <LoaderIcon className="size-4 animate-spin" aria-hidden="true" /> {copy.confirming}
             </p>
           ) : (
             <PaymentPanel order={order} onSubmitted={onPaymentSubmitted} />
@@ -182,7 +182,7 @@ function OrderView({
 
       {order.trackingNumber && (
         <section
-          aria-label="Tracking"
+          aria-label={copy.tracking}
           className="flex items-center gap-3 rounded-2xl border p-5 text-sm"
         >
           <TruckIcon className="size-5 text-brand" aria-hidden="true" />
@@ -196,7 +196,7 @@ function OrderView({
               rel="noreferrer"
               className="ml-auto underline"
             >
-              Track parcel
+              {copy.trackParcel}
             </a>
           )}
         </section>
@@ -213,12 +213,10 @@ function OrderView({
                 <span className="font-medium">{item.name}</span>
                 <span className="text-sm text-muted-foreground">{item.optionsLabel}</span>
                 <span className="text-sm text-muted-foreground tabular-nums">
-                  {item.quantity} × {formatMoney(item.unitPrice)}
+                  {item.quantity} × {money(item.unitPrice)}
                 </span>
               </div>
-              <span className="shrink-0 font-medium tabular-nums">
-                {formatMoney(item.lineTotal)}
-              </span>
+              <span className="shrink-0 font-medium tabular-nums">{money(item.lineTotal)}</span>
             </li>
           ))}
         </ul>
@@ -232,19 +230,19 @@ function OrderView({
               </div>
             ))}
             <div className="mt-2 flex justify-between border-t pt-4 text-base font-semibold">
-              <dt>Total</dt>
-              <dd className="tabular-nums">{formatMoney(order.total)}</dd>
+              <dt>{summary.total}</dt>
+              <dd className="tabular-nums">{money(order.total)}</dd>
             </div>
           </dl>
-          <AddressBlock title="Shipping to" address={order.shippingAddress} />
-          <ol className="grid gap-3 text-sm" aria-label="Order timeline">
+          <AddressBlock title={copy.shippingTo} address={order.shippingAddress} />
+          <ol className="grid gap-3 text-sm" aria-label={copy.timeline}>
             {order.history.map((entry, index) => (
               <li key={`${entry.at}-${String(index)}`} className="flex gap-3">
                 <span className="mt-1.5 size-2 shrink-0 rounded-full bg-brand" aria-hidden="true" />
                 <div>
-                  <p className="font-medium">{orderStatusLabel(entry.status)}</p>
+                  <p className="font-medium">{copy.status[entry.status]}</p>
                   {entry.note && <p className="text-muted-foreground">{entry.note}</p>}
-                  <p className="text-xs text-muted-foreground">{formatDateTime(entry.at)}</p>
+                  <p className="text-xs text-muted-foreground">{dateTime(entry.at)}</p>
                 </div>
               </li>
             ))}
@@ -254,7 +252,7 @@ function OrderView({
 
       {backHref && (
         <Button variant="outline" asChild className="w-fit">
-          <Link href={backHref}>All orders</Link>
+          <Link href={backHref}>{copy.allOrders}</Link>
         </Button>
       )}
     </div>
@@ -262,6 +260,10 @@ function OrderView({
 }
 
 function AddressBlock({ title, address }: { title: string; address: Address }) {
+  const { locale } = useI18n();
+  const country = new Intl.DisplayNames([LOCALE_INFO[locale].intl], { type: 'region' }).of(
+    address.country,
+  );
   return (
     <div className="text-sm">
       <h3 className="font-semibold">{title}</h3>
@@ -284,7 +286,7 @@ function AddressBlock({ title, address }: { title: string; address: Address }) {
         <br />
         {address.postalCode} {address.city}
         <br />
-        {SHIPPING_COUNTRIES[address.country]}
+        {country ?? SHIPPING_COUNTRIES[address.country]}
       </address>
     </div>
   );

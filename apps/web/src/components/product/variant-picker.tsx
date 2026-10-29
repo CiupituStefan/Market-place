@@ -1,5 +1,6 @@
 'use client';
 
+import { useI18n } from '@/components/i18n/provider';
 import type { Product } from '@/lib/catalog/schemas';
 import { valueAvailability, type Selection } from '@/lib/catalog/variants';
 import { cn } from '@/lib/utils';
@@ -11,6 +12,7 @@ interface VariantPickerProps {
 }
 
 export function VariantPicker({ product, selection, onSelect }: VariantPickerProps) {
+  const { t } = useI18n();
   return (
     <div className="flex flex-col gap-6">
       {product.options.map((option) => {
@@ -27,7 +29,7 @@ export function VariantPicker({ product, selection, onSelect }: VariantPickerPro
                 const unavailable =
                   availability === 'UNAVAILABLE' || availability === 'OUT_OF_STOCK';
                 const isSelected = selection[option.key] === value.value;
-                const label = `${value.label}${unavailable ? ' (unavailable in this combination)' : ''}`;
+                const label = `${value.label}${unavailable ? t.product.unavailableSuffix : ''}`;
                 return option.display === 'swatch' ? (
                   <button
                     key={value.value}

@@ -4,7 +4,9 @@ import '@/lib/security/zod-jitless';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
 import { useState, type ReactNode } from 'react';
+import { LocaleProvider } from '@/components/i18n/provider';
 import { ApiError } from '@/lib/api/errors';
+import type { Locale } from '@/lib/i18n/config';
 
 function makeQueryClient(): QueryClient {
   return new QueryClient({
@@ -25,9 +27,11 @@ function makeQueryClient(): QueryClient {
 export function Providers({
   children,
   nonce,
+  locale,
 }: {
   children: ReactNode;
   nonce?: string | undefined;
+  locale: Locale;
 }) {
   const [queryClient] = useState(makeQueryClient);
   return (
@@ -38,7 +42,9 @@ export function Providers({
       disableTransitionOnChange
       nonce={nonce}
     >
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      <LocaleProvider locale={locale}>
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      </LocaleProvider>
     </ThemeProvider>
   );
 }

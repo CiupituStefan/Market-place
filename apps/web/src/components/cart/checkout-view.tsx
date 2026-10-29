@@ -2,7 +2,8 @@
 
 import { CheckoutRequestSchema, ErrorCode } from '@market/types';
 import { CloudOffIcon, CreditCardIcon, LockIcon, ShoppingBagIcon } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/components/i18n/link';
+import { useI18n } from '@/components/i18n/provider';
 import { useRouter } from 'next/navigation';
 import { useId, useState, type SubmitEvent } from 'react';
 import { FormField } from '@/components/auth/form-field';
@@ -27,21 +28,23 @@ import { OrderSummary } from './order-summary';
  * by Stripe's webhook.
  */
 export function CheckoutView() {
+  const { t } = useI18n();
+  const copy = t.checkout;
   const cart = useCart();
   const session = useSession();
 
   if (cart.isPending || session.isPending) {
-    return <Skeleton className="h-96" aria-label="Loading checkout" />;
+    return <Skeleton className="h-96" aria-label={copy.loading} />;
   }
   if (cart.isError) {
     return (
       <EmptyState
         icon={CloudOffIcon}
-        title="Checkout is unavailable right now"
-        description={userMessage(cart.error)}
+        title={copy.unavailable}
+        description={userMessage(cart.error, t)}
         action={
           <Button variant="outline" onClick={() => void cart.refetch()}>
-            Try again
+            {t.common.tryAgain}
           </Button>
         }
       />
@@ -51,10 +54,10 @@ export function CheckoutView() {
     return (
       <EmptyState
         icon={ShoppingBagIcon}
-        title="Nothing to check out yet"
+        title={copy.nothing}
         action={
           <Button asChild>
-            <Link href="/shop">Continue shopping</Link>
+            <Link href="/shop">{t.common.continueShopping}</Link>
           </Button>
         }
       />
@@ -64,11 +67,11 @@ export function CheckoutView() {
     return (
       <EmptyState
         icon={ShoppingBagIcon}
-        title="Some items in your cart need attention"
-        description="An item is out of stock or no longer available. Review your cart to continue."
+        title={copy.attentionTitle}
+        description={copy.attentionBody}
         action={
           <Button asChild>
-            <Link href="/cart">Review cart</Link>
+            <Link href="/cart">{copy.reviewCart}</Link>
           </Button>
         }
       />
@@ -97,6 +100,8 @@ function CheckoutForm({
   signedIn: boolean;
 }) {
   const router = useRouter();
+  const { t, path } = useI18n();
+  const copy = t.checkout;
   const billingId = useId();
   const [errors, setErrors] = useState<FieldErrors>({});
   const [billingSame, setBillingSame] = useState(true);
@@ -116,7 +121,7 @@ function CheckoutForm({
       notes: typeof notes === 'string' && notes.trim() ? notes.trim() : null,
     });
     if (!parsed.success) {
-      setErrors(fieldErrors(parsed.error));
+      setErrors(fieldErrors(parsed.error, t));
       return;
     }
     setErrors({});
@@ -124,7 +129,7 @@ function CheckoutForm({
       { input: parsed.data, idempotencyKey },
       {
         onSuccess: (order) => {
-          router.push(`/order/${order.id}`);
+          router.push(path(`/order/${order.id}`));
         },
       },
     );
@@ -149,32 +154,36 @@ function CheckoutForm({
     >
       <section className="grid gap-4 rounded-2xl border p-6">
         <h2 className="flex items-center gap-3 font-semibold">
-          <Step n={1} /> Contact
+          <Step n={1} /> {copy.contact}
         </h2>
         <FormField
-          label="Email"
+          label={copy.email}
           name="email"
           type="email"
           autoComplete="email"
           defaultValue={email}
           required
-          hint="For your order confirmation and shipping updates"
+          hint={copy.emailHint}
           error={errors.email}
         />
         {!signedIn && (
           <p className="text-sm text-muted-foreground">
-            Have an account?{' '}
-            <Link href="/login?next=%2Fcheckout" prefetch={false} className="underline">
-              Sign in
+            {copy.haveAccount}{' '}
+            <Link
+              href={`/login?next=${encodeURIComponent(path('/checkout'))}`}
+              prefetch={false}
+              className="underline"
+            >
+              {copy.signIn}
             </Link>{' '}
-            to see this order in your account.
+            {copy.signInHint}
           </p>
         )}
       </section>
 
       <section className="grid gap-4 rounded-2xl border p-6">
         <h2 className="flex items-center gap-3 font-semibold">
-          <Step n={2} /> Shipping address
+          <Step n={2} /> {copy.shippingAddress}
         </h2>
         <AddressFields prefix="shippingAddress" errors={errors} />
         <div className="flex items-center gap-2">
@@ -185,16 +194,16 @@ function CheckoutForm({
               setBillingSame(checked === true);
             }}
           />
-          <Label htmlFor={billingId}>Billing address is the same</Label>
+          <Label htmlFor={billingId}>{copy.billingSame}</Label>
         </div>
         {!billingSame && (
           <div className="grid gap-4 border-t pt-4">
-            <h3 className="text-sm font-semibold">Billing address</h3>
+            <h3 className="text-sm font-semibold">{copy.billingAddress}</h3>
             <AddressFields prefix="billingAddress" errors={errors} />
           </div>
         )}
         <div className="grid gap-2">
-          <Label htmlFor="notes">Order notes (optional)</Label>
+          <Label htmlFor="notes">{copy.notes}</Label>
           <textarea
             id="notes"
             name="notes"
@@ -207,21 +216,18 @@ function CheckoutForm({
 
       <section className="grid gap-4 rounded-2xl border p-6">
         <h2 className="flex items-center gap-3 font-semibold">
-          <Step n={3} /> Payment
+          <Step n={3} /> {copy.payment}
         </h2>
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
-          <CreditCardIcon className="size-4" aria-hidden="true" /> After you place the order, you
-          pay securely with Stripe. Your items are held for 30 minutes.
+          <CreditCardIcon className="size-4" aria-hidden="true" /> {copy.paymentHint}
         </p>
         {place.isError && (
           <p role="alert" className="text-sm text-destructive">
-            {priceChanged
-              ? 'Your order total changed since you opened checkout. Review the updated summary and place your order again.'
-              : userMessage(place.error)}
+            {priceChanged ? copy.priceChanged : userMessage(place.error, t)}
           </p>
         )}
         <Button type="submit" size="lg" disabled={place.isPending}>
-          <LockIcon /> {place.isPending ? 'Placing order…' : 'Place order'}
+          <LockIcon /> {place.isPending ? copy.placing : copy.placeOrder}
         </Button>
       </section>
     </form>

@@ -14,7 +14,7 @@ import type {
   Configurator,
   ConfiguratorGroup,
 } from '@/lib/catalog/schemas';
-import { formatMoney } from '@/lib/format';
+import { useI18n } from '@/components/i18n/provider';
 import { cn } from '@/lib/utils';
 
 interface ConfiguratorBuilderProps {
@@ -41,11 +41,14 @@ function conflictsWith(
 }
 
 export function ConfiguratorBuilder({ configurator, initialQuote }: ConfiguratorBuilderProps) {
+  const { t, locale, money } = useI18n();
+  const copy = t.configurator;
   const [selection, setSelection] = useState<ConfigurationSelection>(initialQuote.selection);
   const [quote, setQuote] = useState<ConfigurationQuote>(initialQuote);
 
   const quoting = useMutation({
-    mutationFn: (next: ConfigurationSelection) => quoteConfiguration(configurator.slug, next),
+    mutationFn: (next: ConfigurationSelection) =>
+      quoteConfiguration(configurator.slug, next, locale),
     onSuccess: setQuote,
   });
   // The cart re-quotes the selection on the server; no price is sent.
@@ -68,7 +71,7 @@ export function ConfiguratorBuilder({ configurator, initialQuote }: Configurator
           <ProductArt
             preview={quote.preview}
             quality="full"
-            title={`${configurator.name} preview`}
+            title={copy.preview(configurator.name)}
             className={cn(
               'w-full transition-opacity duration-300',
               quoting.isPending && 'opacity-70',
@@ -77,11 +80,11 @@ export function ConfiguratorBuilder({ configurator, initialQuote }: Configurator
         </div>
         <dl className="mt-4 grid grid-cols-2 gap-4 rounded-2xl border p-5 text-sm">
           <div>
-            <dt className="text-muted-foreground">SKU</dt>
+            <dt className="text-muted-foreground">{copy.sku}</dt>
             <dd className="mt-1 font-mono text-xs break-all">{quote.sku}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Configuration ID</dt>
+            <dt className="text-muted-foreground">{copy.configurationId}</dt>
             <dd className="mt-1 font-mono text-xs">{quote.configurationId}</dd>
           </div>
         </dl>
@@ -131,8 +134,8 @@ export function ConfiguratorBuilder({ configurator, initialQuote }: Configurator
                     )}
                     <span className="font-mono text-[0.7rem] text-muted-foreground">
                       {option.priceDelta.amount > 0
-                        ? `+${formatMoney(option.priceDelta)}`
-                        : 'Included'}
+                        ? `+${money(option.priceDelta)}`
+                        : copy.included}
                     </span>
                   </button>
                 );
@@ -144,7 +147,7 @@ export function ConfiguratorBuilder({ configurator, initialQuote }: Configurator
         <div className="rounded-3xl border bg-card p-6" aria-live="polite">
           {invalid ? (
             <div role="alert" className="text-sm text-destructive">
-              <p className="font-medium">{userMessage(quoting.error)}</p>
+              <p className="font-medium">{userMessage(quoting.error, t)}</p>
               <ul className="mt-2 list-disc pl-5">
                 {problems.map((problem) => (
                   <li key={problem.path}>{problem.message}</li>
@@ -160,15 +163,13 @@ export function ConfiguratorBuilder({ configurator, initialQuote }: Configurator
                     className="flex justify-between gap-4"
                   >
                     <span className="text-muted-foreground">{line.label}</span>
-                    <span className="tabular-nums">{formatMoney(line.amount)}</span>
+                    <span className="tabular-nums">{money(line.amount)}</span>
                   </li>
                 ))}
               </ul>
               <p className="mt-4 flex items-baseline justify-between border-t pt-4">
-                <span className="font-medium">Total</span>
-                <span className="text-3xl font-semibold tabular-nums">
-                  {formatMoney(quote.price)}
-                </span>
+                <span className="font-medium">{copy.total}</span>
+                <span className="text-3xl font-semibold tabular-nums">{money(quote.price)}</span>
               </p>
             </>
           )}
@@ -182,20 +183,18 @@ export function ConfiguratorBuilder({ configurator, initialQuote }: Configurator
           >
             {addToCart.isSuccess ? (
               <>
-                <CheckIcon /> Added to cart
+                <CheckIcon /> {copy.added}
               </>
             ) : (
-              'Add to cart'
+              copy.addToCart
             )}
           </Button>
           {addToCart.isError && (
             <p role="alert" className="mt-3 text-sm text-destructive">
-              {userMessage(addToCart.error)}
+              {userMessage(addToCart.error, t)}
             </p>
           )}
-          <p className="mt-3 text-xs text-muted-foreground">
-            Assembled and sound-tested in 5–7 business days.
-          </p>
+          <p className="mt-3 text-xs text-muted-foreground">{copy.leadTime}</p>
         </div>
       </div>
     </div>

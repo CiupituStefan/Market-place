@@ -7,10 +7,11 @@ import {
   type ReviewSort,
 } from '@market/types';
 import { BadgeCheckIcon, FlagIcon, StarIcon, ThumbsDownIcon, ThumbsUpIcon } from 'lucide-react';
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useId, useState, type SubmitEvent } from 'react';
 import { FormField } from '@/components/auth/form-field';
+import Link from '@/components/i18n/link';
+import { useI18n } from '@/components/i18n/provider';
 import { Rating } from '@/components/product/rating';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -27,21 +28,18 @@ import {
 } from '@/lib/api/reviews';
 import { useSession } from '@/lib/api/session';
 import { fieldErrors, type FieldErrors } from '@/lib/auth/validation';
-import { formatDate } from '@/lib/format';
+import { LOCALE_INFO } from '@/lib/i18n/config';
 import { cn } from '@/lib/utils';
 
-const SORTS: { value: ReviewSort; label: string }[] = [
-  { value: 'helpful', label: 'Most helpful' },
-  { value: 'newest', label: 'Newest' },
-  { value: 'highest', label: 'Highest rated' },
-  { value: 'lowest', label: 'Lowest rated' },
-];
+const SORTS: ReviewSort[] = ['helpful', 'newest', 'highest', 'lowest'];
 
 /**
  * Reviews of one product. Everything shown (averages, counts, the verified badge)
  * comes from review-service; the page only sends ratings, text and votes.
  */
 export function ReviewsSection({ productId }: { productId: string }) {
+  const { t } = useI18n();
+  const copy = t.reviews;
   const session = useSession();
   const signedIn = Boolean(session.data);
   const [filters, setFilters] = useState<ReviewFilters>({
@@ -55,11 +53,11 @@ export function ReviewsSection({ productId }: { productId: string }) {
     setFilters((current) => ({ ...current, page: 1, ...patch }));
   };
 
-  if (reviews.isPending) return <Skeleton className="h-64" aria-label="Loading reviews" />;
+  if (reviews.isPending) return <Skeleton className="h-64" aria-label={copy.loading} />;
   if (reviews.isError) {
     return (
       <p role="alert" className="text-sm text-destructive">
-        {userMessage(reviews.error)}
+        {userMessage(reviews.error, t)}
       </p>
     );
   }
@@ -81,7 +79,7 @@ export function ReviewsSection({ productId }: { productId: string }) {
       <div className="grid h-fit gap-6">
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">Sort</span>
+            <span className="text-muted-foreground">{copy.sort}</span>
             <select
               value={filters.sort}
               onChange={(e) => {
@@ -89,9 +87,9 @@ export function ReviewsSection({ productId }: { productId: string }) {
               }}
               className="h-9 rounded-lg border border-input bg-background px-2 text-sm"
             >
-              {SORTS.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {s.label}
+              {SORTS.map((sort) => (
+                <option key={sort} value={sort}>
+                  {copy.sorts[sort]}
                 </option>
               ))}
             </select>
@@ -104,7 +102,7 @@ export function ReviewsSection({ productId }: { productId: string }) {
                 update({ verified: e.target.checked });
               }}
             />
-            Verified purchases only
+            {copy.verifiedOnly}
           </label>
           {filters.rating && (
             <Button
@@ -114,16 +112,14 @@ export function ReviewsSection({ productId }: { productId: string }) {
                 update({ rating: null });
               }}
             >
-              Showing {filters.rating}★ — clear
+              {copy.clearRating(filters.rating)}
             </Button>
           )}
         </div>
 
         {items.length === 0 ? (
           <p className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-            {summary.count === 0
-              ? 'No reviews yet. Be the first to tell others how it types.'
-              : 'No reviews match these filters.'}
+            {summary.count === 0 ? copy.noneYet : copy.noMatch}
           </p>
         ) : (
           <ul className="divide-y border-y" aria-busy={reviews.isFetching}>
@@ -139,7 +135,7 @@ export function ReviewsSection({ productId }: { productId: string }) {
         )}
 
         {totalPages > 1 && (
-          <nav aria-label="Review pages" className="flex items-center justify-center gap-3">
+          <nav aria-label={copy.pages} className="flex items-center justify-center gap-3">
             <Button
               variant="outline"
               disabled={filters.page <= 1}
@@ -147,10 +143,10 @@ export function ReviewsSection({ productId }: { productId: string }) {
                 setFilters((f) => ({ ...f, page: f.page - 1 }));
               }}
             >
-              Previous
+              {copy.previous}
             </Button>
             <span className="text-sm text-muted-foreground">
-              Page {filters.page} of {totalPages}
+              {copy.pageOf(filters.page, totalPages)}
             </span>
             <Button
               variant="outline"
@@ -159,7 +155,7 @@ export function ReviewsSection({ productId }: { productId: string }) {
                 setFilters((f) => ({ ...f, page: f.page + 1 }));
               }}
             >
-              Next
+              {copy.next}
             </Button>
           </nav>
         )}
@@ -177,19 +173,25 @@ function Summary({
   selected: number | null;
   onSelect: (rating: number) => void;
 }) {
+  const { t, locale } = useI18n();
   return (
     <div className="rounded-3xl border p-6">
       <div className="flex items-end gap-3">
-        <span className="text-5xl font-semibold tabular-nums">{summary.average.toFixed(1)}</span>
+        <span className="text-5xl font-semibold tabular-nums">
+          {summary.average.toLocaleString(LOCALE_INFO[locale].intl, {
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1,
+          })}
+        </span>
         <Rating value={summary.average} count={summary.count} size="md" className="mb-1.5" />
       </div>
       {summary.verifiedCount > 0 && (
         <p className="mt-2 flex items-center gap-1 text-xs text-success">
-          <BadgeCheckIcon className="size-3.5" aria-hidden="true" /> {summary.verifiedCount} from
-          verified buyers
+          <BadgeCheckIcon className="size-3.5" aria-hidden="true" />{' '}
+          {t.reviews.fromVerified(summary.verifiedCount)}
         </p>
       )}
-      <ul className="mt-5 grid gap-1.5" aria-label="Rating distribution">
+      <ul className="mt-5 grid gap-1.5" aria-label={t.reviews.distribution}>
         {([5, 4, 3, 2, 1] as const).map((stars) => {
           const n = summary.distribution[stars];
           const share = summary.count === 0 ? 0 : (n / summary.count) * 100;
@@ -235,6 +237,8 @@ function ReviewItem({
   productId: string;
   signedIn: boolean;
 }) {
+  const { t, date } = useI18n();
+  const copy = t.reviews;
   const vote = useVoteReview(productId);
   const report = useReportReview(productId);
   const [reported, setReported] = useState(false);
@@ -252,15 +256,15 @@ function ReviewItem({
         <span className="font-medium text-foreground">{review.authorName}</span>
         {review.verifiedPurchase && (
           <span className="flex items-center gap-1 text-success">
-            <BadgeCheckIcon className="size-3.5" aria-hidden="true" /> Verified purchase
+            <BadgeCheckIcon className="size-3.5" aria-hidden="true" /> {copy.verifiedPurchase}
           </span>
         )}
-        <span>{formatDate(review.createdAt)}</span>
-        {review.editedAt && <span>(edited)</span>}
+        <span>{date(review.createdAt)}</span>
+        {review.editedAt && <span>{copy.edited}</span>}
       </p>
       {!review.mine && signedIn && (
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="text-muted-foreground">Helpful?</span>
+          <span className="text-muted-foreground">{copy.helpfulQuestion}</span>
           <Button
             variant="outline"
             size="sm"
@@ -295,18 +299,16 @@ function ReviewItem({
               });
             }}
           >
-            <FlagIcon /> {reported ? 'Reported' : 'Report'}
+            <FlagIcon /> {reported ? copy.reported : copy.report}
           </Button>
         </div>
       )}
       {!signedIn && review.helpfulCount > 0 && (
-        <p className="text-xs text-muted-foreground">
-          {review.helpfulCount} {review.helpfulCount === 1 ? 'person' : 'people'} found this helpful
-        </p>
+        <p className="text-xs text-muted-foreground">{copy.foundHelpful(review.helpfulCount)}</p>
       )}
       {(vote.isError || report.isError) && (
         <p role="alert" className="text-xs text-destructive">
-          {userMessage(vote.error ?? report.error)}
+          {userMessage(vote.error ?? report.error, t)}
         </p>
       )}
     </li>
@@ -322,6 +324,8 @@ function WriteReview({
   signedIn: boolean;
   loading: boolean;
 }) {
+  const { t } = useI18n();
+  const copy = t.reviews;
   const pathname = usePathname();
   const mine = useMyReview(productId, signedIn);
   const [editing, setEditing] = useState(false);
@@ -331,11 +335,11 @@ function WriteReview({
   if (!signedIn) {
     return (
       <div className="rounded-3xl border p-6 text-sm">
-        <p className="font-medium">Own this?</p>
-        <p className="mt-1 text-muted-foreground">Sign in to share how it types.</p>
+        <p className="font-medium">{copy.ownThis}</p>
+        <p className="mt-1 text-muted-foreground">{copy.signInHint}</p>
         <Button asChild className="mt-4 w-full">
           <Link href={`/login?next=${encodeURIComponent(`${pathname}#reviews`)}`} prefetch={false}>
-            Sign in to review
+            {copy.signIn}
           </Link>
         </Button>
       </div>
@@ -345,14 +349,12 @@ function WriteReview({
   if (review && !editing) {
     return (
       <div className="rounded-3xl border p-6 text-sm">
-        <p className="font-medium">Your review</p>
+        <p className="font-medium">{copy.yours}</p>
         <Rating value={review.rating} className="mt-2" />
         <p className="mt-1 font-medium">{review.title}</p>
         {review.status !== 'PUBLISHED' && (
           <p className="mt-2 text-xs text-muted-foreground">
-            {review.status === 'PENDING'
-              ? 'Waiting for a moderator before it is shown to others.'
-              : 'Not published. Edit it to submit it again.'}
+            {review.status === 'PENDING' ? copy.pending : copy.rejected}
           </p>
         )}
         <div className="mt-4 flex gap-2">
@@ -363,7 +365,7 @@ function WriteReview({
               setEditing(true);
             }}
           >
-            Edit
+            {copy.edit}
           </Button>
           <Button
             variant="ghost"
@@ -373,7 +375,7 @@ function WriteReview({
               remove.mutate(review.id);
             }}
           >
-            Delete
+            {copy.delete}
           </Button>
         </div>
       </div>
@@ -399,6 +401,8 @@ function ReviewForm({
   review: ProductReview | null;
   onDone: () => void;
 }) {
+  const { t } = useI18n();
+  const copy = t.reviews;
   const ratingLabel = useId();
   const [rating, setRating] = useState(review?.rating ?? 0);
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -414,7 +418,7 @@ function ReviewForm({
       authorName: data.get('authorName'),
     });
     if (!parsed.success) {
-      setErrors(fieldErrors(parsed.error));
+      setErrors(fieldErrors(parsed.error, t));
       return;
     }
     setErrors({});
@@ -423,10 +427,10 @@ function ReviewForm({
 
   return (
     <form onSubmit={onSubmit} noValidate className="grid gap-4 rounded-3xl border p-6">
-      <p className="font-medium">{review ? 'Edit your review' : 'Write a review'}</p>
+      <p className="font-medium">{review ? copy.editTitle : copy.writeTitle}</p>
       <div className="grid gap-2">
         <span id={ratingLabel} className="text-sm font-medium">
-          Rating
+          {copy.rating}
         </span>
         <div role="radiogroup" aria-labelledby={ratingLabel} className="flex gap-1">
           {[1, 2, 3, 4, 5].map((stars) => (
@@ -435,7 +439,7 @@ function ReviewForm({
               type="button"
               role="radio"
               aria-checked={rating === stars}
-              aria-label={`${String(stars)} star${stars === 1 ? '' : 's'}`}
+              aria-label={copy.stars(stars)}
               onClick={() => {
                 setRating(stars);
               }}
@@ -454,14 +458,14 @@ function ReviewForm({
         {errors.rating && <p className="text-xs text-destructive">{errors.rating}</p>}
       </div>
       <FormField
-        label="Title"
+        label={copy.title}
         name="title"
         defaultValue={review?.title}
         maxLength={120}
         error={errors.title}
       />
       <div className="grid gap-2">
-        <Label htmlFor={`${ratingLabel}-body`}>Your review</Label>
+        <Label htmlFor={`${ratingLabel}-body`}>{copy.body}</Label>
         <textarea
           id={`${ratingLabel}-body`}
           name="body"
@@ -474,25 +478,25 @@ function ReviewForm({
         {errors.body && <p className="text-xs text-destructive">{errors.body}</p>}
       </div>
       <FormField
-        label="Name shown with your review"
+        label={copy.authorName}
         name="authorName"
         defaultValue={review?.authorName}
         maxLength={40}
-        hint="E.g. your first name and initial"
+        hint={copy.authorHint}
         error={errors.authorName}
       />
       {save.isError && (
         <p role="alert" className="text-sm text-destructive">
-          {userMessage(save.error)}
+          {userMessage(save.error, t)}
         </p>
       )}
       <div className="flex gap-2">
         <Button type="submit" disabled={save.isPending}>
-          {save.isPending ? 'Saving…' : review ? 'Save changes' : 'Post review'}
+          {save.isPending ? copy.saving : review ? copy.save : copy.post}
         </Button>
         {review && (
           <Button type="button" variant="ghost" onClick={onDone}>
-            Cancel
+            {copy.cancel}
           </Button>
         )}
       </div>

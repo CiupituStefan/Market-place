@@ -1,19 +1,21 @@
+import { getI18n } from '@/lib/i18n/server';
 import { OrdersView } from '@/components/account/orders-view';
 import { Breadcrumbs } from '@/components/seo/breadcrumbs';
-import { privatePage } from '@/lib/seo/private';
+import { localPrivatePage } from '@/lib/seo/private';
 
-export const metadata = privatePage('Orders');
+export const generateMetadata = localPrivatePage((t) => t.pages.orders);
 
-export default function OrdersPage() {
+export default async function OrdersPage() {
+  const { t } = await getI18n();
   return (
     <div className="container-page py-10">
       <Breadcrumbs
         crumbs={[
-          { name: 'Account', href: '/account' },
-          { name: 'Orders', href: '/account/orders' },
+          { name: t.pages.account, href: '/account' },
+          { name: t.pages.orders, href: '/account/orders' },
         ]}
       />
-      <h1 className="mt-6 mb-10 text-4xl font-semibold tracking-tight">Orders</h1>
+      <h1 className="mt-6 mb-10 text-4xl font-semibold tracking-tight">{t.pages.orders}</h1>
       <OrdersView />
     </div>
   );

@@ -1,5 +1,9 @@
 import type { Category, Product, Variant } from '@/lib/catalog/schemas';
+import { LOCALE_INFO, localizePath, type Locale } from '@/lib/i18n/config';
+import type { Messages } from '@/lib/i18n/messages';
 import { absoluteUrl, siteConfig } from '@/lib/site';
+
+const localUrl = (path: string, locale: Locale) => absoluteUrl(localizePath(path, locale));
 
 /**
  * schema.org builders. Values come from catalog data rendered on the page, so
@@ -13,29 +17,30 @@ export function serializeJsonLd(data: JsonLd | JsonLd[]): string {
   return JSON.stringify(data).replace(/</g, '\\u003c');
 }
 
-export function organizationJsonLd(): JsonLd {
+export function organizationJsonLd(locale: Locale): JsonLd {
   return {
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: siteConfig.name,
-    url: siteConfig.url,
+    url: localUrl('/', locale),
     logo: absoluteUrl('/icon.svg'),
     email: siteConfig.supportEmail,
     sameAs: Object.values(siteConfig.social),
   };
 }
 
-export function websiteJsonLd(): JsonLd {
+export function websiteJsonLd(locale: Locale): JsonLd {
   return {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: siteConfig.name,
-    url: siteConfig.url,
+    url: localUrl('/', locale),
+    inLanguage: LOCALE_INFO[locale].htmlLang,
     potentialAction: {
       '@type': 'SearchAction',
       target: {
         '@type': 'EntryPoint',
-        urlTemplate: `${absoluteUrl('/search')}?q={search_term_string}`,
+        urlTemplate: `${localUrl('/search', locale)}?q={search_term_string}`,
       },
       'query-input': 'required name=search_term_string',
     },
@@ -47,7 +52,7 @@ export interface Crumb {
   href: string;
 }
 
-export function breadcrumbJsonLd(crumbs: Crumb[]): JsonLd {
+export function breadcrumbJsonLd(crumbs: Crumb[], locale: Locale): JsonLd {
   return {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
@@ -55,7 +60,7 @@ export function breadcrumbJsonLd(crumbs: Crumb[]): JsonLd {
       '@type': 'ListItem',
       position: index + 1,
       name: crumb.name,
-      item: absoluteUrl(crumb.href),
+      item: localUrl(crumb.href, locale),
     })),
   };
 }
@@ -67,8 +72,8 @@ const AVAILABILITY: Record<Variant['availability'], string> = {
   PREORDER: 'https://schema.org/PreOrder',
 };
 
-export function productJsonLd(product: Product): JsonLd {
-  const url = absoluteUrl(`/product/${product.slug}`);
+export function productJsonLd(product: Product, locale: Locale): JsonLd {
+  const url = localUrl(`/product/${product.slug}`, locale);
   const optionLabel = (variant: Variant) =>
     product.options
       .map((option) => option.values.find((v) => v.value === variant.options[option.key])?.label)
@@ -109,10 +114,10 @@ export function productJsonLd(product: Product): JsonLd {
   };
 }
 
-export function categoryCrumbs(trail: Category[]): Crumb[] {
+export function categoryCrumbs(trail: Category[], t: Messages): Crumb[] {
   return [
-    { name: 'Home', href: '/' },
-    { name: 'Shop', href: '/shop' },
+    { name: t.shop.home, href: '/' },
+    { name: t.shop.shop, href: '/shop' },
     ...trail.map((c) => ({ name: c.name, href: `/shop/${c.slug}` })),
   ];
 }

@@ -1,16 +1,15 @@
+import { getI18n } from '@/lib/i18n/server';
 import { Suspense } from 'react';
 import { AuthCard } from '@/components/auth/auth-card';
 import { ResetPasswordForm } from '@/components/auth/reset-password-form';
-import { privatePage } from '@/lib/seo/private';
+import { localPrivatePage } from '@/lib/seo/private';
 
-export const metadata = privatePage('Choose a new password');
+export const generateMetadata = localPrivatePage((t) => t.pages.chooseNewPassword);
 
-export default function ResetPasswordPage() {
+export default async function ResetPasswordPage() {
+  const { t } = await getI18n();
   return (
-    <AuthCard
-      title="Choose a new password"
-      description="Use a long passphrase you don’t use anywhere else."
-    >
+    <AuthCard title={t.pages.reset.title} description={t.pages.reset.description}>
       <Suspense>
         <ResetPasswordForm />
       </Suspense>

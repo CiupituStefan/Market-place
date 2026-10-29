@@ -9,24 +9,26 @@ import {
   ShoppingBagIcon,
   TrashIcon,
 } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/components/i18n/link';
+import { useI18n } from '@/components/i18n/provider';
 import { EmptyState } from '@/components/empty-state';
 import { ProductArt } from '@/components/product/product-art';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCart, useRemoveCartItem, useUpdateCartQuantity, type Cart } from '@/lib/api/cart';
 import { userMessage } from '@/lib/api/errors';
-import { formatMoney } from '@/lib/format';
 import { CouponForm } from './coupon-form';
 import { FreeShippingProgress } from './free-shipping-progress';
 import { OrderSummary } from './order-summary';
 
 export function CartView() {
+  const { t } = useI18n();
+  const copy = t.cart;
   const cart = useCart();
 
   if (cart.isPending) {
     return (
-      <div className="grid gap-4" aria-busy="true" aria-label="Loading cart">
+      <div className="grid gap-4" aria-busy="true" aria-label={copy.loading}>
         <Skeleton className="h-28" />
         <Skeleton className="h-28" />
       </div>
@@ -36,11 +38,11 @@ export function CartView() {
     return (
       <EmptyState
         icon={CloudOffIcon}
-        title="We couldn’t load your cart"
-        description={userMessage(cart.error)}
+        title={copy.loadFailed}
+        description={userMessage(cart.error, t)}
         action={
           <Button variant="outline" onClick={() => void cart.refetch()}>
-            Try again
+            {t.common.tryAgain}
           </Button>
         }
       />
@@ -50,11 +52,11 @@ export function CartView() {
     return (
       <EmptyState
         icon={ShoppingBagIcon}
-        title="Your cart is empty"
-        description="Find a board you love — it will wait here for you."
+        title={copy.emptyTitle}
+        description={copy.emptyBody}
         action={
           <Button asChild>
-            <Link href="/shop/keyboards">Shop keyboards</Link>
+            <Link href="/shop/keyboards">{copy.shopKeyboards}</Link>
           </Button>
         }
       />
@@ -78,16 +80,14 @@ export function CartView() {
         action={
           cart.data.canCheckout ? (
             <Button size="lg" className="w-full" asChild>
-              <Link href="/checkout">Checkout</Link>
+              <Link href="/checkout">{copy.checkout}</Link>
             </Button>
           ) : (
             <>
               <Button size="lg" className="w-full" disabled>
-                Checkout
+                {copy.checkout}
               </Button>
-              <p className="mt-2 text-center text-xs text-destructive">
-                Remove or adjust the unavailable items to continue.
-              </p>
+              <p className="mt-2 text-center text-xs text-destructive">{copy.fixItems}</p>
             </>
           )
         }
@@ -97,6 +97,7 @@ export function CartView() {
 }
 
 function Notices({ cart }: { cart: Cart }) {
+  const { t } = useI18n();
   // Item-level stock/availability messages are shown on the line itself.
   const general = cart.notices.filter(
     (notice) => notice.code === 'PRICE_CHANGED' || notice.code === 'COUPON_REMOVED',
@@ -110,7 +111,9 @@ function Notices({ cart }: { cart: Cart }) {
       {general.map((notice, index) => (
         <li key={`${notice.code}-${String(index)}`} className="flex gap-2 text-sm">
           <AlertTriangleIcon className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden="true" />
-          {notice.message}
+          {t.errors.preferServerMessage
+            ? notice.message
+            : (t.cart.notices[notice.code] ?? notice.message)}
         </li>
       ))}
     </ul>
@@ -118,6 +121,8 @@ function Notices({ cart }: { cart: Cart }) {
 }
 
 function CartLine({ item }: { item: CartItem }) {
+  const { t, money } = useI18n();
+  const copy = t.cart;
   const update = useUpdateCartQuantity();
   const remove = useRemoveCartItem();
   const busy = update.isPending || remove.isPending;
@@ -147,28 +152,28 @@ function CartLine({ item }: { item: CartItem }) {
         )}
         <p className="text-sm text-muted-foreground">{item.optionsLabel}</p>
         <p className="text-sm text-muted-foreground tabular-nums">
-          {formatMoney(item.unitPrice)} each
+          {copy.each(money(item.unitPrice))}
         </p>
         {!item.available && (
           <p className="text-sm text-destructive">
             {item.availableQuantity === null || item.availableQuantity > 0
               ? item.availableQuantity === null
-                ? 'No longer available'
-                : `Only ${String(item.availableQuantity)} left — lower the quantity`
-              : 'Out of stock'}
+                ? copy.noLongerAvailable
+                : copy.onlyLeft(item.availableQuantity)
+              : copy.outOfStock}
           </p>
         )}
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
           <div
             className="flex h-9 items-center rounded-lg border"
             role="group"
-            aria-label="Quantity"
+            aria-label={copy.quantity}
           >
             <Button
               variant="ghost"
               size="icon"
               className="size-9"
-              aria-label={`Decrease quantity of ${item.name}`}
+              aria-label={copy.decrease(item.name)}
               disabled={busy || item.quantity <= 1}
               onClick={() => {
                 update.mutate({ itemId: item.id, quantity: item.quantity - 1 });
@@ -178,7 +183,7 @@ function CartLine({ item }: { item: CartItem }) {
             </Button>
             <output
               className="w-8 text-center font-mono text-sm tabular-nums"
-              aria-label={`Quantity of ${item.name}`}
+              aria-label={copy.quantityOf(item.name)}
             >
               {item.quantity}
             </output>
@@ -186,7 +191,7 @@ function CartLine({ item }: { item: CartItem }) {
               variant="ghost"
               size="icon"
               className="size-9"
-              aria-label={`Increase quantity of ${item.name}`}
+              aria-label={copy.increase(item.name)}
               disabled={busy || item.quantity >= maxQuantity}
               onClick={() => {
                 update.mutate({ itemId: item.id, quantity: item.quantity + 1 });
@@ -203,16 +208,16 @@ function CartLine({ item }: { item: CartItem }) {
               remove.mutate(item.id);
             }}
           >
-            <TrashIcon /> Remove
+            <TrashIcon /> {copy.remove}
           </Button>
         </div>
         {error && (
           <p role="alert" className="text-sm text-destructive">
-            {userMessage(error)}
+            {userMessage(error, t)}
           </p>
         )}
       </div>
-      <p className="shrink-0 font-medium tabular-nums">{formatMoney(item.lineTotal)}</p>
+      <p className="shrink-0 font-medium tabular-nums">{money(item.lineTotal)}</p>
     </li>
   );
 }

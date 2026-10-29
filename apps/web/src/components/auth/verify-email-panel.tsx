@@ -1,8 +1,9 @@
 'use client';
 
+import { useI18n } from '@/components/i18n/provider';
 import { useMutation } from '@tanstack/react-query';
 import { CheckCircle2Icon } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/components/i18n/link';
 import { useSearchParams } from 'next/navigation';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,7 @@ import { userMessage } from '@/lib/api/errors';
  * and a GET that consumed the token would verify on the scanner's behalf.
  */
 export function VerifyEmailPanel() {
+  const { t } = useI18n();
   const token = useSearchParams().get('token');
   const verify = useMutation({
     mutationFn: (value: string) =>
@@ -21,19 +23,15 @@ export function VerifyEmailPanel() {
   });
 
   if (!token) {
-    return (
-      <p className="text-sm text-destructive">
-        This link is incomplete. Open the link from your email again.
-      </p>
-    );
+    return <p className="text-sm text-destructive">{t.auth.incompleteVerify}</p>;
   }
   if (verify.isSuccess) {
     return (
       <div role="status" className="flex flex-col items-center gap-3 text-center">
         <CheckCircle2Icon className="size-8 text-success" aria-hidden="true" />
-        <p className="font-medium">Your email is confirmed.</p>
+        <p className="font-medium">{t.auth.emailConfirmed}</p>
         <Button asChild>
-          <Link href="/account">Go to your account</Link>
+          <Link href="/account">{t.auth.goToAccount}</Link>
         </Button>
       </div>
     );
@@ -42,7 +40,7 @@ export function VerifyEmailPanel() {
     <div className="grid gap-4">
       {verify.isError && (
         <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
-          {userMessage(verify.error)}
+          {userMessage(verify.error, t)}
         </p>
       )}
       <Button
@@ -52,7 +50,7 @@ export function VerifyEmailPanel() {
           verify.mutate(token);
         }}
       >
-        {verify.isPending ? 'Confirming…' : 'Confirm my email'}
+        {verify.isPending ? t.auth.confirming : t.auth.confirmEmail}
       </Button>
     </div>
   );

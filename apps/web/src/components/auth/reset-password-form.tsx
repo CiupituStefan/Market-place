@@ -1,30 +1,34 @@
 'use client';
 
+import { useI18n } from '@/components/i18n/provider';
 import { useMutation } from '@tanstack/react-query';
-import Link from 'next/link';
+import Link from '@/components/i18n/link';
 import { useSearchParams } from 'next/navigation';
 import { useState, type SubmitEvent } from 'react';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api/browser';
 import { userMessage } from '@/lib/api/errors';
+import type { Messages } from '@/lib/i18n/messages';
 import { fieldErrors, PASSWORD_MAX, PASSWORD_MIN, type FieldErrors } from '@/lib/auth/validation';
 import { FormField } from './form-field';
 
-const ResetSchema = z
-  .object({
-    password: z
-      .string()
-      .min(PASSWORD_MIN, `Use at least ${PASSWORD_MIN} characters.`)
-      .max(PASSWORD_MAX, `Use at most ${PASSWORD_MAX} characters.`),
-    confirmPassword: z.string(),
-  })
-  .refine((d) => d.password === d.confirmPassword, {
-    path: ['confirmPassword'],
-    message: 'Passwords do not match.',
-  });
+const resetSchema = (t: Messages) =>
+  z
+    .object({
+      password: z
+        .string()
+        .min(PASSWORD_MIN, t.auth.useAtLeast(PASSWORD_MIN))
+        .max(PASSWORD_MAX, t.auth.useAtMost(PASSWORD_MAX)),
+      confirmPassword: z.string(),
+    })
+    .refine((d) => d.password === d.confirmPassword, {
+      path: ['confirmPassword'],
+      message: t.auth.passwordsDiffer,
+    });
 
 export function ResetPasswordForm() {
+  const { t } = useI18n();
   const token = useSearchParams().get('token');
   const [errors, setErrors] = useState<FieldErrors>({});
   const reset = useMutation({
@@ -37,18 +41,14 @@ export function ResetPasswordForm() {
   });
 
   if (!token) {
-    return (
-      <p className="text-sm text-destructive">
-        This link is incomplete. Request a new reset email.
-      </p>
-    );
+    return <p className="text-sm text-destructive">{t.auth.incompleteReset}</p>;
   }
   if (reset.isSuccess) {
     return (
       <div role="status" className="grid gap-4 text-center">
-        <p className="font-medium">Password updated. You have been signed out on all devices.</p>
+        <p className="font-medium">{t.auth.passwordUpdated}</p>
         <Button asChild>
-          <Link href="/login">Sign in</Link>
+          <Link href="/login">{t.auth.signIn}</Link>
         </Button>
       </div>
     );
@@ -57,12 +57,12 @@ export function ResetPasswordForm() {
   function onSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    const parsed = ResetSchema.safeParse({
+    const parsed = resetSchema(t).safeParse({
       password: data.get('password'),
       confirmPassword: data.get('confirmPassword'),
     });
     if (!parsed.success) {
-      setErrors(fieldErrors(parsed.error));
+      setErrors(fieldErrors(parsed.error, t));
       return;
     }
     setErrors({});
@@ -72,14 +72,14 @@ export function ResetPasswordForm() {
   return (
     <form onSubmit={onSubmit} noValidate className="grid gap-5">
       <FormField
-        label="New password"
+        label={t.auth.newPassword}
         name="password"
         type="password"
         autoComplete="new-password"
         error={errors.password}
       />
       <FormField
-        label="Confirm new password"
+        label={t.auth.confirmNewPassword}
         name="confirmPassword"
         type="password"
         autoComplete="new-password"
@@ -87,14 +87,14 @@ export function ResetPasswordForm() {
       />
       {reset.isError && (
         <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
-          {userMessage(reset.error)}{' '}
+          {userMessage(reset.error, t)}{' '}
           <Link href="/forgot-password" className="underline">
-            Request a new link
+            {t.auth.requestNewLink}
           </Link>
         </p>
       )}
       <Button type="submit" size="lg" disabled={reset.isPending}>
-        {reset.isPending ? 'Saving…' : 'Set new password'}
+        {reset.isPending ? t.common.saving : t.auth.setNewPassword}
       </Button>
     </form>
   );

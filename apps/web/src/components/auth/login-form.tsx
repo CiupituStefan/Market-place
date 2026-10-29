@@ -1,7 +1,8 @@
 'use client';
 
+import { useI18n } from '@/components/i18n/provider';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import Link from 'next/link';
+import Link from '@/components/i18n/link';
 import { useSearchParams } from 'next/navigation';
 import { useState, type SubmitEvent } from 'react';
 import { z } from 'zod';
@@ -12,6 +13,7 @@ import { fieldErrors, LoginSchema, safeRedirect, type FieldErrors } from '@/lib/
 import { FormField } from './form-field';
 
 export function LoginForm() {
+  const { t, path } = useI18n();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -23,7 +25,7 @@ export function LoginForm() {
       queryClient.clear();
       // Full navigation: the identity changed, so no client-cached route (e.g. a
       // redirect-to-login prefetched while anonymous) may be reused.
-      window.location.assign(safeRedirect(searchParams.get('next')));
+      window.location.assign(safeRedirect(searchParams.get('next'), path('/account')));
     },
   });
 
@@ -35,7 +37,7 @@ export function LoginForm() {
       password: data.get('password'),
     });
     if (!parsed.success) {
-      setErrors(fieldErrors(parsed.error));
+      setErrors(fieldErrors(parsed.error, t));
       return;
     }
     setErrors({});
@@ -45,7 +47,7 @@ export function LoginForm() {
   return (
     <form onSubmit={onSubmit} noValidate className="grid gap-5">
       <FormField
-        label="Email"
+        label={t.auth.email}
         name="email"
         type="email"
         autoComplete="email"
@@ -53,7 +55,7 @@ export function LoginForm() {
         error={errors.email}
       />
       <FormField
-        label="Password"
+        label={t.auth.password}
         name="password"
         type="password"
         autoComplete="current-password"
@@ -65,16 +67,16 @@ export function LoginForm() {
           href="/forgot-password"
           className="text-muted-foreground underline-offset-4 hover:underline"
         >
-          Forgot password?
+          {t.auth.forgot}
         </Link>
       </div>
       {login.isError && (
         <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
-          {userMessage(login.error)}
+          {userMessage(login.error, t)}
         </p>
       )}
       <Button type="submit" size="lg" disabled={login.isPending}>
-        {login.isPending ? 'Signing in…' : 'Sign in'}
+        {login.isPending ? t.auth.signingIn : t.auth.signIn}
       </Button>
     </form>
   );

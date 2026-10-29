@@ -1,38 +1,41 @@
-import Link from 'next/link';
+import Link from '@/components/i18n/link';
+import type { Messages } from '@/lib/i18n/messages';
+import { getI18n } from '@/lib/i18n/server';
 import { siteConfig } from '@/lib/site';
 import { LogoMark } from './logo';
 
-const columns = [
+const columns = (t: Messages) => [
   {
-    title: 'Shop',
+    title: t.layout.footer.shop,
     links: [
-      { href: '/shop/keyboards', label: 'Keyboards' },
-      { href: '/shop/switches', label: 'Switches' },
-      { href: '/shop/keycaps', label: 'Keycaps' },
-      { href: '/shop/accessories', label: 'Accessories' },
-      { href: '/shop', label: 'All products' },
+      { href: '/shop/keyboards', label: t.layout.nav.keyboards },
+      { href: '/shop/switches', label: t.layout.nav.switches },
+      { href: '/shop/keycaps', label: t.layout.nav.keycaps },
+      { href: '/shop/accessories', label: t.layout.nav.accessories },
+      { href: '/shop', label: t.layout.footer.allProducts },
     ],
   },
   {
-    title: 'Support',
+    title: t.layout.footer.support,
     links: [
-      { href: '/account/orders', label: 'Track an order' },
-      { href: '/shipping', label: 'Shipping' },
-      { href: '/returns', label: 'Returns & warranty' },
-      { href: `mailto:${siteConfig.supportEmail}`, label: 'Contact us' },
+      { href: '/account/orders', label: t.layout.footer.trackOrder },
+      { href: '/shipping', label: t.layout.footer.shipping },
+      { href: '/returns', label: t.layout.footer.returns },
+      { href: `mailto:${siteConfig.supportEmail}`, label: t.layout.footer.contact },
     ],
   },
   {
-    title: 'Company',
+    title: t.layout.footer.company,
     links: [
-      { href: '/about', label: 'About CSE' },
-      { href: '/privacy', label: 'Privacy' },
-      { href: '/terms', label: 'Terms' },
+      { href: '/about', label: t.layout.footer.about },
+      { href: '/privacy', label: t.layout.footer.privacy },
+      { href: '/terms', label: t.layout.footer.terms },
     ],
   },
 ];
 
-export function SiteFooter() {
+export async function SiteFooter() {
+  const { t } = await getI18n();
   return (
     <footer className="mt-24 border-t bg-secondary/40">
       <div className="container-page grid gap-12 py-16 md:grid-cols-[1.4fr_repeat(3,1fr)]">
@@ -40,9 +43,9 @@ export function SiteFooter() {
           <div className="flex items-center gap-2.5 font-semibold">
             <LogoMark /> CSE Keyboards
           </div>
-          <p className="mt-4 text-sm text-muted-foreground">{siteConfig.description}</p>
+          <p className="mt-4 text-sm text-muted-foreground">{t.layout.footer.blurb}</p>
         </div>
-        {columns.map((column) => (
+        {columns(t).map((column) => (
           <div key={column.title}>
             <h2 className="eyebrow text-muted-foreground">{column.title}</h2>
             <ul className="mt-4 space-y-2.5 text-sm">
@@ -62,8 +65,8 @@ export function SiteFooter() {
       </div>
       <div className="border-t">
         <div className="container-page flex flex-col gap-2 py-6 text-xs text-muted-foreground sm:flex-row sm:justify-between">
-          <p>© {new Date().getFullYear()} CSE Keyboards. All rights reserved.</p>
-          <p>Secure card payments processed by Stripe. We never store card details.</p>
+          <p>{t.layout.footer.rights(new Date().getFullYear())}</p>
+          <p>{t.layout.footer.payments}</p>
         </div>
       </div>
     </footer>

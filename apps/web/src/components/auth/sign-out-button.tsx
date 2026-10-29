@@ -1,5 +1,6 @@
 'use client';
 
+import { useI18n } from '@/components/i18n/provider';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { LogOutIcon } from 'lucide-react';
 import { z } from 'zod';
@@ -7,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api/browser';
 
 export function SignOutButton() {
+  const { t, path } = useI18n();
   const queryClient = useQueryClient();
   const signOut = useMutation({
     mutationFn: () => api('/auth/logout', { method: 'POST', schema: z.unknown() }),
@@ -14,8 +16,8 @@ export function SignOutButton() {
     onSettled: () => {
       queryClient.clear();
       // A full page load on sign-out guarantees no private data survives in client caches.
-      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- intentional hard navigation
-      window.location.assign('/');
+
+      window.location.assign(path('/'));
     },
   });
   return (
@@ -26,7 +28,7 @@ export function SignOutButton() {
         signOut.mutate();
       }}
     >
-      <LogOutIcon /> {signOut.isPending ? 'Signing out…' : 'Sign out'}
+      <LogOutIcon /> {signOut.isPending ? t.auth.signingOut : t.auth.signOut}
     </Button>
   );
 }
