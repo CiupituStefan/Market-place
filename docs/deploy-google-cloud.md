@@ -256,6 +256,20 @@ gcloud compute ssh cse-api --zone=europe-west3-a -- -N -L 8080:localhost:8025
 Apoi apasă **Web Preview → Preview on port 8080** în bara Cloud Shell. Se deschide Mailpit cu
 toate emailurile. Comanda rămâne pornită cât timp te uiți; o oprești cu Ctrl+C.
 
+**Plăți cu Stripe.** La instalare, plățile folosesc un simulator (butoane „plătește” /
+„refuză”, fără card). Ca să treci pe Stripe, ia cheile din Dashboard-ul Stripe (Developers → API
+keys; ideal o cheie restricționată `rk_`) și rulează pe mașină:
+
+```bash
+cd /opt/cse/Market-place && sudo git pull && sudo deploy/gcp-vm/enable-stripe.sh
+```
+
+Scriptul cere cheile (nu se afișează când le scrii), creează webhook-ul
+`https://api.csekeyboards.com/api/v1/payments/webhook` în contul Stripe, le salvează în `.env`
+și repornește `payment-service`. Cu chei `_test_` plătești cu cardul de test `4242 4242 4242 4242`;
+pentru plăți reale rulezi același script cu cheile `_live_`. Înapoi la simulator:
+`sudo deploy/gcp-vm/enable-stripe.sh --mock`.
+
 **Backup zilnic al discului (opțional, recomandat), din Cloud Shell:**
 
 ```bash
