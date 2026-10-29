@@ -91,3 +91,40 @@ describe('configurator', () => {
     await request(h.http).get('/api/v1/configurator/nope').expect(404);
   });
 });
+
+describe('configurator in Romanian', () => {
+  it('translates names, labels and rules, with the same options and prices', async () => {
+    const en = ConfiguratorSchema.parse(
+      (await request(h.http).get('/api/v1/configurator/cse-custom').expect(200)).body,
+    );
+    const ro = ConfiguratorSchema.parse(
+      (await request(h.http).get('/api/v1/configurator/cse-custom?locale=ro').expect(200)).body,
+    );
+    expect(ro.groups.map((g) => g.label)).toContain('Carcasă');
+    const silver = ro.groups
+      .find((g) => g.key === 'case')
+      ?.options.find((o) => o.value === 'silver');
+    expect(silver).toMatchObject({ label: 'Argintiu', description: 'Sablat, anodizat' });
+    expect(ro.incompatibilities[0]?.reason).toMatch(/Carcasa 100%/);
+    expect(ro.basePrice).toEqual(en.basePrice);
+    expect(ro.defaultSelection).toEqual(en.defaultSelection);
+  });
+
+  it('quotes in Romanian: same price and id, translated breakdown and errors', async () => {
+    const en = ConfigurationQuoteSchema.parse((await quote(defaults).expect(200)).body);
+    const res = await request(h.http)
+      .post('/api/v1/configurator/cse-custom/quote?locale=ro')
+      .send({ selection: defaults })
+      .expect(200);
+    const ro = ConfigurationQuoteSchema.parse(res.body);
+    expect(ro.price).toEqual(en.price);
+    expect(ro.configurationId).toBe(en.configurationId);
+    expect(ro.breakdown[0]?.label).toBe('CSE Custom – bază');
+
+    const rejected = await request(h.http)
+      .post('/api/v1/configurator/cse-custom/quote?locale=ro')
+      .send({ selection: { ...defaults, plate: 'polycarbonate', switch: 'clicky' } })
+      .expect(422);
+    expect(rejected.body.error.details[0].message).toMatch(/policarbonat/);
+  });
+});

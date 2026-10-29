@@ -62,6 +62,22 @@ describe('buildSearchDocument', () => {
       }),
     ).toBe('cse forge 75 cse gasket mounted keyboards cse-forge-75-car-lin 75% linear');
   });
+
+  it('includes translations, and words with diacritics once more without them', () => {
+    expect(
+      buildSearchDocument({
+        name: 'CSE Pulse 60',
+        brand: 'CSE',
+        tagline: 'Compact',
+        translated: ['Tastatură compactă'],
+        categoryNames: ['Keyboards', 'Tastaturi mecanice'],
+        skus: [],
+        attributes: {},
+      }),
+    ).toBe(
+      'cse pulse 60 cse compact tastatură compactă keyboards tastaturi mecanice tastatura compacta',
+    );
+  });
 });
 
 describe('assertVariantsMatchOptions', () => {

@@ -22,6 +22,12 @@ import {
 } from '../db/schema.js';
 import { CATALOG_SEARCH, type CatalogSearch } from '../search/catalog-search.js';
 import { groupAttributes, toCategory, toProduct, toSummary } from './mappers.js';
+import {
+  localizeCategory,
+  localizeProduct,
+  localizeSummary,
+  type CatalogLocale,
+} from './translations.js';
 
 export interface ManagedProductSummary extends ProductSummary {
   status: ProductStatus;
@@ -35,10 +41,10 @@ export class CatalogReaderService {
     @Inject(CATALOG_SEARCH) private readonly catalogSearch: CatalogSearch,
   ) {}
 
-  async list(query: CatalogQuery): Promise<ProductListing> {
+  async list(query: CatalogQuery, locale: CatalogLocale = 'en'): Promise<ProductListing> {
     const result = await this.catalogSearch.search(query);
     return {
-      items: await this.summaries(result.ids),
+      items: await this.summaries(result.ids, locale),
       page: query.page,
       pageSize: query.pageSize,
       total: result.total,
@@ -47,13 +53,13 @@ export class CatalogReaderService {
     };
   }
 
-  async getPublishedBySlug(slug: string): Promise<Product> {
+  async getPublishedBySlug(slug: string, locale: CatalogLocale = 'en'): Promise<Product> {
     const [row] = await this.db
       .select()
       .from(products)
       .where(and(eq(products.slug, slug), eq(products.status, 'PUBLISHED')));
     if (!row) throw new DomainError(ErrorCode.PRODUCT_NOT_FOUND, 'Product not found');
-    return this.detail(row);
+    return this.detail(row, locale);
   }
 
   async getById(id: string): Promise<Product & { status: ProductStatus }> {
@@ -63,7 +69,7 @@ export class CatalogReaderService {
   }
 
   /** Same category first, then the most reviewed; only published products. */
-  async related(slug: string, limit = 4): Promise<ProductSummary[]> {
+  async related(slug: string, locale: CatalogLocale = 'en', limit = 4): Promise<ProductSummary[]> {
     const [product] = await this.db
       .select({ id: products.id, categoryId: products.categoryId })
       .from(products)
@@ -79,22 +85,29 @@ export class CatalogReaderService {
         asc(products.id),
       )
       .limit(limit);
-    return this.summaries(rows.map((row) => row.id));
+    return this.summaries(
+      rows.map((row) => row.id),
+      locale,
+    );
   }
 
-  async categories(): Promise<Category[]> {
+  async categories(locale: CatalogLocale = 'en'): Promise<Category[]> {
     const rows = await this.db
       .select()
       .from(categories)
       .orderBy(asc(categories.position), asc(categories.name));
     const slugById = new Map(rows.map((row) => [row.id, row.slug]));
     return rows.map((row) =>
-      toCategory(row, row.parentId ? (slugById.get(row.parentId) ?? null) : null),
+      localizeCategory(
+        toCategory(row, row.parentId ? (slugById.get(row.parentId) ?? null) : null),
+        row.translations,
+        locale,
+      ),
     );
   }
 
-  async category(slug: string): Promise<Category> {
-    const category = (await this.categories()).find((c) => c.slug === slug);
+  async category(slug: string, locale: CatalogLocale = 'en'): Promise<Category> {
+    const category = (await this.categories(locale)).find((c) => c.slug === slug);
     if (!category) throw new DomainError(ErrorCode.NOT_FOUND, 'Category not found');
     return category;
   }
@@ -151,7 +164,7 @@ export class CatalogReaderService {
   }
 
   /** Loads summaries for ids, preserving the given order. */
-  async summaries(ids: readonly string[]): Promise<ProductSummary[]> {
+  async summaries(ids: readonly string[], locale: CatalogLocale = 'en'): Promise<ProductSummary[]> {
     if (ids.length === 0) return [];
     const [rows, images, attributes] = await Promise.all([
       this.db
@@ -178,17 +191,21 @@ export class CatalogReaderService {
       const row = byId.get(id);
       if (!row) return [];
       return [
-        toSummary(
-          row.product,
-          row.categorySlug,
-          images.filter((image) => image.productId === id),
-          groupAttributes(attributes.filter((attribute) => attribute.productId === id)),
+        localizeSummary(
+          toSummary(
+            row.product,
+            row.categorySlug,
+            images.filter((image) => image.productId === id),
+            groupAttributes(attributes.filter((attribute) => attribute.productId === id)),
+          ),
+          row.product.translations,
+          locale,
         ),
       ];
     });
   }
 
-  private async detail(row: ProductRow): Promise<Product> {
+  private async detail(row: ProductRow, locale: CatalogLocale = 'en'): Promise<Product> {
     const [category, variants, images, attributes] = await Promise.all([
       this.db
         .select({ slug: categories.slug })
@@ -205,6 +222,10 @@ export class CatalogReaderService {
         .from(productAttributes)
         .where(eq(productAttributes.productId, row.id)),
     ]);
-    return toProduct(row, category[0]?.slug ?? '', variants, images, groupAttributes(attributes));
+    return localizeProduct(
+      toProduct(row, category[0]?.slug ?? '', variants, images, groupAttributes(attributes)),
+      row.translations,
+      locale,
+    );
   }
 }

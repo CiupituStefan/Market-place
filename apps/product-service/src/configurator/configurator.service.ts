@@ -14,14 +14,47 @@ import { and, asc, eq } from 'drizzle-orm';
 import { DATABASE, type Database } from '../db/database.js';
 import { configuratorIncompatibilities, configuratorOptions, configurators } from '../db/schema.js';
 import { money } from '../catalog/mappers.js';
+import { translationFor, type CatalogLocale } from '../catalog/translations.js';
 
-const GROUP_LABELS: Record<ConfiguratorGroup, string> = {
-  layout: 'Layout',
-  case: 'Case',
-  switch: 'Switches',
-  plate: 'Plate',
-  keycaps: 'Keycaps',
-  connection: 'Connection',
+/** Fixed copy per language; option labels and rule reasons are data (`translations`). */
+const COPY: Record<
+  CatalogLocale,
+  {
+    groups: Record<ConfiguratorGroup, string>;
+    choose: (group: string) => string;
+    unknown: (value: string) => string;
+    unavailable: (label: string) => string;
+    base: (name: string) => string;
+  }
+> = {
+  en: {
+    groups: {
+      layout: 'Layout',
+      case: 'Case',
+      switch: 'Switches',
+      plate: 'Plate',
+      keycaps: 'Keycaps',
+      connection: 'Connection',
+    },
+    choose: (group) => `Choose a ${group.toLowerCase()}`,
+    unknown: (value) => `Unknown option "${value}"`,
+    unavailable: (label) => `${label} is currently unavailable`,
+    base: (name) => `${name} base`,
+  },
+  ro: {
+    groups: {
+      layout: 'Format',
+      case: 'Carcasă',
+      switch: 'Switch-uri',
+      plate: 'Placă',
+      keycaps: 'Keycaps',
+      connection: 'Conexiune',
+    },
+    choose: (group) => `Alege: ${group.toLowerCase()}`,
+    unknown: (value) => `Opțiune necunoscută: „${value}”`,
+    unavailable: (label) => `${label} nu este disponibil momentan`,
+    base: (name) => `${name} – bază`,
+  },
 };
 
 /** Same configurator + same selection → same id, so carts and orders can reference it. */
@@ -40,17 +73,17 @@ export function configurationId(slug: string, selection: ConfigurationSelection)
 export class ConfiguratorService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
-  async definition(slug: string): Promise<Configurator> {
-    const { configurator, options, incompatibilities } = await this.load(slug);
+  async definition(slug: string, locale: CatalogLocale = 'en'): Promise<Configurator> {
+    const { configurator, options, incompatibilities, text } = await this.load(slug, locale);
     const currency = configurator.currency as Currency;
     return {
       slug: configurator.slug,
-      name: configurator.name,
-      description: configurator.description,
+      name: text.name,
+      description: text.description,
       basePrice: money(configurator.basePriceAmount, currency),
       groups: CONFIGURATOR_GROUPS.map((key) => ({
         key,
-        label: GROUP_LABELS[key],
+        label: COPY[locale].groups[key],
         options: options
           .filter((option) => option.group === key)
           .map((option) => ({
@@ -79,17 +112,21 @@ export class ConfiguratorService {
     };
   }
 
-  async quote(slug: string, selection: ConfigurationSelection): Promise<ConfigurationQuote> {
-    const { configurator, options, incompatibilities } = await this.load(slug);
+  async quote(
+    slug: string,
+    selection: ConfigurationSelection,
+    locale: CatalogLocale = 'en',
+  ): Promise<ConfigurationQuote> {
+    const { configurator, options, incompatibilities, text } = await this.load(slug, locale);
+    const copy = COPY[locale];
     const details: { path: string; message: string }[] = [];
     const chosen = CONFIGURATOR_GROUPS.map((group) => {
       const value = selection[group];
       const option = options.find((o) => o.group === group && o.value === value);
-      if (!value)
-        details.push({ path: group, message: `Choose a ${GROUP_LABELS[group].toLowerCase()}` });
-      else if (!option) details.push({ path: group, message: `Unknown option "${value}"` });
+      if (!value) details.push({ path: group, message: copy.choose(copy.groups[group]) });
+      else if (!option) details.push({ path: group, message: copy.unknown(value) });
       else if (!option.available)
-        details.push({ path: group, message: `${option.label} is currently unavailable` });
+        details.push({ path: group, message: copy.unavailable(option.label) });
       return option;
     });
     for (const rule of incompatibilities) {
@@ -125,7 +162,7 @@ export class ConfiguratorService {
       breakdown: [
         {
           group: null,
-          label: `${configurator.name} base`,
+          label: copy.base(text.name),
           amount: money(configurator.basePriceAmount, currency),
         },
         ...picked
@@ -140,7 +177,8 @@ export class ConfiguratorService {
     };
   }
 
-  private async load(slug: string) {
+  /** The configurator with its texts (option labels, rule reasons) in the requested language. */
+  private async load(slug: string, locale: CatalogLocale) {
     const [configurator] = await this.db
       .select()
       .from(configurators)
@@ -157,6 +195,27 @@ export class ConfiguratorService {
         .from(configuratorIncompatibilities)
         .where(eq(configuratorIncompatibilities.configuratorId, configurator.id)),
     ]);
-    return { configurator, options, incompatibilities };
+    const t = translationFor(configurator.translations, locale);
+    return {
+      configurator,
+      text: {
+        name: t?.name ?? configurator.name,
+        description: t?.description ?? configurator.description,
+      },
+      options: options.map((option) => {
+        const translated = t?.options?.[`${option.group}:${option.value}`];
+        return {
+          ...option,
+          label: translated?.label ?? option.label,
+          description: translated?.description ?? option.description,
+        };
+      }),
+      incompatibilities: incompatibilities.map((rule) => ({
+        ...rule,
+        reason:
+          t?.reasons?.[`${rule.groupA}:${rule.valueA}+${rule.groupB}:${rule.valueB}`] ??
+          rule.reason,
+      })),
+    };
   }
 }

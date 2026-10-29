@@ -105,12 +105,8 @@
           "name": "categories_parent_id_categories_id_fk",
           "tableFrom": "categories",
           "tableTo": "categories",
-          "columnsFrom": [
-            "parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["parent_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -193,12 +189,8 @@
           "name": "configurator_incompatibilities_configurator_id_configurators_id_fk",
           "tableFrom": "configurator_incompatibilities",
           "tableTo": "configurators",
-          "columnsFrom": [
-            "configurator_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["configurator_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -333,12 +325,8 @@
           "name": "configurator_options_configurator_id_configurators_id_fk",
           "tableFrom": "configurator_options",
           "tableTo": "configurators",
-          "columnsFrom": [
-            "configurator_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["configurator_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -613,12 +601,8 @@
           "name": "product_attributes_product_id_products_id_fk",
           "tableFrom": "product_attributes",
           "tableTo": "products",
-          "columnsFrom": [
-            "product_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["product_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -725,12 +709,8 @@
           "name": "product_images_product_id_products_id_fk",
           "tableFrom": "product_images",
           "tableTo": "products",
-          "columnsFrom": [
-            "product_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["product_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -738,12 +718,8 @@
           "name": "product_images_variant_id_product_variants_id_fk",
           "tableFrom": "product_images",
           "tableTo": "product_variants",
-          "columnsFrom": [
-            "variant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["variant_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -874,12 +850,8 @@
           "name": "product_variants_product_id_products_id_fk",
           "tableFrom": "product_variants",
           "tableTo": "products",
-          "columnsFrom": [
-            "product_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["product_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1184,12 +1156,8 @@
           "name": "products_category_id_categories_id_fk",
           "tableFrom": "products",
           "tableTo": "categories",
-          "columnsFrom": [
-            "category_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["category_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -1210,46 +1178,22 @@
     "public.availability": {
       "name": "availability",
       "schema": "public",
-      "values": [
-        "IN_STOCK",
-        "LOW_STOCK",
-        "OUT_OF_STOCK",
-        "PREORDER"
-      ]
+      "values": ["IN_STOCK", "LOW_STOCK", "OUT_OF_STOCK", "PREORDER"]
     },
     "public.configurator_group": {
       "name": "configurator_group",
       "schema": "public",
-      "values": [
-        "layout",
-        "case",
-        "switch",
-        "plate",
-        "keycaps",
-        "connection"
-      ]
+      "values": ["layout", "case", "switch", "plate", "keycaps", "connection"]
     },
     "public.product_kind": {
       "name": "product_kind",
       "schema": "public",
-      "values": [
-        "keyboard",
-        "switch",
-        "keycaps",
-        "stabilizer",
-        "cable",
-        "deskmat",
-        "wristrest"
-      ]
+      "values": ["keyboard", "switch", "keycaps", "stabilizer", "cable", "deskmat", "wristrest"]
     },
     "public.product_status": {
       "name": "product_status",
       "schema": "public",
-      "values": [
-        "DRAFT",
-        "PUBLISHED",
-        "ARCHIVED"
-      ]
+      "values": ["DRAFT", "PUBLISHED", "ARCHIVED"]
     }
   },
   "schemas": {},

@@ -36,6 +36,13 @@
       "when": 1791290215212,
       "tag": "0004_outbox_headers",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793245318280,
+      "tag": "0005_translations",
+      "breakpoints": true
     }
   ]
 }

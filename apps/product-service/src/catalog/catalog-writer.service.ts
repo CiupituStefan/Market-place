@@ -67,6 +67,7 @@ export class CatalogWriterService {
             options: input.options,
             preview: input.preview,
             featuredRank: input.featuredRank,
+            translations: input.translations,
             currency,
           })
           .returning();
@@ -248,6 +249,7 @@ export class CatalogWriterService {
             parentId,
             preview: input.preview,
             position: input.position,
+            translations: input.translations,
           })
           .returning({ id: categories.id });
         if (!row) throw new Error('category insert returned no row');
@@ -416,7 +418,7 @@ export class CatalogWriterService {
       .from(productAttributes)
       .where(eq(productAttributes.productId, productId));
     const categoryNames = await tx
-      .select({ name: categories.name })
+      .select({ name: categories.name, translations: categories.translations })
       .from(categories)
       .where(
         or(
@@ -443,7 +445,14 @@ export class CatalogWriterService {
           name: product.name,
           brand: product.brand,
           tagline: product.tagline,
-          categoryNames: categoryNames.map((c) => c.name),
+          translated: Object.values(product.translations).flatMap((t) => [
+            t.name ?? '',
+            t.tagline ?? '',
+          ]),
+          categoryNames: categoryNames.flatMap((c) => [
+            c.name,
+            ...Object.values(c.translations).map((t) => t.name ?? ''),
+          ]),
           skus: variants.map((v) => v.sku),
           attributes: grouped,
         }),

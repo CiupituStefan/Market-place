@@ -4,7 +4,7 @@ What is tested where, and why at that level. Decision: [ADR-025](adr/ADR-025-end
 
 | Level          | Where                                                | Runs against                                         | Catches                                                                                     |
 | -------------- | ---------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| Unit           | `*.test.ts` next to the code (Vitest)                | nothing external                                     | pricing, tax, state machines, validation, moderation, templates, CSP building               |
+| Unit           | `*.test.ts` next to the code (Vitest)                | nothing external                                     | pricing, tax, state machines, validation, moderation, templates, CSP, language choice       |
 | Integration    | `apps/*/test`, `packages/*/test` (Vitest, Supertest) | real PostgreSQL, Redis, Kafka                        | overselling under concurrency, deadlocks, `SKIP LOCKED`, outbox → Kafka → inbox, migrations |
 | Contract       | `packages/events` (Zod schemas, versioned)           | nothing external                                     | a producer and consumer disagreeing about an event                                          |
 | Infrastructure | `infrastructure/*/check.sh`, `kafka/test.sh`         | rendered manifests, mock providers, a real broker    | broken charts, policies that admit bad pods, IAM/ACLs wider than intended                   |
@@ -25,6 +25,7 @@ few of them on purpose: each is slow and touches everything.
 | `account.spec.ts`    | Register, confirm the email from the link in Mailpit, sign in, buy, find the order in the account.                                                                                                           |
 | `fulfilment.spec.ts` | The back office prepares, ships (tracking number) and delivers; the customer gets both emails, sees the tracking, and leaves a review marked **Verified purchase**.                                          |
 | `security.spec.ts`   | A fresh CSP nonce per page, no `unsafe-inline`; injected markup's inline handler is blocked; anonymous visitors are sent to sign in; customers are kept out of the back office (UI and API).                 |
+| `language.spec.ts`   | Visitors from Romania are sent to `/ro`, others stay on English, a chosen language beats the country; a product reads in Romanian (catalog texts included) and the switch goes to English.                   |
 
 Every test also fails on any CSP violation or uncaught error in the page, so a regression in
 either shows up in the journey that caused it.

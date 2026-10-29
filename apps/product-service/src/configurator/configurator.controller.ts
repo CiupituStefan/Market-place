@@ -7,10 +7,11 @@ import {
   type ConfigurationSelection,
   type Configurator,
 } from '@market/types';
-import { Body, Controller, Get, Header, HttpCode, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Header, HttpCode, Param, Post, Query } from '@nestjs/common';
 import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
 import { SlugSchema } from '../catalog/dto.js';
+import { LocaleParamSchema, type CatalogLocale } from '../catalog/translations.js';
 import { ConfiguratorService } from './configurator.service.js';
 
 const QuoteRequestSchema = z.object({ selection: ConfigurationSelectionSchema }).strict();
@@ -25,8 +26,9 @@ export class ConfiguratorController {
   @ApiOkResponse({ schema: openApiSchema(ConfiguratorSchema) })
   definition(
     @Param('slug', new ZodValidationPipe(SlugSchema)) slug: string,
+    @Query('locale', new ZodValidationPipe(LocaleParamSchema)) locale: CatalogLocale,
   ): Promise<Configurator> {
-    return this.configurator.definition(slug);
+    return this.configurator.definition(slug, locale);
   }
 
   @Post(':slug/quote')
@@ -40,7 +42,8 @@ export class ConfiguratorController {
   quote(
     @Param('slug', new ZodValidationPipe(SlugSchema)) slug: string,
     @Body(new ZodValidationPipe(QuoteRequestSchema)) body: { selection: ConfigurationSelection },
+    @Query('locale', new ZodValidationPipe(LocaleParamSchema)) locale: CatalogLocale,
   ): Promise<ConfigurationQuote> {
-    return this.configurator.quote(slug, body.selection);
+    return this.configurator.quote(slug, body.selection, locale);
   }
 }

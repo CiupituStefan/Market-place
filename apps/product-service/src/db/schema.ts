@@ -16,6 +16,11 @@ import {
   uuid,
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
+import type {
+  CategoryTranslations,
+  ConfiguratorTranslations,
+  ProductTranslations,
+} from '../catalog/translations.js';
 
 /**
  * product-service owns the `products` database: catalog, merchandising and
@@ -61,6 +66,8 @@ export const categories = pgTable(
     }),
     preview: jsonb('preview').$type<ProductPreview>().notNull(),
     position: integer('position').notNull().default(0),
+    /** Name and description in other languages (see catalog/translations.ts). */
+    translations: jsonb('translations').$type<CategoryTranslations>().notNull().default({}),
     ...timestamps,
   },
   (t) => [
@@ -124,6 +131,8 @@ export const products = pgTable(
     /** Option groups (color, switch...) whose values the variants combine. */
     options: jsonb('options').$type<ProductOptionDefinition[]>().notNull().default([]),
     preview: jsonb('preview').$type<ProductPreview>().notNull(),
+    /** Customer-facing texts in other languages (see catalog/translations.ts). */
+    translations: jsonb('translations').$type<ProductTranslations>().notNull().default({}),
     /** Merchandising order for the "featured" sort; null = not featured. */
     featuredRank: integer('featured_rank'),
 
@@ -136,7 +145,10 @@ export const products = pgTable(
     ratingAverage: real('rating_average').notNull().default(0),
     ratingCount: integer('rating_count').notNull().default(0),
 
-    /** Name, brand, tagline, category, SKUs and attribute values: the searchable text. */
+    /**
+     * Name, brand, tagline, category, SKUs and attribute values, in every language (and
+     * without diacritics): the searchable text.
+     */
     searchDocument: text('search_document').notNull().default(''),
     searchVector: tsvector('search_vector').generatedAlwaysAs(
       (): SQL => sql`to_tsvector('simple', ${products.searchDocument})`,
@@ -244,6 +256,8 @@ export const configurators = pgTable(
     currency: text('currency').notNull(),
     basePreview: jsonb('base_preview').$type<ProductPreview>().notNull(),
     active: boolean('active').notNull().default(true),
+    /** Name, option labels and rule reasons in other languages. */
+    translations: jsonb('translations').$type<ConfiguratorTranslations>().notNull().default({}),
     ...timestamps,
   },
   (t) => [uniqueIndex('configurators_slug_key').on(t.slug)],

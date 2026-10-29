@@ -1,5 +1,14 @@
-import { ProductListingSchema, ProductSchema } from '@market/types';
+import {
+  ProductListingSchema,
+  ProductSchema,
+  ProductSummarySchema,
+  CategorySchema,
+} from '@market/types';
+import { eq } from 'drizzle-orm';
+import { categories, products } from '../src/db/schema.js';
+import { seedCatalog } from '../src/seed/seed.js';
 import request from 'supertest';
+import { z } from 'zod';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createHarness, type Harness } from './harness.js';
 
@@ -202,5 +211,67 @@ describe('infrastructure', () => {
       expect.arrayContaining(['/api/v1/products', '/api/v1/configurator/{slug}/quote']),
     );
     expect(Object.keys(spec.body.paths).some((p) => p.includes('internal'))).toBe(false);
+  });
+});
+
+describe('languages', () => {
+  const get = async (path: string): Promise<unknown> => {
+    const res = await request(h.http).get(`/api/v1${path}`).expect(200);
+    return res.body as unknown;
+  };
+
+  it('serves Romanian product texts with ?locale=ro, and the same prices and variants', async () => {
+    const en = ProductSchema.parse(await get('/products/cse-forge-75'));
+    const ro = ProductSchema.parse(await get('/products/cse-forge-75?locale=ro'));
+    expect(ro.tagline).toMatch(/^Tastatură mecanică/);
+    expect(ro.description[0]).toMatch(/Forge 75 este/);
+    expect(ro.specs[0]?.items[1]).toEqual({ label: 'Tip de montaj', value: 'Gasket' });
+    expect(ro.options.find((o) => o.key === 'color')?.name).toBe('Culoare');
+    expect(ro.faq[0]?.question).toMatch(/^Pot schimba/);
+    expect(ro.variants).toEqual(en.variants);
+    expect(ro.price).toEqual(en.price);
+    expect(en.tagline).toBe('Gasket-mounted 75% in CNC aluminium');
+  });
+
+  it('translates listings, related products and categories', async () => {
+    const listing = ProductListingSchema.parse(await get('/products?locale=ro&category=switches'));
+    expect(listing.items.map((p) => p.name)).toContain('Switch-uri Silk Linear');
+    const related = z
+      .array(ProductSummarySchema)
+      .parse(await get('/products/cse-forge-75/related?locale=ro'));
+    expect(related[0]?.tagline).toMatch(/Tastatură/);
+    const keyboards = CategorySchema.parse(await get('/categories/keyboards?locale=ro'));
+    expect(keyboards.name).toBe('Tastaturi mecanice');
+  });
+
+  it('serves English for unknown languages instead of failing', async () => {
+    const product = ProductSchema.parse(await get('/products/cse-forge-75?locale=xx'));
+    expect(product.tagline).toBe('Gasket-mounted 75% in CNC aluminium');
+  });
+
+  it.each([
+    ['tastatura', 'cse-forge-75'],
+    ['tastatură', 'cse-pulse-60'],
+    ['tastaturi mecanice', 'cse-atlas-tkl'],
+    ['suport incheieturi', 'walnut-wrist-rest'],
+  ])('search "%s" finds %s (Romanian, with or without diacritics)', async (q, slug) => {
+    expect(slugs(await list(`?q=${encodeURIComponent(q)}`))).toContain(slug);
+  });
+
+  it('adds translations to a catalog seeded before they existed, without overwriting', async () => {
+    await h.db.update(products).set({ translations: {} }).where(eq(products.slug, 'cse-orbit-96'));
+    await h.db
+      .update(products)
+      .set({ translations: { ro: { tagline: 'Scris de mână' } } })
+      .where(eq(products.slug, 'cse-pulse-60'));
+    await h.db.update(categories).set({ translations: {} }).where(eq(categories.slug, 'cables'));
+    await seedCatalog(h.db, h.config);
+    expect(ProductSchema.parse(await get('/products/cse-orbit-96?locale=ro')).tagline).toMatch(
+      /^Tastatură/,
+    );
+    expect(ProductSchema.parse(await get('/products/cse-pulse-60?locale=ro')).tagline).toBe(
+      'Scris de mână',
+    );
+    expect(CategorySchema.parse(await get('/categories/cables?locale=ro')).name).toBe('Cabluri');
   });
 });

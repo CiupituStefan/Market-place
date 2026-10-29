@@ -1,5 +1,6 @@
 import { DomainError, ErrorCode, type Availability } from '@market/types';
 import type { OptionDefinition } from './dto.js';
+import { withoutDiacritics } from './translations.js';
 
 /**
  * Pure rules for derived catalog data. Kept free of I/O so they are trivially
@@ -36,14 +37,17 @@ export function buildSearchDocument(input: {
   name: string;
   brand: string;
   tagline: string;
+  /** Names and taglines in other languages. */
+  translated?: readonly string[];
   categoryNames: readonly string[];
   skus: readonly string[];
   attributes: Readonly<Record<string, readonly string[]>>;
 }): string {
-  return [
+  const text = [
     input.name,
     input.brand,
     input.tagline,
+    ...(input.translated ?? []),
     ...input.categoryNames,
     ...input.skus,
     ...Object.values(input.attributes).flat(),
@@ -52,6 +56,14 @@ export function buildSearchDocument(input: {
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase();
+  // Words with diacritics are added once more without them, so "tastatura" finds "tastatură".
+  const plain = new Set(
+    text
+      .split(' ')
+      .filter((word) => withoutDiacritics(word) !== word)
+      .map(withoutDiacritics),
+  );
+  return plain.size === 0 ? text : `${text} ${[...plain].join(' ')}`;
 }
 
 /**

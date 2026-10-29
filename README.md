@@ -8,6 +8,8 @@
 A production-oriented e-commerce platform for mechanical and custom keyboards, keycaps, switches,
 stabilizers, cables, desk mats and accessories. Built as TypeScript microservices (NestJS) with a
 Next.js storefront, PostgreSQL, Redis, Kafka and Stripe, deployed to Kubernetes on AWS.
+The storefront speaks English and Romanian: visitors from Romania land on `/ro`, everyone else
+on English, and anyone can switch ([ADR-026](docs/adr/ADR-026-storefront-languages.md)).
 
 > **Status: all 21 phases done — the last one: Playwright end-to-end journeys (checkout, payment, stock, accounts, fulfilment, reviews, browser security) on the full Docker Compose stack, in CI on every pull request.**
 > See the [roadmap](#roadmap).

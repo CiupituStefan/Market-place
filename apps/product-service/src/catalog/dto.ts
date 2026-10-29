@@ -6,6 +6,7 @@ import {
   ProductStatusSchema,
 } from '@market/types';
 import { z } from 'zod';
+import { CategoryTranslationsSchema, ProductTranslationsSchema } from './translations.js';
 
 /** Slugs appear in URLs; `manage` is reserved for the back-office routes. */
 export const SlugSchema = z
@@ -94,6 +95,8 @@ const productFields = {
   /** Filterable attributes, e.g. { layout: ["75%"], switchType: ["Linear", "Tactile"] }. */
   attributes: z.record(z.string().regex(/^[a-z][a-zA-Z0-9]{0,30}$/), z.array(Text(60)).max(20)),
   featuredRank: z.int().min(0).max(10_000).nullable(),
+  /** Customer-facing texts in other languages; English (above) is the fallback. */
+  translations: ProductTranslationsSchema,
 };
 
 export const CreateProductSchema = z
@@ -111,6 +114,7 @@ export const CreateProductSchema = z
     options: productFields.options.default([]),
     attributes: productFields.attributes.default({}),
     featuredRank: productFields.featuredRank.default(null),
+    translations: productFields.translations.default({}),
     variants: z.array(VariantInputSchema).min(1).max(200),
   })
   .strict();
@@ -132,6 +136,7 @@ export const CategoryInputSchema = z
     parentSlug: SlugSchema.nullable().default(null),
     preview: ProductPreviewSchema,
     position: z.int().min(0).max(1_000).default(0),
+    translations: CategoryTranslationsSchema.default({}),
   })
   .strict();
 export type CategoryInput = z.infer<typeof CategoryInputSchema>;
