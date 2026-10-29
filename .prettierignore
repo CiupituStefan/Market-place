@@ -17,3 +17,6 @@ infrastructure/terraform/modules/platform/policies
 e2e/playwright-report
 e2e/test-results
 e2e/blob-report
+# Stripe agent skills, vendored as published (npx skills add https://docs.stripe.com)
+.agents
+skills-lock.json
