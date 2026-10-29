@@ -1,6 +1,11 @@
 import { openApiSchema, ZodValidationPipe } from '@market/nest-common';
-import { EmailTokenSchema, NewsletterSubscribeSchema } from '@market/types';
-import { Body, Controller, HttpCode, Post } from '@nestjs/common';
+import {
+  EmailTokenSchema,
+  LocaleParamSchema,
+  NewsletterSubscribeSchema,
+  type Locale,
+} from '@market/types';
+import { Body, Controller, HttpCode, Post, Query } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { z } from 'zod';
 import { NewsletterService } from './newsletter.service.js';
@@ -22,8 +27,9 @@ export class NewsletterController {
   async subscribe(
     @Body(new ZodValidationPipe(NewsletterSubscribeSchema))
     body: z.infer<typeof NewsletterSubscribeSchema>,
+    @Query('locale', new ZodValidationPipe(LocaleParamSchema)) locale: Locale,
   ): Promise<{ status: 'pending_confirmation' }> {
-    await this.newsletter.subscribe(body.email, 'storefront');
+    await this.newsletter.subscribe(body.email, 'storefront', new Date(), locale);
     return { status: 'pending_confirmation' };
   }
 

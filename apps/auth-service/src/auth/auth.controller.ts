@@ -5,8 +5,8 @@ import {
   readCookie,
   ZodValidationPipe,
 } from '@market/nest-common';
-import { REFRESH_TOKEN_COOKIE, type AuthUser } from '@market/types';
-import { Body, Controller, Get, HttpCode, Inject, Post, Req, Res } from '@nestjs/common';
+import { LocaleParamSchema, REFRESH_TOKEN_COOKIE, type AuthUser, type Locale } from '@market/types';
+import { Body, Controller, Get, HttpCode, Inject, Post, Query, Req, Res } from '@nestjs/common';
 import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
@@ -30,6 +30,9 @@ import { SessionService } from './session.service.js';
 
 const userResponse = { schema: openApiSchema(z.object({ user: UserResponseSchema })) };
 
+/** `?locale=`: the storefront language, used for the emails a request sends (ADR-026). */
+const locale = () => Query('locale', new ZodValidationPipe(LocaleParamSchema));
+
 function clientInfo(req: Request) {
   return { userAgent: req.headers['user-agent'], ip: req.ip };
 }
@@ -50,8 +53,9 @@ export class AuthController {
   @ApiOkResponse(userResponse)
   async register(
     @Body(new ZodValidationPipe(RegisterSchema)) body: RegisterInput,
+    @locale() lang: Locale,
   ): Promise<{ user: UserResponse }> {
-    return { user: toUserResponse(await this.auth.register(body)) };
+    return { user: toUserResponse(await this.auth.register(body, lang)) };
   }
 
   @Post('login')
@@ -117,8 +121,9 @@ export class AuthController {
   @ApiBody({ schema: openApiSchema(ForgotPasswordSchema) })
   async forgotPassword(
     @Body(new ZodValidationPipe(ForgotPasswordSchema)) body: { email: string },
+    @locale() lang: Locale,
   ): Promise<void> {
-    await this.recovery.requestPasswordReset(body.email);
+    await this.recovery.requestPasswordReset(body.email, lang);
   }
 
   @Post('reset-password')
@@ -147,7 +152,10 @@ export class AuthController {
   @HttpCode(202)
   @Authenticated()
   @ApiOperation({ summary: 'Send a new verification email' })
-  async resendVerification(@CurrentUser() principal: AuthUser): Promise<void> {
-    await this.recovery.resendVerification(principal.id);
+  async resendVerification(
+    @CurrentUser() principal: AuthUser,
+    @locale() lang: Locale,
+  ): Promise<void> {
+    await this.recovery.resendVerification(principal.id, lang);
   }
 }

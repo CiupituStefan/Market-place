@@ -87,6 +87,33 @@ describe('order-service: checkout', () => {
     expect(await events(order.id)).toEqual(['OrderCreated']);
   });
 
+  it('records the storefront language on OrderCreated, for the order emails', async () => {
+    const localeOf = async (orderId: string) => {
+      const [row] = await h.db
+        .select()
+        .from(outboxEvents)
+        .where(eq(outboxEvents.messageKey, orderId));
+      return (row?.envelope as { payload: { locale?: string } }).payload.locale;
+    };
+    const romanian = await shopper();
+    const ro = (
+      await request(h.http)
+        .post('/api/v1/orders?locale=ro')
+        .set('Authorization', romanian.auth)
+        .set('Idempotency-Key', randomUUID())
+        .send({
+          email: 'ana@example.com',
+          shippingAddress: address,
+          expectedTotal: romanian.cart.total.amount,
+        })
+        .expect(201)
+    ).body as PlacedOrder;
+    expect(await localeOf(ro.id)).toBe('ro');
+    const english = await shopper();
+    const en = (await english.place().expect(201)).body as PlacedOrder;
+    expect(await localeOf(en.id)).toBe('en');
+  });
+
   it('computes VAT at the destination country rate on the same gross total', async () => {
     const { place } = await shopper([variantItem(119_00)]);
     const order = (

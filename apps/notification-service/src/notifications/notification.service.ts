@@ -2,6 +2,7 @@ import { PermanentEventError } from '@market/messaging';
 import {
   DomainError,
   ErrorCode,
+  type Locale,
   type NewsletterState,
   type NotificationLog,
   type NotificationPreferences,
@@ -27,6 +28,8 @@ export interface NotificationRequest {
   correlationId?: string | null;
   /** When the triggering event happened; stale events are not emailed. */
   occurredAt?: string | undefined;
+  /** Language of the email; English when not given. */
+  locale?: Locale | undefined;
 }
 
 export const normalizeEmail = (email: string) => email.trim().toLowerCase();
@@ -65,6 +68,7 @@ export class NotificationService {
         status: suppressedReason ? 'SUPPRESSED' : 'QUEUED',
         suppressedReason,
         correlationId: request.correlationId ?? null,
+        locale: request.locale ?? 'en',
       })
       .onConflictDoNothing({ target: notificationLogs.notificationKey })
       .returning({ id: notificationLogs.id });

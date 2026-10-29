@@ -143,6 +143,48 @@ describe('notification-service', () => {
       expect(mail?.html).toContain('2 × Forge 75 — Black / Gateron Yellow');
     });
 
+    it('writes order emails in the language the order was placed in', async () => {
+      const paid = (order: ReturnType<typeof orderCreated>) =>
+        h.deliver(
+          OrderPaidV1,
+          {
+            orderId: order.orderId,
+            orderNumber: order.orderNumber,
+            paymentId: randomUUID(),
+            reservationId: null,
+            cartId: null,
+            total: order.total,
+            paidAt: new Date().toISOString(),
+          },
+          order.orderId,
+        );
+      const romanian = orderCreated({
+        email: 'ro-buyer@example.com',
+        locale: 'ro',
+        shippingCountry: 'DE',
+      });
+      // Placed before the storefront sent its language: the shipping country decides.
+      const older = orderCreated({ email: 'old-buyer@example.com', locale: undefined });
+      const abroad = orderCreated({
+        email: 'de-buyer@example.com',
+        locale: undefined,
+        shippingCountry: 'DE',
+      });
+      for (const order of [romanian, older, abroad]) {
+        await h.deliver(OrderCreatedV1, order, order.orderId);
+        await paid(order);
+      }
+      await h.dispatcher.dispatch();
+
+      const [ro] = h.email.to('ro-buyer@example.com');
+      expect(ro?.subject).toBe(`Comanda ${romanian.orderNumber} a fost confirmată`);
+      expect(ro?.text).toContain('Total plătit');
+      expect(ro?.text).toContain(`https://shop.test/ro/order/${romanian.orderId}`);
+      expect(ro?.html).toContain('<html lang="ro">');
+      expect(h.email.to('old-buyer@example.com')[0]?.subject).toMatch(/^Comanda /);
+      expect(h.email.to('de-buyer@example.com')[0]?.subject).toMatch(/^Order .* confirmed$/);
+    });
+
     it('records but does not email events older than MAX_EVENT_AGE_HOURS (topic replays)', async () => {
       const lastWeek = new Date(Date.now() - 7 * 86_400_000);
       const order = orderCreated({ email: 'replayed@example.com' });
@@ -429,6 +471,22 @@ describe('notification-service', () => {
         .from(newsletterSubscribers)
         .where(eq(newsletterSubscribers.email, 'fan@example.com'));
       expect(row?.status).toBe('UNSUBSCRIBED');
+    });
+
+    it('speaks Romanian to subscribers who signed up on the Romanian site', async () => {
+      await request(h.http)
+        .post('/api/v1/newsletter/subscriptions?locale=ro')
+        .send({ email: 'fan-ro@example.com' })
+        .expect(202);
+      await h.dispatcher.dispatch();
+      const [confirmation] = h.email.to('fan-ro@example.com');
+      expect(confirmation?.subject).toBe('Confirmă abonarea la newsletterul CSE Keyboards');
+      const token = linkTo(confirmation!.text, '/ro/newsletter/confirm');
+      await request(h.http).post('/api/v1/newsletter/confirm').send({ token }).expect(200);
+      await h.dispatcher.dispatch();
+      const welcome = h.email.to('fan-ro@example.com')[1];
+      expect(welcome?.subject).toBe('Bine ai venit în newsletterul CSE Keyboards');
+      expect(welcome?.text).toContain('Dezabonare: https://shop.test/ro/unsubscribe?token=');
     });
 
     it('rejects forged unsubscribe tokens and invalid addresses', async () => {

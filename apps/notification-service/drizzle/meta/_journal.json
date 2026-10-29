@@ -8,6 +8,13 @@
       "when": 1791222126954,
       "tag": "0000_notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793284350409,
+      "tag": "0001_locale",
+      "breakpoints": true
     }
   ]
 }

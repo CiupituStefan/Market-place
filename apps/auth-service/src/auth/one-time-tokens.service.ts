@@ -1,5 +1,5 @@
 import { NotificationRequestedV1 } from '@market/events';
-import { DomainError, ErrorCode } from '@market/types';
+import { DomainError, ErrorCode, localizedPath, type Locale } from '@market/types';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { and, eq, gt, isNull } from 'drizzle-orm';
 import { APP_CONFIG, type AppConfig } from '../config.js';
@@ -32,7 +32,8 @@ export class OneTimeTokenService {
 
   constructor(@Inject(APP_CONFIG) private readonly config: AppConfig) {}
 
-  async issue(tx: Database, user: UserRow, purpose: Purpose): Promise<void> {
+  /** `locale`: the storefront language the request came from; the email and its link use it. */
+  async issue(tx: Database, user: UserRow, purpose: Purpose, locale: Locale = 'en'): Promise<void> {
     const settings = SETTINGS[purpose];
     const now = new Date();
     await tx
@@ -53,7 +54,7 @@ export class OneTimeTokenService {
       .values({ userId: user.id, purpose, tokenHash: hashOpaqueToken(token), expiresAt })
       .returning({ id: oneTimeTokens.id });
 
-    const link = new URL(settings.path, this.config.WEB_URL);
+    const link = new URL(localizedPath(settings.path, locale), this.config.WEB_URL);
     link.searchParams.set('token', token);
     await enqueueEvent(
       tx,
@@ -69,6 +70,7 @@ export class OneTimeTokenService {
           link: link.toString(),
           expiresAt: expiresAt.toISOString(),
         },
+        locale,
       },
       user.id,
     );

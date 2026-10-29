@@ -7,6 +7,7 @@ import {
 } from '@market/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
+import { useI18n } from '@/components/i18n/provider';
 import { api } from './browser';
 
 const key = ['notification-preferences'] as const;
@@ -20,11 +21,13 @@ export function useNotificationPreferences() {
 
 export function useUpdateNotificationPreferences() {
   const queryClient = useQueryClient();
+  const { locale } = useI18n();
   return useMutation({
     mutationFn: (input: UpdateNotificationPreferences) =>
       api('/notifications/preferences', {
         method: 'PUT',
         body: input,
+        query: { locale },
         schema: NotificationPreferencesSchema,
       }),
     onSuccess: (preferences) => {

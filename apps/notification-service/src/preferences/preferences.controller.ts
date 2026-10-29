@@ -3,8 +3,10 @@ import {
   DomainError,
   EmailTokenSchema,
   ErrorCode,
+  LocaleParamSchema,
   UpdateNotificationPreferencesSchema,
   type AuthUser,
+  type Locale,
   type NotificationPreferences,
   type UnsubscribeResult,
   type UpdateNotificationPreferences,
@@ -52,6 +54,7 @@ export class PreferencesController {
     @CurrentUser() user: AuthUser,
     @Body(new ZodValidationPipe(UpdateNotificationPreferencesSchema))
     body: UpdateNotificationPreferences,
+    @Query('locale', new ZodValidationPipe(LocaleParamSchema)) locale: Locale,
   ): Promise<NotificationPreferences> {
     if (body.orderUpdates !== undefined) {
       await this.notifications.setOrderUpdates(this.db, user.id, body.orderUpdates);
@@ -64,6 +67,8 @@ export class PreferencesController {
       await this.newsletter.setForAccount(
         { email: user.email, emailVerified: user.emailVerified },
         body.newsletter,
+        new Date(),
+        locale,
       );
     }
     return this.notifications.preferences(user.id, user.email);

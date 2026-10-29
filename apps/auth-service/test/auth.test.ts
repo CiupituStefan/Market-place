@@ -106,6 +106,28 @@ describe('registration', () => {
     expect(stored.some((t) => t.tokenHash === token)).toBe(false);
   });
 
+  it('sends the email in the storefront language, linking to the page in that language', async () => {
+    const lastRequest = async (email: string) => {
+      const rows = await h.db.select().from(outboxEvents);
+      const event = rows
+        .map((r) => r.envelope as { eventType: string; payload: unknown })
+        .filter((e) => e.eventType === NotificationRequestedV1.type)
+        .map((e) => NotificationRequestedV1.payload.parse(e.payload))
+        .filter((p) => p.recipient.email === email)
+        .at(-1)!;
+      return { locale: event.locale, link: new URL(String(event.data.link)).pathname };
+    };
+    const email = newEmail();
+    await request(http)
+      .post('/api/v1/auth/register?locale=ro')
+      .send({ email, password: PASSWORD, firstName: 'Ana', lastName: 'Pop' })
+      .expect(201);
+    expect(await lastRequest(email)).toEqual({ locale: 'ro', link: '/ro/verify-email' });
+
+    await request(http).post('/api/v1/auth/forgot-password?locale=xx').send({ email }).expect(202);
+    expect(await lastRequest(email)).toEqual({ locale: 'en', link: '/reset-password' });
+  });
+
   it('rejects duplicates (case-insensitively) with 409', async () => {
     const email = await register();
     const res = await request(http)

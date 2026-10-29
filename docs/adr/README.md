@@ -29,6 +29,7 @@ ADRs are immutable once accepted; a changed decision gets a new ADR that superse
 | [ADR-024](ADR-024-security-hardening.md)               | Nonce CSP, default-deny egress, Kyverno admission, Kafka ACLs as code     | Accepted |
 | [ADR-025](ADR-025-end-to-end-testing.md)               | Playwright end-to-end journeys on the Docker Compose stack                | Accepted |
 | [ADR-026](ADR-026-storefront-languages.md)             | Romanian and English storefront: `/ro` URLs, country, visitor's choice    | Accepted |
+| [ADR-027](ADR-027-email-languages.md)                  | Customer emails in the shopper's language, carried on requests and events | Accepted |
 
 ADR-005 and ADR-006 were reserved for Kubernetes and AWS; those decisions are recorded in ADR-018
 and ADR-019, written in the phases that implemented them.

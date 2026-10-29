@@ -15,7 +15,7 @@ import { fieldErrors, PASSWORD_MIN, RegisterSchema, type FieldErrors } from '@/l
 import { FormField } from './form-field';
 
 export function RegisterForm() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const termsId = useId();
   const [errors, setErrors] = useState<FieldErrors>({});
   const [acceptTerms, setAcceptTerms] = useState(false);
@@ -26,7 +26,13 @@ export function RegisterForm() {
       acceptTerms: _a,
       ...input
     }: z.infer<typeof RegisterSchema>) =>
-      api('/auth/register', { method: 'POST', body: input, schema: z.unknown() }),
+      // The confirmation email is written in the page's language.
+      api('/auth/register', {
+        method: 'POST',
+        body: input,
+        query: { locale },
+        schema: z.unknown(),
+      }),
   });
 
   function onSubmit(event: SubmitEvent<HTMLFormElement>) {

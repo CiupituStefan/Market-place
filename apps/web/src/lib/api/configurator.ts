@@ -8,10 +8,10 @@ export function quoteConfiguration(
   selection: ConfigurationSelection,
   locale: Locale,
 ) {
-  const query = locale === 'en' ? '' : `?locale=${locale}`;
-  return api(`/configurator/${encodeURIComponent(slug)}/quote${query}`, {
+  return api(`/configurator/${encodeURIComponent(slug)}/quote`, {
     method: 'POST',
     body: { selection },
+    query: { locale },
     schema: ConfigurationQuoteSchema,
   });
 }

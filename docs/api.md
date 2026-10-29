@@ -35,6 +35,9 @@ POST   /api/v1/payments/create-intent   command endpoints use verbs
 - Public catalog reads (products, categories, configurator, quotes) take `?locale=ro` for
   Romanian texts; English is the default and the fallback for anything untranslated
   ([ADR-026](adr/ADR-026-storefront-languages.md)).
+- Requests that send emails (register, forgot password, checkout, newsletter) take the same
+  `?locale=`, and the emails are written in that language
+  ([ADR-027](adr/ADR-027-email-languages.md)).
 - Unsafe operations that must not run twice (orders, payments) accept an `Idempotency-Key` header.
 - Paths containing an `internal` segment are service-to-service only and are not reachable through
   the gateway.

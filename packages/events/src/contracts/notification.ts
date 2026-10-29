@@ -1,3 +1,4 @@
+import { LocaleSchema } from '@market/types';
 import { z } from 'zod';
 import { defineEvent } from '../define.js';
 import { Topics } from '../topics.js';
@@ -25,5 +26,7 @@ export const NotificationRequestedV1 = defineEvent({
     recipient: z.object({ userId: z.uuid().nullable(), email: z.email() }),
     /** Template variables. Must never contain secrets other than single-use links. */
     data: z.record(z.string(), z.unknown()),
+    /** Language of the email. Optional (added later): English when missing. */
+    locale: LocaleSchema.optional(),
   }),
 });

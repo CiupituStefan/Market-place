@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { escapeHtml, renderEmail } from './blocks.js';
+import { orderLocale } from '../orders/order-notifications.js';
 import { formatMoney, renderTemplate, templateDefinitions, TEMPLATES } from './templates.js';
 
-const context = { webUrl: 'https://shop.test' };
+const context = { webUrl: 'https://shop.test', locale: 'en' as const };
+const romanian = { webUrl: 'https://shop.test', locale: 'ro' as const };
 const footer = { reason: 'Because.', unsubscribeUrl: null };
 const eur = (amount: number) => ({ amount, currency: 'EUR' });
 const orderId = '6f1c2a51-6c1e-4a53-9a65-3b8a7c1d2e3f';
@@ -59,6 +61,37 @@ describe('email templates', () => {
     expect(email.text).toContain('CSE Keyboards');
     expect(email.text).not.toContain('<');
     expect(templateDefinitions[name].category).toBeDefined();
+  });
+
+  it.each(TEMPLATES)('%s also renders in Romanian, with a different subject', (name) => {
+    const en = renderEmail(renderTemplate(name, samples[name], context), footer);
+    const ro = renderEmail(renderTemplate(name, samples[name], romanian), footer, 'ro');
+    expect(ro.subject).not.toBe(en.subject);
+    expect(ro.html).toContain('<html lang="ro">');
+    expect(ro.html).toContain('București, România');
+  });
+
+  it('writes Romanian order emails with Romanian money, dates and links', () => {
+    const content = renderTemplate('ORDER_CONFIRMATION', samples.ORDER_CONFIRMATION, romanian);
+    const email = renderEmail(content, footer, 'ro');
+    expect(email.subject).toBe('Comanda CSE-1 a fost confirmată');
+    expect(email.text).toContain('115,00');
+    expect(email.text).toContain('Total plătit');
+    expect(email.text).toContain(`Vezi comanda: https://shop.test/ro/order/${orderId}`);
+    // English stays at the unprefixed URL.
+    const english = renderEmail(
+      renderTemplate('ORDER_DELIVERED', samples.ORDER_DELIVERED, context),
+      footer,
+    );
+    expect(english.text).toContain(`https://shop.test/order/${orderId}`);
+  });
+
+  it('picks the order language from the storefront, else from the shipping country', () => {
+    expect(orderLocale('en', 'RO')).toBe('en');
+    expect(orderLocale('ro', 'DE')).toBe('ro');
+    expect(orderLocale(undefined, 'RO')).toBe('ro');
+    expect(orderLocale(undefined, 'MD')).toBe('ro');
+    expect(orderLocale(undefined, 'DE')).toBe('en');
   });
 
   it('formats money in minor units', () => {

@@ -9,6 +9,7 @@ import {
   money,
   type Cart,
   type Currency,
+  type Locale,
   type PlacedOrder,
 } from '@market/types';
 import { Inject, Injectable, Logger } from '@nestjs/common';
@@ -62,6 +63,8 @@ export class CheckoutService {
     identity: CartIdentity,
     idempotencyKey: string,
     request: CheckoutInput,
+    /** Storefront language; travels on OrderCreated so the order's emails use it. */
+    locale: Locale = 'en',
   ): Promise<{ order: PlacedOrder; replayed: boolean }> {
     if (!identity.userId && !identity.guestToken) {
       throw new DomainError(ErrorCode.CART_EMPTY, 'Your cart is empty');
@@ -114,7 +117,7 @@ export class CheckoutService {
           subtotal: cart.subtotal.amount,
         });
       }
-      await this.confirmPlaced(orderId, reservation);
+      await this.confirmPlaced(orderId, reservation, locale);
     } catch (error) {
       await this.fail(orderId, reservation?.id ?? null, error);
       await this.releaseClaim(scope, idempotencyKey);
@@ -270,7 +273,11 @@ export class CheckoutService {
     return { orderId, accessToken };
   }
 
-  private async confirmPlaced(orderId: string, reservation: Reservation | null): Promise<void> {
+  private async confirmPlaced(
+    orderId: string,
+    reservation: Reservation | null,
+    locale: Locale,
+  ): Promise<void> {
     await this.db.transaction(async (tx) => {
       const order = await lockOrder(tx, orderId);
       // The sweeper may have given up on this checkout meanwhile: transition() refuses FAILED → PENDING_PAYMENT.
@@ -307,6 +314,7 @@ export class CheckoutService {
           shipping: money(placed.shipping, currency),
           tax: money(placed.tax, currency),
           total: money(placed.total, currency),
+          locale,
         },
         { producer: SERVICE_NAME, aggregateId: orderId },
       );

@@ -1,4 +1,5 @@
 import { inboxEvents } from '@market/db';
+import type { Locale } from '@market/types';
 import { sql } from 'drizzle-orm';
 import {
   boolean,
@@ -47,6 +48,8 @@ export const notificationLogs = pgTable(
     suppressedReason: text('suppressed_reason'),
     /** Event or request that caused it, for tracing. */
     correlationId: text('correlation_id'),
+    /** Language the email is written in (ADR-026). */
+    locale: text('locale').$type<Locale>().notNull().default('en'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     sentAt: timestamp('sent_at', { withTimezone: true }),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -87,6 +90,8 @@ export const newsletterSubscribers = pgTable(
     /** Last confirmation email: limits resends to one per cooldown. */
     confirmSentAt: timestamp('confirm_sent_at', { withTimezone: true }),
     source: text('source').notNull(),
+    /** Language of the confirmation and newsletter emails: the storefront's at sign-up. */
+    locale: text('locale').$type<Locale>().notNull().default('en'),
     subscribedAt: timestamp('subscribed_at', { withTimezone: true }),
     unsubscribedAt: timestamp('unsubscribed_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -109,6 +114,8 @@ export const orderContacts = pgTable('order_contacts', {
   userId: uuid('user_id'),
   email: text('email').notNull(),
   summary: jsonb('summary').$type<OrderSummary>().notNull(),
+  /** Language of the order's emails: the storefront's when it was placed. */
+  locale: text('locale').$type<Locale>().notNull().default('en'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 

@@ -1,5 +1,5 @@
 import { isUniqueViolation } from '@market/db';
-import { DomainError, ErrorCode } from '@market/types';
+import { DomainError, ErrorCode, type Locale } from '@market/types';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { eq, sql } from 'drizzle-orm';
 import { APP_CONFIG, type AppConfig } from '../config.js';
@@ -25,7 +25,7 @@ export class AuthService {
     private readonly oneTimeTokens: OneTimeTokenService,
   ) {}
 
-  async register(input: RegisterInput): Promise<UserRow> {
+  async register(input: RegisterInput, locale: Locale = 'en'): Promise<UserRow> {
     const passwordHash = await hashPassword(input.password);
     try {
       return await this.db.transaction(async (tx) => {
@@ -39,7 +39,7 @@ export class AuthService {
           })
           .returning();
         if (!user) throw new Error('user insert returned no row');
-        await this.oneTimeTokens.issue(tx, user, 'EMAIL_VERIFICATION');
+        await this.oneTimeTokens.issue(tx, user, 'EMAIL_VERIFICATION', locale);
         return user;
       });
     } catch (error) {

@@ -13,9 +13,11 @@ import {
   DomainError,
   ErrorCode,
   IDEMPOTENCY_KEY_HEADER,
+  LocaleParamSchema,
   ORDER_TOKEN_HEADER,
   PaginationQuerySchema,
   type AuthUser,
+  type Locale,
   type Order,
   type OrderSummary,
   type Paginated,
@@ -81,6 +83,7 @@ export class OrdersController {
   async place(
     @Body(new ZodValidationPipe(CheckoutRequestSchema)) body: CheckoutInput,
     @Headers(IDEMPOTENCY_KEY_HEADER) idempotencyKey: string | undefined,
+    @Query('locale', new ZodValidationPipe(LocaleParamSchema)) locale: Locale,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
     @MaybeUser() user?: AuthUser,
@@ -99,6 +102,7 @@ export class OrdersController {
       },
       idempotencyKey,
       body,
+      locale,
     );
     res.status(replayed ? 200 : 201);
     if (replayed) res.setHeader('Idempotent-Replayed', 'true');

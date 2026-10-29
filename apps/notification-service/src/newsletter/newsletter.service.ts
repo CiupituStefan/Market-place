@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { DomainError, ErrorCode } from '@market/types';
+import { DomainError, ErrorCode, localizedPath, type Locale } from '@market/types';
 import { Inject, Injectable } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { APP_CONFIG, type AppConfig } from '../config.js';
@@ -26,14 +26,22 @@ export class NewsletterService {
     private readonly notifications: NotificationService,
   ) {}
 
-  /** Starts (or restarts) double opt-in. Silent no-op when already subscribed or throttled. */
-  async subscribe(rawEmail: string, source: string, now = new Date()): Promise<void> {
+  /**
+   * Starts (or restarts) double opt-in. Silent no-op when already subscribed or throttled.
+   * `locale`: the storefront language; the confirmation and later newsletters use it.
+   */
+  async subscribe(
+    rawEmail: string,
+    source: string,
+    now = new Date(),
+    locale: Locale = 'en',
+  ): Promise<void> {
     const email = normalizeEmail(rawEmail);
     await this.db.transaction(async (tx) => {
       // Lock (or create) the row so two concurrent submits send one email.
       await tx
         .insert(newsletterSubscribers)
-        .values({ email, status: 'PENDING', source })
+        .values({ email, status: 'PENDING', source, locale })
         .onConflictDoNothing();
       const [row] = await tx
         .select()
@@ -54,16 +62,18 @@ export class NewsletterService {
           confirmExpiresAt: new Date(now.getTime() + CONFIRM_TTL_MS),
           confirmSentAt: now,
           source,
+          locale,
           updatedAt: now,
         })
         .where(eq(newsletterSubscribers.email, email));
-      const link = new URL('/newsletter/confirm', this.config.WEB_URL);
+      const link = new URL(localizedPath('/newsletter/confirm', locale), this.config.WEB_URL);
       link.searchParams.set('token', token);
       await this.notifications.enqueue(tx, {
         key: `newsletter-confirm:${tokenHash}`,
         template: 'NEWSLETTER_CONFIRM',
         recipient: { userId: null, email },
         data: { link: link.toString() },
+        locale,
       });
     });
   }
@@ -84,7 +94,7 @@ export class NewsletterService {
       ) {
         throw new DomainError(ErrorCode.INVALID_TOKEN, 'This link is invalid or has expired');
       }
-      await this.markSubscribed(tx, row.email, row.source, now);
+      await this.markSubscribed(tx, row.email, row.source, now, row.locale);
     });
   }
 
@@ -96,20 +106,21 @@ export class NewsletterService {
     user: { email: string; emailVerified: boolean },
     subscribed: boolean,
     now = new Date(),
+    locale: Locale = 'en',
   ): Promise<void> {
     if (!subscribed) {
       await this.unsubscribe(user.email, now);
       return;
     }
     if (!user.emailVerified) {
-      await this.subscribe(user.email, 'account', now);
+      await this.subscribe(user.email, 'account', now, locale);
       return;
     }
     const email = normalizeEmail(user.email);
     await this.db.transaction(async (tx) => {
       await tx
         .insert(newsletterSubscribers)
-        .values({ email, status: 'PENDING', source: 'account' })
+        .values({ email, status: 'PENDING', source: 'account', locale })
         .onConflictDoNothing();
       const [row] = await tx
         .select()
@@ -117,7 +128,7 @@ export class NewsletterService {
         .where(eq(newsletterSubscribers.email, email))
         .for('update');
       if (row?.status === 'SUBSCRIBED') return;
-      await this.markSubscribed(tx, email, 'account', now);
+      await this.markSubscribed(tx, email, 'account', now, locale);
     });
   }
 
@@ -128,10 +139,16 @@ export class NewsletterService {
       .where(eq(newsletterSubscribers.email, normalizeEmail(rawEmail)));
   }
 
-  private async markSubscribed(tx: Database, email: string, source: string, now: Date) {
+  private async markSubscribed(
+    tx: Database,
+    email: string,
+    source: string,
+    now: Date,
+    locale: Locale,
+  ) {
     await tx
       .update(newsletterSubscribers)
-      .set({ status: 'SUBSCRIBED', subscribedAt: now, source, updatedAt: now })
+      .set({ status: 'SUBSCRIBED', subscribedAt: now, source, locale, updatedAt: now })
       .where(eq(newsletterSubscribers.email, email));
     await this.notifications.enqueue(tx, {
       // One welcome per subscription (re-subscribing later welcomes again).
@@ -139,6 +156,7 @@ export class NewsletterService {
       template: 'NEWSLETTER_WELCOME',
       recipient: { userId: null, email },
       data: {},
+      locale,
     });
   }
 }

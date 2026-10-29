@@ -4,6 +4,7 @@ export * from './cart.js';
 export * from './catalog.js';
 export * from './errors.js';
 export * from './http.js';
+export * from './locale.js';
 export * from './money.js';
 export * from './pagination.js';
 export * from './roles.js';

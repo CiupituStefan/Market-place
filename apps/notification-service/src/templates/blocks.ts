@@ -1,3 +1,6 @@
+import type { Locale } from '@market/types';
+import { COPY } from './copy.js';
+
 /**
  * A tiny email layout language: templates return blocks, and the same blocks are
  * rendered to HTML (escaped in one place) and to the plain-text alternative.
@@ -98,19 +101,24 @@ function blockText(block: Block): string {
   }
 }
 
-export function renderEmail(content: EmailContent, footer: Footer): RenderedEmail {
+export function renderEmail(
+  content: EmailContent,
+  footer: Footer,
+  locale: Locale = 'en',
+): RenderedEmail {
+  const words = COPY[locale].footer;
   const footerHtml = [
     escapeHtml(footer.reason),
     footer.unsubscribeUrl
-      ? `<a href="${escapeHtml(safeHref(footer.unsubscribeUrl))}" style="color:#71717a;">Unsubscribe</a>`
+      ? `<a href="${escapeHtml(safeHref(footer.unsubscribeUrl))}" style="color:#71717a;">${escapeHtml(words.unsubscribe)}</a>`
       : null,
-    `${BRAND} · Bucharest, Romania`,
+    `${BRAND} · ${escapeHtml(words.address)}`,
   ]
     .filter(Boolean)
     .join('<br>');
 
   const html = `<!doctype html>
-<html lang="en">
+<html lang="${locale}">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(content.subject)}</title></head>
 <body style="${S.body}">
 <div style="display:none;max-height:0;overflow:hidden;">${escapeHtml(content.preheader)}</div>
@@ -130,7 +138,7 @@ ${content.blocks.map(blockHtml).join('\n')}
     ...content.blocks.flatMap((block) => [blockText(block), '']),
     '--',
     footer.reason,
-    footer.unsubscribeUrl ? `Unsubscribe: ${safeHref(footer.unsubscribeUrl)}` : null,
+    footer.unsubscribeUrl ? `${words.unsubscribe}: ${safeHref(footer.unsubscribeUrl)}` : null,
   ]
     .filter((line) => line !== null)
     .join('\n');

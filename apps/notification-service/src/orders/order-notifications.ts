@@ -10,12 +10,19 @@ import type {
   PaymentFailedV1,
   PaymentRefundedV1,
 } from '@market/events';
+import type { Locale } from '@market/types';
 import { eq } from 'drizzle-orm';
 import type { Database } from '../db/database.js';
 import { orderContacts, type OrderContactRow } from '../db/schema.js';
 import type { NotificationService } from '../notifications/notification.service.js';
 
 type Event<D extends EventDefinition> = EventEnvelope<D>;
+
+/** Orders placed before the storefront sent its language: Romanian for Romania and Moldova. */
+const ROMANIAN_COUNTRIES = new Set(['RO', 'MD']);
+export function orderLocale(locale: Locale | undefined, shippingCountry: string): Locale {
+  return locale ?? (ROMANIAN_COUNTRIES.has(shippingCountry) ? 'ro' : 'en');
+}
 
 /**
  * Turns domain events into notifications. All handlers only write to this
@@ -35,6 +42,7 @@ export class OrderNotifications {
       data: payload.data,
       correlationId: event.correlationId,
       occurredAt: event.occurredAt,
+      locale: payload.locale,
     });
   }
 
@@ -48,6 +56,7 @@ export class OrderNotifications {
         orderNumber: p.orderNumber,
         userId: p.userId,
         email: p.email,
+        locale: orderLocale(p.locale, p.shippingCountry),
         summary: {
           lines: p.lines.map((line) => ({
             name: line.name,
@@ -135,6 +144,7 @@ export class OrderNotifications {
       data: { orderId: order.orderId, orderNumber: order.orderNumber, ...data },
       correlationId: event.correlationId,
       occurredAt: event.occurredAt,
+      locale: order.locale,
     });
   }
 

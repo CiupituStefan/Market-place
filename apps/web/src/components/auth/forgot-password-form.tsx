@@ -10,11 +10,17 @@ import { userMessage } from '@/lib/api/errors';
 import { FormField } from './form-field';
 
 export function ForgotPasswordForm() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [error, setError] = useState<string>();
   const request = useMutation({
     mutationFn: (email: string) =>
-      api('/auth/forgot-password', { method: 'POST', body: { email }, schema: z.unknown() }),
+      // The reset email is written in the page's language.
+      api('/auth/forgot-password', {
+        method: 'POST',
+        body: { email },
+        query: { locale },
+        schema: z.unknown(),
+      }),
   });
 
   function onSubmit(event: SubmitEvent<HTMLFormElement>) {

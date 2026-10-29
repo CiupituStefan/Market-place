@@ -1,10 +1,13 @@
 import { NOTIFICATION_TEMPLATES } from '@market/events';
+import { localizedPath, type Locale } from '@market/types';
 import { z } from 'zod';
 import type { EmailContent } from './blocks.js';
+import { COPY, INTL } from './copy.js';
 
 /**
  * Every email the shop sends. The event contract lists the templates other
  * services may request; the rest are triggered by notification-service itself.
+ * Each is written in English and Romanian (copy.ts); the language travels with the request.
  */
 export const TEMPLATES = [
   ...NOTIFICATION_TEMPLATES,
@@ -23,22 +26,20 @@ export type Category = 'security' | 'transactional' | 'order-updates' | 'newslet
 const MoneyData = z.object({ amount: z.int(), currency: z.string().length(3) });
 type MoneyData = z.infer<typeof MoneyData>;
 
-export function formatMoney(money: MoneyData): string {
-  return new Intl.NumberFormat('en-IE', { style: 'currency', currency: money.currency }).format(
-    money.amount / 100,
-  );
+export function formatMoney(money: MoneyData, locale: Locale = 'en'): string {
+  return new Intl.NumberFormat(INTL[locale], {
+    style: 'currency',
+    currency: money.currency,
+  }).format(money.amount / 100);
 }
 
-function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat('en-GB', {
+export function formatDate(iso: string, locale: Locale = 'en'): string {
+  return new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : INTL[locale], {
     dateStyle: 'medium',
     timeStyle: 'short',
     timeZone: 'Europe/Bucharest',
   }).format(new Date(iso));
 }
-
-const greeting = (firstName: string | null | undefined) =>
-  firstName ? `Hi ${firstName},` : 'Hi there,';
 
 const OrderData = z.object({
   orderId: z.uuid(),
@@ -60,38 +61,39 @@ const OrderSummaryData = z.object({
 
 export interface TemplateContext {
   webUrl: string;
+  locale: Locale;
+}
+
+/** What a template's render function gets besides its data: copy, formatters and links. */
+interface Helpers {
+  c: (typeof COPY)[Locale];
+  money: (money: MoneyData) => string;
+  date: (iso: string) => string;
+  /** Absolute storefront URL of a page, in the email's language. */
+  page: (path: string) => string;
 }
 
 interface TemplateDefinition<S extends z.ZodType> {
   category: Category;
   data: S;
-  render: (data: z.infer<S>, context: TemplateContext) => EmailContent;
+  render: (data: z.infer<S>, helpers: Helpers) => EmailContent;
 }
 
 const define = <S extends z.ZodType>(definition: TemplateDefinition<S>) => definition;
-
-const orderUrl = (context: TemplateContext, orderId: string) =>
-  new URL(`/order/${orderId}`, context.webUrl).toString();
 
 export const templateDefinitions = {
   EMAIL_VERIFICATION: define({
     category: 'security',
     data: z.object({ firstName: z.string().nullish(), link: z.url(), expiresAt: z.iso.datetime() }),
-    render: (data) => ({
-      subject: 'Confirm your email address',
-      preheader: 'One click and your account is ready.',
+    render: (data, { c, date }) => ({
+      subject: c.verification.subject,
+      preheader: c.verification.preheader,
       blocks: [
-        { type: 'heading', text: 'Confirm your email' },
-        { type: 'text', text: greeting(data.firstName) },
-        {
-          type: 'text',
-          text: 'Thanks for creating a CSE Keyboards account. Confirm your email address so you can write reviews and recover your account if you ever need to.',
-        },
-        { type: 'button', label: 'Confirm email', href: data.link },
-        {
-          type: 'note',
-          text: `This link works once and expires on ${formatDate(data.expiresAt)}. If you did not create an account, you can ignore this email.`,
-        },
+        { type: 'heading', text: c.verification.heading },
+        { type: 'text', text: c.greeting(data.firstName) },
+        { type: 'text', text: c.verification.body },
+        { type: 'button', label: c.verification.button, href: data.link },
+        { type: 'note', text: c.verification.note(date(data.expiresAt)) },
       ],
     }),
   }),
@@ -99,21 +101,15 @@ export const templateDefinitions = {
   PASSWORD_RESET: define({
     category: 'security',
     data: z.object({ firstName: z.string().nullish(), link: z.url(), expiresAt: z.iso.datetime() }),
-    render: (data) => ({
-      subject: 'Reset your password',
-      preheader: 'Use this link to choose a new password.',
+    render: (data, { c, date }) => ({
+      subject: c.reset.subject,
+      preheader: c.reset.preheader,
       blocks: [
-        { type: 'heading', text: 'Reset your password' },
-        { type: 'text', text: greeting(data.firstName) },
-        {
-          type: 'text',
-          text: 'Someone (hopefully you) asked to reset the password of your CSE Keyboards account.',
-        },
-        { type: 'button', label: 'Choose a new password', href: data.link },
-        {
-          type: 'note',
-          text: `This link works once and expires on ${formatDate(data.expiresAt)}. If you did not ask for it, ignore this email: your password stays the same. Resetting signs you out everywhere.`,
-        },
+        { type: 'heading', text: c.reset.heading },
+        { type: 'text', text: c.greeting(data.firstName) },
+        { type: 'text', text: c.reset.body },
+        { type: 'button', label: c.reset.button, href: data.link },
+        { type: 'note', text: c.reset.note(date(data.expiresAt)) },
       ],
     }),
   }),
@@ -121,22 +117,19 @@ export const templateDefinitions = {
   ORDER_CONFIRMATION: define({
     category: 'transactional',
     data: OrderData.extend({ summary: OrderSummaryData, paidAt: z.iso.datetime() }),
-    render: (data, context) => {
+    render: (data, { c, money, date, page }) => {
       const { summary } = data;
       return {
-        subject: `Order ${data.orderNumber} confirmed`,
-        preheader: `We received your payment of ${formatMoney(summary.total)}.`,
+        subject: c.confirmation.subject(data.orderNumber),
+        preheader: c.confirmation.preheader(money(summary.total)),
         blocks: [
-          { type: 'heading', text: 'Thanks for your order!' },
-          {
-            type: 'text',
-            text: `Payment received on ${formatDate(data.paidAt)}. We are getting order ${data.orderNumber} ready and will email you the tracking number as soon as it ships.`,
-          },
+          { type: 'heading', text: c.confirmation.heading },
+          { type: 'text', text: c.confirmation.body(date(data.paidAt), data.orderNumber) },
           {
             type: 'rows',
             rows: summary.lines.map((line) => ({
-              label: `${line.quantity} × ${line.name}`,
-              value: formatMoney({
+              label: `${String(line.quantity)} × ${line.name}`,
+              value: money({
                 amount: line.unitPrice.amount * line.quantity,
                 currency: line.unitPrice.currency,
               }),
@@ -145,24 +138,24 @@ export const templateDefinitions = {
           {
             type: 'rows',
             rows: [
-              { label: 'Subtotal', value: formatMoney(summary.subtotal) },
+              { label: c.totals.subtotal, value: money(summary.subtotal) },
               ...(summary.discount.amount > 0
                 ? [
                     {
-                      label: summary.couponCode ? `Discount (${summary.couponCode})` : 'Discount',
-                      value: `−${formatMoney(summary.discount)}`,
+                      label: c.totals.discount(summary.couponCode),
+                      value: `−${money(summary.discount)}`,
                     },
                   ]
                 : []),
               {
-                label: 'Shipping',
-                value: summary.shipping.amount === 0 ? 'Free' : formatMoney(summary.shipping),
+                label: c.totals.shipping,
+                value: summary.shipping.amount === 0 ? c.totals.free : money(summary.shipping),
               },
-              { label: 'VAT included', value: formatMoney(summary.tax) },
-              { label: 'Total paid', value: formatMoney(summary.total), strong: true },
+              { label: c.totals.vat, value: money(summary.tax) },
+              { label: c.totals.paid, value: money(summary.total), strong: true },
             ],
           },
-          { type: 'button', label: 'View your order', href: orderUrl(context, data.orderId) },
+          { type: 'button', label: c.viewOrder, href: page(`/order/${data.orderId}`) },
         ],
       };
     },
@@ -175,19 +168,19 @@ export const templateDefinitions = {
       trackingNumber: z.string(),
       trackingUrl: z.url().nullable(),
     }),
-    render: (data, context) => ({
-      subject: `Order ${data.orderNumber} is on its way`,
-      preheader: `${data.carrier} tracking number ${data.trackingNumber}.`,
+    render: (data, { c, page }) => ({
+      subject: c.shipped.subject(data.orderNumber),
+      preheader: c.shipped.preheader(data.carrier, data.trackingNumber),
       blocks: [
-        { type: 'heading', text: 'Your keyboard is on its way' },
-        { type: 'text', text: greeting(data.firstName) },
+        { type: 'heading', text: c.shipped.heading },
+        { type: 'text', text: c.greeting(data.firstName) },
         {
           type: 'text',
-          text: `Order ${data.orderNumber} left our workshop with ${data.carrier}. Tracking number: ${data.trackingNumber}.`,
+          text: c.shipped.body(data.orderNumber, data.carrier, data.trackingNumber),
         },
         data.trackingUrl
-          ? { type: 'button', label: 'Track your parcel', href: data.trackingUrl }
-          : { type: 'button', label: 'View your order', href: orderUrl(context, data.orderId) },
+          ? { type: 'button', label: c.shipped.track, href: data.trackingUrl }
+          : { type: 'button', label: c.viewOrder, href: page(`/order/${data.orderId}`) },
       ],
     }),
   }),
@@ -195,17 +188,14 @@ export const templateDefinitions = {
   ORDER_DELIVERED: define({
     category: 'order-updates',
     data: OrderData,
-    render: (data, context) => ({
-      subject: `Order ${data.orderNumber} was delivered`,
-      preheader: 'Enjoy the new board. Tell other typists what you think.',
+    render: (data, { c, page }) => ({
+      subject: c.delivered.subject(data.orderNumber),
+      preheader: c.delivered.preheader,
       blocks: [
-        { type: 'heading', text: 'Delivered!' },
-        { type: 'text', text: greeting(data.firstName) },
-        {
-          type: 'text',
-          text: `Order ${data.orderNumber} has been delivered. Once you have typed on it for a while, a review helps other enthusiasts choose.`,
-        },
-        { type: 'button', label: 'View your order', href: orderUrl(context, data.orderId) },
+        { type: 'heading', text: c.delivered.heading },
+        { type: 'text', text: c.greeting(data.firstName) },
+        { type: 'text', text: c.delivered.body(data.orderNumber) },
+        { type: 'button', label: c.viewOrder, href: page(`/order/${data.orderId}`) },
       ],
     }),
   }),
@@ -216,49 +206,32 @@ export const templateDefinitions = {
       reason: z.enum(['CUSTOMER_REQUEST', 'ADMIN', 'OUT_OF_STOCK']),
       refundRequired: z.boolean(),
     }),
-    render: (data, context) => {
-      const why = {
-        CUSTOMER_REQUEST: 'as you requested',
-        ADMIN: 'by our team',
-        OUT_OF_STOCK: 'because an item is no longer in stock',
-      }[data.reason];
-      return {
-        subject: `Order ${data.orderNumber} was cancelled`,
-        preheader: data.refundRequired
-          ? 'Your payment will be refunded.'
-          : 'No payment was taken for it.',
-        blocks: [
-          { type: 'heading', text: 'Order cancelled' },
-          { type: 'text', text: `Order ${data.orderNumber} was cancelled ${why}.` },
-          {
-            type: 'text',
-            text: data.refundRequired
-              ? 'We are refunding your payment in full; you will get another email when the refund is issued.'
-              : 'You have not been charged.',
-          },
-          { type: 'button', label: 'View your order', href: orderUrl(context, data.orderId) },
-        ],
-      };
-    },
+    render: (data, { c, page }) => ({
+      subject: c.cancelled.subject(data.orderNumber),
+      preheader: data.refundRequired ? c.cancelled.refundPreheader : c.cancelled.noChargePreheader,
+      blocks: [
+        { type: 'heading', text: c.cancelled.heading },
+        { type: 'text', text: c.cancelled.body(data.orderNumber, c.cancelled.why[data.reason]) },
+        {
+          type: 'text',
+          text: data.refundRequired ? c.cancelled.refund : c.cancelled.noCharge,
+        },
+        { type: 'button', label: c.viewOrder, href: page(`/order/${data.orderId}`) },
+      ],
+    }),
   }),
 
   PAYMENT_FAILED: define({
     category: 'transactional',
     data: OrderData.extend({ failureMessage: z.string().nullable() }),
-    render: (data, context) => ({
-      subject: `Payment for order ${data.orderNumber} did not go through`,
-      preheader: 'Your items are still held for a short while.',
+    render: (data, { c, page }) => ({
+      subject: c.paymentFailed.subject(data.orderNumber),
+      preheader: c.paymentFailed.preheader,
       blocks: [
-        { type: 'heading', text: 'Your payment did not go through' },
-        {
-          type: 'text',
-          text: `We could not take the payment for order ${data.orderNumber}${data.failureMessage ? `: ${data.failureMessage}` : '.'}`,
-        },
-        {
-          type: 'text',
-          text: 'Your items stay reserved until the payment window closes. You can try again with the same or another payment method.',
-        },
-        { type: 'button', label: 'Try again', href: orderUrl(context, data.orderId) },
+        { type: 'heading', text: c.paymentFailed.heading },
+        { type: 'text', text: c.paymentFailed.body(data.orderNumber, data.failureMessage) },
+        { type: 'text', text: c.paymentFailed.retry },
+        { type: 'button', label: c.paymentFailed.button, href: page(`/order/${data.orderId}`) },
       ],
     }),
   }),
@@ -270,22 +243,19 @@ export const templateDefinitions = {
       totalRefunded: MoneyData,
       isFullRefund: z.boolean(),
     }),
-    render: (data, context) => ({
-      subject: `Refund of ${formatMoney(data.refunded)} for order ${data.orderNumber}`,
-      preheader: 'Refunds usually appear on your statement within 5–10 business days.',
+    render: (data, { c, money, page }) => ({
+      subject: c.refund.subject(money(data.refunded), data.orderNumber),
+      preheader: c.refund.preheader,
       blocks: [
-        { type: 'heading', text: 'Refund issued' },
+        { type: 'heading', text: c.refund.heading },
         {
           type: 'text',
           text: data.isFullRefund
-            ? `Order ${data.orderNumber} has been refunded in full (${formatMoney(data.totalRefunded)}).`
-            : `We refunded ${formatMoney(data.refunded)} for order ${data.orderNumber} (${formatMoney(data.totalRefunded)} refunded so far).`,
+            ? c.refund.full(data.orderNumber, money(data.totalRefunded))
+            : c.refund.partial(data.orderNumber, money(data.refunded), money(data.totalRefunded)),
         },
-        {
-          type: 'note',
-          text: 'The money goes back to the payment method you used. Depending on your bank this takes 5–10 business days.',
-        },
-        { type: 'button', label: 'View your order', href: orderUrl(context, data.orderId) },
+        { type: 'note', text: c.refund.note },
+        { type: 'button', label: c.viewOrder, href: page(`/order/${data.orderId}`) },
       ],
     }),
   }),
@@ -293,20 +263,14 @@ export const templateDefinitions = {
   NEWSLETTER_CONFIRM: define({
     category: 'security',
     data: z.object({ link: z.url() }),
-    render: (data) => ({
-      subject: 'Confirm your CSE Keyboards newsletter subscription',
-      preheader: 'One click to start getting group buys, restocks and build guides.',
+    render: (data, { c }) => ({
+      subject: c.newsletterConfirm.subject,
+      preheader: c.newsletterConfirm.preheader,
       blocks: [
-        { type: 'heading', text: 'Confirm your subscription' },
-        {
-          type: 'text',
-          text: 'Someone asked to subscribe this address to the CSE Keyboards newsletter: one email a month with restocks, new boards and build guides.',
-        },
-        { type: 'button', label: 'Yes, subscribe me', href: data.link },
-        {
-          type: 'note',
-          text: 'If it was not you, ignore this email and you will not hear from us again.',
-        },
+        { type: 'heading', text: c.newsletterConfirm.heading },
+        { type: 'text', text: c.newsletterConfirm.body },
+        { type: 'button', label: c.newsletterConfirm.button, href: data.link },
+        { type: 'note', text: c.newsletterConfirm.note },
       ],
     }),
   }),
@@ -314,20 +278,13 @@ export const templateDefinitions = {
   NEWSLETTER_WELCOME: define({
     category: 'newsletter',
     data: z.object({}),
-    render: (_data, context) => ({
-      subject: 'Welcome to the CSE Keyboards newsletter',
-      preheader: 'You are on the list.',
+    render: (_data, { c, page }) => ({
+      subject: c.welcome.subject,
+      preheader: c.welcome.preheader,
       blocks: [
-        { type: 'heading', text: 'You are on the list' },
-        {
-          type: 'text',
-          text: 'Thanks for subscribing. Expect one email a month: restocks, new boards, switch reviews and build guides. No spam.',
-        },
-        {
-          type: 'button',
-          label: 'Browse keyboards',
-          href: new URL('/shop', context.webUrl).toString(),
-        },
+        { type: 'heading', text: c.welcome.heading },
+        { type: 'text', text: c.welcome.body },
+        { type: 'button', label: c.welcome.button, href: page('/shop') },
       ],
     }),
   }),
@@ -344,5 +301,11 @@ export function renderTemplate(
   context: TemplateContext,
 ): EmailContent {
   const definition: TemplateDefinition<z.ZodType> = templateDefinitions[name];
-  return definition.render(definition.data.parse(data), context);
+  const { locale, webUrl } = context;
+  return definition.render(definition.data.parse(data), {
+    c: COPY[locale],
+    money: (money) => formatMoney(money, locale),
+    date: (iso) => formatDate(iso, locale),
+    page: (path) => new URL(localizedPath(path, locale), webUrl).toString(),
+  });
 }

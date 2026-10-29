@@ -1,3 +1,4 @@
+import type { Locale } from '@market/types';
 import { Inject, Injectable } from '@nestjs/common';
 import { and, eq, isNull } from 'drizzle-orm';
 import { DATABASE, type Database } from '../db/database.js';
@@ -15,10 +16,10 @@ export class AccountRecoveryService {
   ) {}
 
   /** Always succeeds from the caller's point of view: never reveals whether an account exists. */
-  async requestPasswordReset(email: string): Promise<void> {
+  async requestPasswordReset(email: string, locale: Locale = 'en'): Promise<void> {
     await this.db.transaction(async (tx) => {
       const [user] = await tx.select().from(users).where(eq(users.email, email));
-      if (user) await this.oneTimeTokens.issue(tx, user, 'PASSWORD_RESET');
+      if (user) await this.oneTimeTokens.issue(tx, user, 'PASSWORD_RESET', locale);
     });
   }
 
@@ -54,11 +55,11 @@ export class AccountRecoveryService {
     });
   }
 
-  async resendVerification(userId: string): Promise<void> {
+  async resendVerification(userId: string, locale: Locale = 'en'): Promise<void> {
     await this.db.transaction(async (tx) => {
       const [user] = await tx.select().from(users).where(eq(users.id, userId));
       if (user && !user.emailVerifiedAt)
-        await this.oneTimeTokens.issue(tx, user, 'EMAIL_VERIFICATION');
+        await this.oneTimeTokens.issue(tx, user, 'EMAIL_VERIFICATION', locale);
     });
   }
 }

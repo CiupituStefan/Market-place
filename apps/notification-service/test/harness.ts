@@ -167,7 +167,13 @@ export const eur = (amount: number) => ({ amount, currency: 'EUR' as const });
 
 /** A plausible OrderCreated payload. */
 export function orderCreated(
-  overrides: { orderId?: string; userId?: string | null; email?: string } = {},
+  overrides: {
+    orderId?: string;
+    userId?: string | null;
+    email?: string;
+    locale?: 'en' | 'ro' | undefined;
+    shippingCountry?: 'RO' | 'DE';
+  } = {},
 ) {
   return {
     orderId: overrides.orderId ?? randomUUID(),
@@ -185,12 +191,18 @@ export function orderCreated(
         unitPrice: eur(12_999),
       },
     ],
-    shippingCountry: 'RO' as const,
+    shippingCountry: overrides.shippingCountry ?? 'RO',
     couponCode: 'WELCOME10',
     subtotal: eur(25_998),
     discount: eur(2_600),
     shipping: eur(0),
     tax: eur(3_736),
     total: eur(23_398),
+    // Placed in English unless a test says otherwise (`locale: undefined`: an older event).
+    ...('locale' in overrides
+      ? overrides.locale
+        ? { locale: overrides.locale }
+        : {}
+      : { locale: 'en' as const }),
   };
 }

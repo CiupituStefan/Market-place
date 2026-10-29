@@ -10,7 +10,7 @@ import { useI18n } from '@/components/i18n/provider';
 import { userMessage } from '@/lib/api/errors';
 
 export function NewsletterForm() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const copy = t.home.newsletter;
   const inputId = useId();
   const [email, setEmail] = useState('');
@@ -21,6 +21,8 @@ export function NewsletterForm() {
       api('/newsletter/subscriptions', {
         method: 'POST',
         body: { email: value },
+        // Confirmation and newsletters come in the language the shopper subscribed in.
+        query: { locale },
         schema: z.unknown(),
       }),
   });

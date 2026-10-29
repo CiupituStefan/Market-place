@@ -10,6 +10,7 @@ import {
 } from '@market/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
+import { useI18n } from '@/components/i18n/provider';
 import { api } from './browser';
 import { CART_QUERY_KEY } from './cart';
 
@@ -74,12 +75,15 @@ export function useMyOrders(page: number) {
  */
 export function usePlaceOrder() {
   const queryClient = useQueryClient();
+  const { locale } = useI18n();
   return useMutation({
     mutationFn: ({ input, idempotencyKey }: { input: CheckoutRequest; idempotencyKey: string }) =>
       api('/orders', {
         method: 'POST',
         body: input,
         headers: { [IDEMPOTENCY_KEY_HEADER]: idempotencyKey },
+        // The order's emails are written in the language it was placed in.
+        query: { locale },
         schema: PlacedOrderSchema,
       }),
     onSuccess: (order) => {

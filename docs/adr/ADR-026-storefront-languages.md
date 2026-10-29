@@ -78,5 +78,5 @@ names) live in product-service, so the language also has to reach the API.
 - Product content is translated by whoever writes it (admin API now, an admin UI field later).
   Untranslated products still show, in English.
 - Catalog responses are cached per URL, `?locale=` included.
-- Emails, invoices and the back office remain English for now; emails follow in a later change,
-  together with storing the shopper's language on the order.
+- The back office remains English. Emails follow the shopper's language since
+  [ADR-027](ADR-027-email-languages.md).

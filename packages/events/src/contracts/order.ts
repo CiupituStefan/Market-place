@@ -1,4 +1,9 @@
-import { CancelReasonSchema, MoneySchema, ShippingCountrySchema } from '@market/types';
+import {
+  CancelReasonSchema,
+  LocaleSchema,
+  MoneySchema,
+  ShippingCountrySchema,
+} from '@market/types';
 import { z } from 'zod';
 import { defineEvent } from '../define.js';
 import { Topics } from '../topics.js';
@@ -31,6 +36,8 @@ export const OrderCreatedV1 = defineEvent({
     shipping: MoneySchema,
     tax: MoneySchema,
     total: MoneySchema,
+    /** The storefront language the order was placed in (emails follow it). Optional: added later. */
+    locale: LocaleSchema.optional(),
   }),
 });
 

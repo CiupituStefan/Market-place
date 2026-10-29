@@ -55,10 +55,7 @@
       "compositePrimaryKeys": {
         "inbox_events_consumer_event_id_pk": {
           "name": "inbox_events_consumer_event_id_pk",
-          "columns": [
-            "consumer",
-            "event_id"
-          ]
+          "columns": ["consumer", "event_id"]
         }
       },
       "uniqueConstraints": {},
@@ -454,21 +451,12 @@
     "public.newsletter_status": {
       "name": "newsletter_status",
       "schema": "public",
-      "values": [
-        "PENDING",
-        "SUBSCRIBED",
-        "UNSUBSCRIBED"
-      ]
+      "values": ["PENDING", "SUBSCRIBED", "UNSUBSCRIBED"]
     },
     "public.notification_status": {
       "name": "notification_status",
       "schema": "public",
-      "values": [
-        "QUEUED",
-        "SENT",
-        "FAILED",
-        "SUPPRESSED"
-      ]
+      "values": ["QUEUED", "SENT", "FAILED", "SUPPRESSED"]
     }
   },
   "schemas": {},

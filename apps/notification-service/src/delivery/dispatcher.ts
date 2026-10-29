@@ -5,12 +5,14 @@ import {
   type BeforeApplicationShutdown,
   type OnApplicationBootstrap,
 } from '@nestjs/common';
+import { localizedPath } from '@market/types';
 import { and, asc, eq, isNotNull, lt, lte } from 'drizzle-orm';
 import { APP_CONFIG, type AppConfig } from '../config.js';
 import { DATABASE, type Database } from '../db/database.js';
 import { notificationLogs, type NotificationLogRow } from '../db/schema.js';
 import { createUnsubscribeToken } from '../notifications/unsubscribe-token.js';
 import { renderEmail, type Footer, type RenderedEmail } from '../templates/blocks.js';
+import { COPY } from '../templates/copy.js';
 import {
   isTemplate,
   renderTemplate,
@@ -150,7 +152,10 @@ export class Dispatcher implements OnApplicationBootstrap, BeforeApplicationShut
 
   render(row: NotificationLogRow): RenderedEmail & { headers: Record<string, string> } {
     if (!isTemplate(row.template)) throw new Error(`Unknown template ${row.template}`);
-    const content = renderTemplate(row.template, row.data ?? {}, { webUrl: this.config.WEB_URL });
+    const content = renderTemplate(row.template, row.data ?? {}, {
+      webUrl: this.config.WEB_URL,
+      locale: row.locale,
+    });
     const footer = this.footer(row, templateDefinitions[row.template].category);
     const headers: Record<string, string> = { 'X-Entity-Ref-ID': row.id };
     if (footer.oneClickUrl) {
@@ -158,16 +163,17 @@ export class Dispatcher implements OnApplicationBootstrap, BeforeApplicationShut
       headers['List-Unsubscribe'] = `<${footer.oneClickUrl}>`;
       headers['List-Unsubscribe-Post'] = 'List-Unsubscribe=One-Click';
     }
-    return { ...renderEmail(content, footer), headers };
+    return { ...renderEmail(content, footer, row.locale), headers };
   }
 
   private footer(
     row: NotificationLogRow,
     category: Category,
   ): Footer & { oneClickUrl: string | null } {
+    const words = COPY[row.locale].footer;
     const links = (claim: Parameters<typeof createUnsubscribeToken>[1]) => {
       const token = createUnsubscribeToken(this.config.UNSUBSCRIBE_SECRET, claim);
-      const page = new URL('/unsubscribe', this.config.WEB_URL);
+      const page = new URL(localizedPath('/unsubscribe', row.locale), this.config.WEB_URL);
       page.searchParams.set('token', token);
       const oneClick = new URL('/api/v1/notifications/unsubscribe', this.config.PUBLIC_API_URL);
       oneClick.searchParams.set('token', token);
@@ -176,30 +182,30 @@ export class Dispatcher implements OnApplicationBootstrap, BeforeApplicationShut
     switch (category) {
       case 'security':
         return {
-          reason: 'You received this email because of a request made with this address.',
+          reason: words.security,
           unsubscribeUrl: null,
           oneClickUrl: null,
         };
       case 'transactional':
         return {
-          reason: 'You received this email because you placed an order at CSE Keyboards.',
+          reason: words.transactional,
           unsubscribeUrl: null,
           oneClickUrl: null,
         };
       case 'order-updates':
         return row.userId
           ? {
-              reason: 'Shipping updates for your order. You can turn them off in your account.',
+              reason: words.orderUpdates,
               ...links({ scope: 'order-updates', userId: row.userId }),
             }
           : {
-              reason: 'Shipping updates for the order you placed at CSE Keyboards.',
+              reason: words.orderUpdatesGuest,
               unsubscribeUrl: null,
               oneClickUrl: null,
             };
       case 'newsletter':
         return {
-          reason: 'You subscribed to the CSE Keyboards newsletter.',
+          reason: words.newsletter,
           ...links({ scope: 'newsletter', email: row.recipient }),
         };
     }
