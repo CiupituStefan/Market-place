@@ -141,11 +141,10 @@ Apoi:
 git clone --depth 1 --branch claude/mechanical-keyboard-ecommerce-irdl65 \
   https://github.com/CiupituStefan/Market-place.git
 cd Market-place
-deploy/gcp-vm/setup-vm.sh csekeyboards.com adresa-ta@gmail.com
+deploy/gcp-vm/setup-vm.sh csekeyboards.com
 ```
 
-Al doilea argument este emailul tău. Let's Encrypt îl folosește doar pentru avertismente
-despre certificat.
+Argumentul este domeniul magazinului. API-ul va fi pe `api.` + domeniu.
 
 Scriptul face singur toate etapele, afișând `1/5` … `5/5`:
 
@@ -209,13 +208,13 @@ Poți să-mi ceri să fac eu acest pas, dacă CLI-ul Vercel este încă autentif
 
 ## Utilizare zilnică (pe mașina virtuală, în `~/Market-place`)
 
-| Ce vrei                        | Comanda                                                        |
-| ------------------------------ | -------------------------------------------------------------- |
-| Starea serviciilor             | `deploy/gcp-vm/dc ps`                                          |
-| Log-urile unui serviciu        | `deploy/gcp-vm/dc logs -f --tail 100 order-service`            |
-| Repornirea unui serviciu       | `deploy/gcp-vm/dc restart cart-service`                        |
-| Actualizare după un commit nou | `git pull && deploy/gcp-vm/setup-vm.sh csekeyboards.com email` |
-| Emailurile trimise de magazin  | vezi mai jos                                                   |
+| Ce vrei                        | Comanda                                                  |
+| ------------------------------ | -------------------------------------------------------- |
+| Starea serviciilor             | `deploy/gcp-vm/dc ps`                                    |
+| Log-urile unui serviciu        | `deploy/gcp-vm/dc logs -f --tail 100 order-service`      |
+| Repornirea unui serviciu       | `deploy/gcp-vm/dc restart cart-service`                  |
+| Actualizare după un commit nou | `git pull && deploy/gcp-vm/setup-vm.sh csekeyboards.com` |
+| Emailurile trimise de magazin  | vezi mai jos                                             |
 
 **Emailurile** (confirmări de comandă, verificarea contului) nu pleacă spre adrese reale. Ajung
 în Mailpit, pe mașină. Ca să le vezi, rulează în **Cloud Shell**:

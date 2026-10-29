@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 # Prepares a fresh Ubuntu 24.04 VM and starts the backend (docs/deploy-google-cloud.md).
-#   deploy/gcp-vm/setup-vm.sh <site-domain> <email-for-https-certificates>
-#   e.g. deploy/gcp-vm/setup-vm.sh csekeyboards.com you@gmail.com
+#   deploy/gcp-vm/setup-vm.sh <site-domain>
+#   e.g. deploy/gcp-vm/setup-vm.sh csekeyboards.com
 # Safe to run again: it keeps an existing .env (and so the admin password) and rebuilds/restarts.
 set -euo pipefail
 
-domain="${1:?usage: $0 <site-domain> <email>}"
-email="${2:?usage: $0 <site-domain> <email>}"
+domain="${1:?usage: $0 <site-domain>}"
 here="$(cd "$(dirname "$0")" && pwd)"
 repo="$(cd "$here/../.." && pwd)"
 env_file="$here/.env"
@@ -46,7 +45,6 @@ if [ ! -f "$env_file" ]; then
   cat > "$env_file" <<ENV
 # Made by setup-vm.sh. Not in Git. Keep the admin password somewhere safe.
 API_DOMAIN=api.$domain
-ACME_EMAIL=$email
 SITE_URL=https://$domain
 SITE_ORIGINS=https://$domain,https://www.$domain
 COOKIE_DOMAIN=$domain

@@ -1,8 +1,5 @@
 # HTTPS for the API gateway. Caddy obtains and renews the Let's Encrypt certificate itself once
-# the DNS record for {$API_DOMAIN} points at this machine.
-{
-	email {$ACME_EMAIL}
-}
+# the DNS record for {$API_DOMAIN} points at this machine (no account email needed).
 
 {$API_DOMAIN} {
 	encode zstd gzip
