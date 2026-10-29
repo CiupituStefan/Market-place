@@ -177,6 +177,7 @@ Kubernetes (Helm) · Terraform · AWS (EKS, RDS, ElastiCache, MSK, ECR, WAF) · 
 - [Testing](docs/testing.md) (unit, integration, end-to-end)
 - [Continuous integration](docs/ci.md)
 - [Deployment](docs/deployment.md)
+- [Backend on one Google Cloud VM, step by step (Romanian)](docs/deploy-google-cloud.md) — demo hosting, storefront on Vercel
 - [Observability](docs/observability.md) and [runbooks](docs/runbooks.md)
 - [Repository settings](docs/repository-settings.md)
 - [Security policy](SECURITY.md) (report vulnerabilities privately)

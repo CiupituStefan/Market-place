@@ -1,0 +1,62 @@
+# The backend on one public virtual machine (docs/deploy-google-cloud.md): a demo deployment of
+# the Docker Compose stack behind HTTPS, with the storefront on Vercel. Use with:
+#   docker compose -f docker-compose.yml -f deploy/gcp-vm/compose.vm.yml up -d
+# Values come from deploy/gcp-vm/.env (made by setup-vm.sh; git-ignored).
+#
+# Only Caddy is reachable from the internet (80/443). PostgreSQL, Redis, Kafka, Mailpit, object
+# storage and Kafka UI stay bound to 127.0.0.1 as in docker-compose.yml, behind the VM firewall.
+# Production proper is Kubernetes on AWS (infrastructure/terraform), not this.
+
+services:
+  caddy:
+    image: caddy:2.11.7-alpine@sha256:eb4d35b7452d1ab6171fbdbe8d9275b2301dad6dad92115d91e19fb9b24d510f
+    restart: unless-stopped
+    depends_on:
+      api-gateway: { condition: service_healthy }
+    environment:
+      API_DOMAIN: ${API_DOMAIN:?set API_DOMAIN in deploy/gcp-vm/.env}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in deploy/gcp-vm/.env}
+    ports: ['80:80', '443:443', '443:443/udp']
+    volumes:
+      - ./deploy/gcp-vm/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+  api-gateway:
+    environment:
+      CORS_ORIGINS: ${SITE_ORIGINS:?set SITE_ORIGINS in deploy/gcp-vm/.env}
+      # Caddy is the one proxy in front: the client address is the last X-Forwarded-For hop.
+      TRUST_PROXY: 1
+      DOCS_ENABLED: 'false'
+    # Reached through Caddy only.
+    ports: !reset []
+
+  auth-service:
+    environment:
+      WEB_URL: ${SITE_URL:?set SITE_URL in deploy/gcp-vm/.env}
+      # The storefront (csekeyboards.com) and the API (api.csekeyboards.com) share the session
+      # cookies, so the storefront's server can tell a signed-in visitor.
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:?set COOKIE_DOMAIN in deploy/gcp-vm/.env}
+      COOKIE_SECURE: 'true'
+
+  cart-service:
+    environment:
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN}
+      COOKIE_SECURE: 'true'
+
+  notification-service:
+    environment:
+      WEB_URL: ${SITE_URL}
+
+  seed-admin:
+    environment:
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?set ADMIN_EMAIL in deploy/gcp-vm/.env}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in deploy/gcp-vm/.env}
+
+  # The storefront runs on Vercel: not started here.
+  web:
+    profiles: [storefront]
+
+volumes:
+  caddy-data:
+  caddy-config:

@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# `docker compose` for the VM deployment: the base stack plus compose.vm.yml, with deploy/gcp-vm/.env.
+#   deploy/gcp-vm/dc ps | logs -f order-service | restart cart-service | ...
+set -euo pipefail
+cd "$(dirname "$0")/../.."
+docker=(docker)
+docker info >/dev/null 2>&1 || docker=(sudo docker)
+exec "${docker[@]}" compose --env-file deploy/gcp-vm/.env -f docker-compose.yml -f deploy/gcp-vm/compose.vm.yml "$@"

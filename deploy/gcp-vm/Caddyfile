@@ -1,0 +1,14 @@
+# HTTPS for the API gateway. Caddy obtains and renews the Let's Encrypt certificate itself once
+# the DNS record for {$API_DOMAIN} points at this machine.
+{
+	email {$ACME_EMAIL}
+}
+
+{$API_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy api-gateway:4000
+	log {
+		output stdout
+		format json
+	}
+}

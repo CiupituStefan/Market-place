@@ -52,3 +52,6 @@ dump.rdb
 
 # code scanning reports (CI, scripts/security-scan.sh with SARIF_DIR)
 .sarif/
+
+# VM deployment settings (generated, contain the admin password)
+deploy/gcp-vm/.env
