@@ -116,6 +116,36 @@ Trebuie să afișeze același IP. Dacă nu afișează nimic, mai așteaptă 2–
 **Nu trece mai departe până nu vezi IP-ul:** fără DNS corect, certificatul HTTPS de la pasul 9
 nu poate fi obținut.
 
+> **Varianta automată (fără SSH), folosită pentru csekeyboards.com:** în loc de pașii 8–9,
+> mașina poate face instalarea singură la prima pornire, printr-un _startup script_:
+>
+> ```bash
+> cat > startup.sh <<'SCRIPT'
+> #!/bin/bash
+> set -euo pipefail
+> [ -f /opt/cse/.installed ] && exit 0
+> export HOME=/root USER=root DEBIAN_FRONTEND=noninteractive
+> mkdir -p /opt/cse
+> [ -d /opt/cse/Market-place ] || git clone --depth 1 --branch claude/mechanical-keyboard-ecommerce-irdl65 \
+>   https://github.com/CiupituStefan/Market-place.git /opt/cse/Market-place
+> cd /opt/cse/Market-place && deploy/gcp-vm/setup-vm.sh csekeyboards.com
+> touch /opt/cse/.installed
+> SCRIPT
+> gcloud compute instances add-metadata cse-api --zone=europe-west3-a --metadata-from-file=startup-script=startup.sh
+> gcloud compute instances reset cse-api --zone=europe-west3-a
+> ```
+>
+> Progresul se vede cu
+> `gcloud compute instances get-serial-port-output cse-api --zone=europe-west3-a | grep startup-script`.
+> Codul ajunge atunci în `/opt/cse/Market-place`, deci comenzile de mai jos se rulează cu `sudo`
+> de acolo, de exemplu `sudo /opt/cse/Market-place/deploy/gcp-vm/dc ps`. Parola de admin o afli din
+> Cloud Shell cu:
+>
+> ```bash
+> gcloud compute ssh cse-api --zone=europe-west3-a \
+>   --command="sudo grep ADMIN_PASSWORD /opt/cse/Market-place/deploy/gcp-vm/.env"
+> ```
+
 ## Pasul 8 — Conectează-te la mașină
 
 ```bash
