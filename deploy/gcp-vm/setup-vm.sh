@@ -79,6 +79,8 @@ jobs='^(seed-admin|seed-catalog|seed-inventory|seed-discounts|storage-init)$'
 mapfile -t services < <("$here/dc" config --services | grep -vE "$jobs")
 "$here/dc" up -d --wait --wait-timeout 900 "${services[@]}"
 "$here/dc" up -d seed-admin seed-catalog seed-inventory seed-discounts storage-init
+# The Caddyfile is a bind-mounted file: `git pull` replaces it, so recreate Caddy to load it.
+"$here/dc" up -d --force-recreate --no-deps caddy
 "$here/dc" ps --format 'table {{.Service}}\t{{.Status}}'
 
 api_domain="$(grep '^API_DOMAIN=' "$env_file" | cut -d= -f2)"
