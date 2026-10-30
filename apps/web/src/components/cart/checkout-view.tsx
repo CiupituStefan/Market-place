@@ -1,5 +1,7 @@
 'use client';
 
+import { StoreClosedNotice } from '@/components/store-closed-notice';
+import { storeOpen } from '@/lib/env';
 import { CheckoutRequestSchema, ErrorCode } from '@market/types';
 import { CloudOffIcon, CreditCardIcon, LockIcon, ShoppingBagIcon } from 'lucide-react';
 import Link from '@/components/i18n/link';
@@ -33,6 +35,7 @@ export function CheckoutView() {
   const cart = useCart();
   const session = useSession();
 
+  if (!storeOpen) return <StoreClosedNotice />;
   if (cart.isPending || session.isPending) {
     return <Skeleton className="h-96" aria-label={copy.loading} />;
   }

@@ -38,6 +38,7 @@ export const ro: Messages = {
       PRODUCT_OUT_OF_STOCK: 'Produsul nu mai este în stoc.',
       INSUFFICIENT_STOCK: 'Nu avem destul stoc pentru cantitatea aleasă.',
       INVALID_CONFIGURATION: 'Această combinație nu este posibilă. Schimbă una dintre piese.',
+      STORE_CLOSED: 'Încă nu preluăm comenzi: magazinul se deschide în curând.',
       CART_NOT_FOUND: 'Coșul tău nu a fost găsit. Adaugă din nou produsele.',
       CART_EMPTY: 'Coșul tău este gol.',
       COUPON_INVALID: 'Codul de reducere nu este valid.',
@@ -66,6 +67,12 @@ export const ro: Messages = {
   },
   layout: {
     announcement: 'Livrare gratuită în UE peste 99 € · Retur în 30 de zile · Garanție 2 ani',
+    previewAnnouncement: 'Lansăm în curând: vezi produsele acum, comenzile se deschid la lansare',
+    storeClosed: {
+      title: 'Comenzile se deschid în curând',
+      body: 'Magazinul nu preia încă comenzi. Lasă-ne adresa de email și te anunțăm când se deschide.',
+      notify: 'Anunță-mă',
+    },
     nav: {
       keyboards: 'Tastaturi',
       switches: 'Switch-uri',
@@ -98,8 +105,9 @@ export const ro: Messages = {
       about: 'Despre CSE',
       privacy: 'Confidențialitate',
       terms: 'Termeni și condiții',
-      blurb:
-        'CSE Keyboards creează și selectează tastaturi mecanice premium, switch-uri, keycaps și accesorii de birou — reglate, testate și livrate gata de tastat.',
+      cookies: 'Cookie-uri',
+      legal: 'Informații legale',
+      blurb: 'Tastaturi mecanice, switch-uri, keycaps și accesorii de birou.',
       rights: (year: number) => `© ${String(year)} CSE Keyboards. Toate drepturile rezervate.`,
       payments:
         'Plăți securizate cu cardul, procesate de Stripe. Nu stocăm niciodată datele cardului.',
@@ -350,6 +358,8 @@ export const ro: Messages = {
     },
   },
   pages: {
+    draftNotice:
+      'Ciornă: această pagină este în curs de completare și va fi verificată de un jurist înainte de deschiderea magazinului. Detaliile dintre [paranteze] nu sunt încă completate.',
     cart: 'Coș',
     checkout: 'Finalizarea comenzii',
     account: 'Cont',
@@ -604,6 +614,7 @@ export const ro: Messages = {
   home: {
     hero: {
       eyebrow: 'Forge 75 · Disponibilă acum',
+      eyebrowPreview: 'Forge 75 · În curând',
       title: 'Construită pentru felul în care tastezi.',
       body: 'Tastaturi mecanice frezate, reglate și testate în atelierul nostru. Fiecare tastatură pleacă lubrifiată, amortizată și gata de folosit — fără modificări.',
       shop: 'Vezi tastaturile',

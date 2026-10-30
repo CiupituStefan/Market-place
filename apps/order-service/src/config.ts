@@ -25,6 +25,11 @@ export const ConfigSchema = baseServiceEnv
     SWEEP_BATCH_SIZE: z.coerce.number().int().min(1).max(500).default(50),
     /** SKIP LOCKED makes several sweepers safe; disable per replica if needed. */
     SWEEPER_ENABLED: booleanString.default(true),
+    /**
+     * Off: checkout answers STORE_CLOSED (preview before launch, e.g. while the business is not
+     * yet registered or no real payment provider is set up). Enforced here, not only in the UI.
+     */
+    ORDERS_ENABLED: booleanString.default(true),
   })
   .transform((env) => ({
     ...env,

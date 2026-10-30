@@ -1,3 +1,4 @@
+import { storeOpen } from '@/lib/env';
 import { ArrowRightIcon } from 'lucide-react';
 import Link from '@/components/i18n/link';
 import { getI18n } from '@/lib/i18n/server';
@@ -25,7 +26,7 @@ export async function Hero() {
       />
       <div className="container-page relative grid items-center gap-12 pt-14 pb-20 lg:grid-cols-[1fr_1.15fr] lg:pt-24 lg:pb-28">
         <div className="max-w-xl animate-in duration-700 fade-in slide-in-from-bottom-4">
-          <p className="eyebrow">{copy.eyebrow}</p>
+          <p className="eyebrow">{storeOpen ? copy.eyebrow : copy.eyebrowPreview}</p>
           <h1
             id="hero-title"
             className="mt-4 text-5xl font-semibold tracking-tight text-balance md:text-6xl lg:text-7xl"

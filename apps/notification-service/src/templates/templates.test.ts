@@ -65,10 +65,22 @@ describe('email templates', () => {
 
   it.each(TEMPLATES)('%s also renders in Romanian, with a different subject', (name) => {
     const en = renderEmail(renderTemplate(name, samples[name], context), footer);
-    const ro = renderEmail(renderTemplate(name, samples[name], romanian), footer, 'ro');
+    const ro = renderEmail(
+      renderTemplate(name, samples[name], romanian),
+      { ...footer, unsubscribeUrl: 'https://shop.test/ro/unsubscribe?token=t' },
+      'ro',
+    );
     expect(ro.subject).not.toBe(en.subject);
     expect(ro.html).toContain('<html lang="ro">');
-    expect(ro.html).toContain('București, România');
+    expect(ro.text).toContain('Dezabonare: https://shop.test/ro/unsubscribe?token=t');
+  });
+
+  it('shows a postal address only when one is configured (never a made-up one)', () => {
+    const content = renderTemplate('NEWSLETTER_WELCOME', {}, context);
+    expect(renderEmail(content, footer).html).toContain('>CSE Keyboards</div>');
+    expect(
+      renderEmail(content, { ...footer, postalAddress: 'Str. Exemplu 1, Cluj' }).html,
+    ).toContain('CSE Keyboards · Str. Exemplu 1, Cluj');
   });
 
   it('writes Romanian order emails with Romanian money, dates and links', () => {

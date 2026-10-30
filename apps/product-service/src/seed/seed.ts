@@ -11,6 +11,7 @@ import {
   configuratorOptions,
   configurators,
   products as productsTable,
+  productVariants as productVariantsTable,
 } from '../db/schema.js';
 import { categories, featuredSlugs, products } from './catalog-data.js';
 import { romanianCategories, romanianConfigurator, romanianProduct } from './catalog-data.ro.js';
@@ -28,7 +29,21 @@ function categoryTranslations(slug: string): CategoryTranslations {
 
 const isEmpty = (value: object) => Object.keys(value).length === 0;
 
-export function toCreateInput(product: Product): CreateProductInput {
+/**
+ * Demo merchandising: made-up star ratings and review counts, BESTSELLER / LIMITED / SALE / NEW
+ * badges and "was" (compare-at) prices. Fine for local development and tests, but on a site
+ * real people visit they would be fake reviews and fake reference prices (EU consumer law), so
+ * deployments seed without them (SEED_DEMO_MERCHANDISING=false).
+ */
+export interface SeedOptions {
+  demoMerchandising: boolean;
+}
+
+export function toCreateInput(
+  product: Product,
+  options: SeedOptions = { demoMerchandising: true },
+): CreateProductInput {
+  const demo = options.demoMerchandising;
   const { brand: _brand, ...attributes } = product.attributes;
   const rank = featuredSlugs.indexOf(product.slug);
   return {
@@ -44,7 +59,7 @@ export function toCreateInput(product: Product): CreateProductInput {
     compatibility: product.compatibility,
     faq: product.faq,
     specs: product.specs,
-    badges: product.badges,
+    badges: demo ? product.badges : [],
     preview: product.preview,
     options: product.options,
     attributes,
@@ -54,7 +69,7 @@ export function toCreateInput(product: Product): CreateProductInput {
       sku: variant.sku,
       options: variant.options,
       price: variant.price.amount,
-      compareAtPrice: variant.compareAtPrice?.amount ?? null,
+      compareAtPrice: demo ? (variant.compareAtPrice?.amount ?? null) : null,
       availability: variant.availability,
       preview: variant.preview,
     })),
@@ -69,6 +84,7 @@ export function toCreateInput(product: Product): CreateProductInput {
 export async function seedCatalog(
   db: Database,
   config: AppConfig,
+  options: SeedOptions = { demoMerchandising: true },
 ): Promise<{ created: number; skipped: number }> {
   const writer = new CatalogWriterService(db, config);
   const existingCategories = new Map(
@@ -115,17 +131,20 @@ export async function seedCatalog(
       const translations = productTranslations(product);
       if (isEmpty(existing.translations) && !isEmpty(translations))
         await writer.update(existing.id, { translations });
+      if (!options.demoMerchandising)
+        await removeDemoMerchandising(db, writer, existing.id, product);
       skipped += 1;
       continue;
     }
-    const id = await writer.create(toCreateInput(product));
+    const id = await writer.create(toCreateInput(product, options));
     await writer.setStatus(id, 'PUBLISHED');
     // Demo-only projections that normally come from review-service and the publish time.
     await db
       .update(productsTable)
       .set({
-        ratingAverage: product.rating.average,
-        ratingCount: product.rating.count,
+        ...(options.demoMerchandising
+          ? { ratingAverage: product.rating.average, ratingCount: product.rating.count }
+          : {}),
         publishedAt: new Date(product.createdAt),
       })
       .where(eq(productsTable.id, id));
@@ -176,3 +195,50 @@ async function seedConfigurator(db: Database): Promise<void> {
       .values(CSE_CUSTOM.incompatibilities.map((rule) => ({ ...rule, configuratorId: row.id })));
   });
 }
+
+/**
+ * Takes the demo merchandising off a product seeded with it earlier, touching only values that
+ * still equal the demo data: ratings from real reviews, badges and prices an admin set stay.
+ */
+async function removeDemoMerchandising(
+  db: Database,
+  writer: CatalogWriterService,
+  productId: string,
+  demo: Product,
+): Promise<void> {
+  const [row] = await db
+    .select({
+      badges: productsTable.badges,
+      ratingAverage: productsTable.ratingAverage,
+      ratingCount: productsTable.ratingCount,
+    })
+    .from(productsTable)
+    .where(eq(productsTable.id, productId));
+  if (!row) return;
+  if (demo.badges.length > 0 && sameItems(row.badges, demo.badges))
+    await writer.update(productId, { badges: [] });
+  if (
+    row.ratingCount === demo.rating.count &&
+    Math.abs(row.ratingAverage - demo.rating.average) < 0.01
+  )
+    await db
+      .update(productsTable)
+      .set({ ratingAverage: 0, ratingCount: 0 })
+      .where(eq(productsTable.id, productId));
+  const variants = await db
+    .select({
+      id: productVariantsTable.id,
+      sku: productVariantsTable.sku,
+      compareAt: productVariantsTable.compareAtAmount,
+    })
+    .from(productVariantsTable)
+    .where(eq(productVariantsTable.productId, productId));
+  for (const variant of variants) {
+    const seeded = demo.variants.find((v) => v.sku === variant.sku)?.compareAtPrice?.amount;
+    if (seeded !== undefined && variant.compareAt === seeded)
+      await writer.updateVariant(productId, variant.id, { compareAtPrice: null });
+  }
+}
+
+const sameItems = (a: readonly string[], b: readonly string[]) =>
+  a.length === b.length && a.every((item) => b.includes(item));

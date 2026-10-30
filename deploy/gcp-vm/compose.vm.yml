@@ -46,6 +46,26 @@ services:
   notification-service:
     environment:
       WEB_URL: ${SITE_URL}
+      # Signs unsubscribe links: the docker-compose.yml default is public, so a random one is
+      # required here (setup-vm.sh generates it).
+      UNSUBSCRIBE_SECRET: ${UNSUBSCRIBE_SECRET:?set UNSUBSCRIBE_SECRET in deploy/gcp-vm/.env}
+      # The registered business address for email footers, once the business exists.
+      EMAIL_POSTAL_ADDRESS: ${EMAIL_POSTAL_ADDRESS:-}
+
+  payment-service:
+    environment:
+      # With the mock provider this signs its own webhooks; the default is public (generated here).
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:?set STRIPE_WEBHOOK_SECRET in deploy/gcp-vm/.env}
+
+  order-service:
+    environment:
+      # Preview until the business can sell (registered, real payments): checkout is refused.
+      ORDERS_ENABLED: ${ORDERS_ENABLED:-false}
+
+  seed-catalog:
+    environment:
+      # Real visitors: no made-up ratings, badges or "was" prices (also removes them if present).
+      SEED_DEMO_MERCHANDISING: 'false'
 
   seed-admin:
     environment:

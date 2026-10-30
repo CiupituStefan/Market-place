@@ -1,5 +1,7 @@
 'use client';
 
+import { StoreClosedNotice } from '@/components/store-closed-notice';
+import { storeOpen } from '@/lib/env';
 import { MAX_LINE_QUANTITY, type CartItem } from '@market/types';
 import {
   AlertTriangleIcon,
@@ -78,7 +80,9 @@ export function CartView() {
         cart={cart.data}
         extra={<CouponForm couponCode={cart.data.couponCode} />}
         action={
-          cart.data.canCheckout ? (
+          !storeOpen ? (
+            <StoreClosedNotice />
+          ) : cart.data.canCheckout ? (
             <Button size="lg" className="w-full" asChild>
               <Link href="/checkout">{copy.checkout}</Link>
             </Button>

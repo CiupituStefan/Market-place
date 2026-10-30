@@ -1,5 +1,7 @@
 'use client';
 
+import { StoreClosedNotice } from '@/components/store-closed-notice';
+import { storeOpen } from '@/lib/env';
 import {
   CheckIcon,
   HeartIcon,
@@ -153,26 +155,28 @@ export function ProductExperience({ product, initialSelection }: ProductExperien
                 <PlusIcon />
               </Button>
             </div>
-            <Button
-              size="lg"
-              className="flex-1"
-              disabled={!purchasable || cart.isPending}
-              onClick={() => {
-                onAddToCart(false);
-              }}
-            >
-              {cart.isSuccess ? (
-                <>
-                  <CheckIcon /> {copy.added}
-                </>
-              ) : cart.isPending ? (
-                copy.adding
-              ) : purchasable ? (
-                copy.addToCart
-              ) : (
-                copy.soldOut
-              )}
-            </Button>
+            {storeOpen && (
+              <Button
+                size="lg"
+                className="flex-1"
+                disabled={!purchasable || cart.isPending}
+                onClick={() => {
+                  onAddToCart(false);
+                }}
+              >
+                {cart.isSuccess ? (
+                  <>
+                    <CheckIcon /> {copy.added}
+                  </>
+                ) : cart.isPending ? (
+                  copy.adding
+                ) : purchasable ? (
+                  copy.addToCart
+                ) : (
+                  copy.soldOut
+                )}
+              </Button>
+            )}
             <Button
               size="lg"
               variant="outline"
@@ -186,16 +190,20 @@ export function ProductExperience({ product, initialSelection }: ProductExperien
               <HeartIcon className={cn(wishlist.isSuccess && 'fill-brand text-brand')} />
             </Button>
           </div>
-          <Button
-            size="lg"
-            variant="brand"
-            disabled={!purchasable || cart.isPending}
-            onClick={() => {
-              onAddToCart(true);
-            }}
-          >
-            {copy.buyNow}
-          </Button>
+          {storeOpen ? (
+            <Button
+              size="lg"
+              variant="brand"
+              disabled={!purchasable || cart.isPending}
+              onClick={() => {
+                onAddToCart(true);
+              }}
+            >
+              {copy.buyNow}
+            </Button>
+          ) : (
+            <StoreClosedNotice />
+          )}
           {cart.isError && (
             <p role="alert" className="text-sm text-destructive">
               {userMessage(cart.error, t)}

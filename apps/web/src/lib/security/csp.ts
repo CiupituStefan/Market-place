@@ -19,10 +19,12 @@ export interface CspOptions {
   https: boolean;
 }
 
+// Payment Element only. Stripe's Address Element (Google Maps autocomplete) is not used, so
+// maps.googleapis.com is deliberately not allowed: add it only together with that element.
 const STRIPE = {
-  script: ['https://js.stripe.com', 'https://*.js.stripe.com', 'https://maps.googleapis.com'],
+  script: ['https://js.stripe.com', 'https://*.js.stripe.com'],
   frame: ['https://js.stripe.com', 'https://*.js.stripe.com', 'https://hooks.stripe.com'],
-  connect: ['https://api.stripe.com', 'https://maps.googleapis.com'],
+  connect: ['https://api.stripe.com'],
   img: ['https://*.stripe.com'],
 };
 

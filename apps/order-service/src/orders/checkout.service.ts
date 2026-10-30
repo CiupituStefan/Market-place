@@ -66,6 +66,9 @@ export class CheckoutService {
     /** Storefront language; travels on OrderCreated so the order's emails use it. */
     locale: Locale = 'en',
   ): Promise<{ order: PlacedOrder; replayed: boolean }> {
+    if (!this.config.ORDERS_ENABLED) {
+      throw new DomainError(ErrorCode.STORE_CLOSED, 'The shop is not taking orders yet');
+    }
     if (!identity.userId && !identity.guestToken) {
       throw new DomainError(ErrorCode.CART_EMPTY, 'Your cart is empty');
     }

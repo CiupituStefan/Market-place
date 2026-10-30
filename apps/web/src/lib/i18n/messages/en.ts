@@ -41,6 +41,7 @@ export const en = {
       PRODUCT_OUT_OF_STOCK: 'This product is out of stock.',
       INSUFFICIENT_STOCK: 'Not enough stock for the quantity you chose.',
       INVALID_CONFIGURATION: 'This combination is not possible. Change one of the parts.',
+      STORE_CLOSED: 'We are not taking orders yet: the shop opens soon.',
       CART_NOT_FOUND: 'Your cart could not be found. Add the products again.',
       CART_EMPTY: 'Your cart is empty.',
       COUPON_INVALID: 'This discount code is not valid.',
@@ -69,6 +70,12 @@ export const en = {
   },
   layout: {
     announcement: 'Free EU shipping over €99 · 30-day returns · 2-year warranty',
+    previewAnnouncement: 'Opening soon: browse the range now, orders open at launch',
+    storeClosed: {
+      title: 'Orders open soon',
+      body: 'The shop is not taking orders yet. Leave your email and we will tell you when it opens.',
+      notify: 'Notify me',
+    },
     nav: {
       keyboards: 'Keyboards',
       switches: 'Switches',
@@ -101,8 +108,9 @@ export const en = {
       about: 'About CSE',
       privacy: 'Privacy',
       terms: 'Terms',
-      blurb:
-        'CSE Keyboards builds and curates premium mechanical keyboards, switches, keycaps and desk accessories — tuned, tested and shipped ready to type.',
+      cookies: 'Cookies',
+      legal: 'Legal notice',
+      blurb: 'Mechanical keyboards, switches, keycaps and desk accessories.',
       rights: (year: number) => `© ${String(year)} CSE Keyboards. All rights reserved.`,
       payments: 'Secure card payments processed by Stripe. We never store card details.',
     },
@@ -319,6 +327,8 @@ export const en = {
     },
   },
   pages: {
+    draftNotice:
+      'Draft: this page is being completed and will be reviewed by a lawyer before the shop opens. Details in [brackets] are not filled in yet.',
     cart: 'Cart',
     checkout: 'Checkout',
     account: 'Account',
@@ -568,6 +578,7 @@ export const en = {
   home: {
     hero: {
       eyebrow: 'Forge 75 · Now shipping',
+      eyebrowPreview: 'Forge 75 · Coming soon',
       title: 'Built for the way you type.',
       body: 'Mechanical keyboards milled, tuned and tested in-house. Every board ships lubed, dampened and ready — no modding required.',
       shop: 'Shop keyboards',

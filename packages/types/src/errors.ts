@@ -34,6 +34,8 @@ export const ErrorCode = {
   COUPON_INVALID: 'COUPON_INVALID',
   COUPON_EXPIRED: 'COUPON_EXPIRED',
   PRICE_CHANGED: 'PRICE_CHANGED',
+  /** The shop is not taking orders (preview mode before launch). */
+  STORE_CLOSED: 'STORE_CLOSED',
   // orders / payments
   ORDER_NOT_FOUND: 'ORDER_NOT_FOUND',
   INVALID_ORDER_STATE: 'INVALID_ORDER_STATE',
@@ -70,6 +72,7 @@ const ERROR_STATUS: Record<ErrorCode, number> = {
   COUPON_INVALID: 422,
   COUPON_EXPIRED: 422,
   PRICE_CHANGED: 409,
+  STORE_CLOSED: 503,
   ORDER_NOT_FOUND: 404,
   INVALID_ORDER_STATE: 409,
   PAYMENT_FAILED: 402,

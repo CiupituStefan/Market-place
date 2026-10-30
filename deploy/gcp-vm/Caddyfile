@@ -3,6 +3,11 @@
 
 {$API_DOMAIN} {
 	encode zstd gzip
+	header {
+		# The API is HTTPS-only; browsers must never try plain HTTP for it again.
+		Strict-Transport-Security "max-age=63072000; includeSubDomains"
+		-Server
+	}
 	reverse_proxy api-gateway:4000
 	log {
 		output stdout

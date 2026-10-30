@@ -163,7 +163,14 @@ export class Dispatcher implements OnApplicationBootstrap, BeforeApplicationShut
       headers['List-Unsubscribe'] = `<${footer.oneClickUrl}>`;
       headers['List-Unsubscribe-Post'] = 'List-Unsubscribe=One-Click';
     }
-    return { ...renderEmail(content, footer, row.locale), headers };
+    return {
+      ...renderEmail(
+        content,
+        { ...footer, postalAddress: this.config.EMAIL_POSTAL_ADDRESS ?? null },
+        row.locale,
+      ),
+      headers,
+    };
   }
 
   private footer(

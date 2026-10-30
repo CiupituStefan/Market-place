@@ -28,13 +28,18 @@ export async function generateMetadata(props: PageProps<'/[page]'>): Promise<Met
 
 export default async function ContentPage(props: PageProps<'/[page]'>) {
   const { page } = await props.params;
-  const { locale } = await getI18n();
+  const { locale, t } = await getI18n();
   const content = contentOf(page, locale);
   if (!content) notFound();
   return (
     <article className="container-page max-w-3xl py-16">
       <h1 className="text-4xl font-semibold tracking-tight">{content.title}</h1>
       <p className="mt-4 text-lg text-muted-foreground">{content.description}</p>
+      {content.draft && (
+        <p role="note" className="mt-6 rounded-xl border border-dashed p-4 text-sm">
+          {t.pages.draftNotice}
+        </p>
+      )}
       <div className="mt-12 grid gap-10">
         {content.sections.map((section) => (
           <section key={section.heading}>

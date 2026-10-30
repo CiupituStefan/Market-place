@@ -1,5 +1,7 @@
 'use client';
 
+import { StoreClosedNotice } from '@/components/store-closed-notice';
+import { storeOpen } from '@/lib/env';
 import { useMutation } from '@tanstack/react-query';
 import { CheckIcon } from 'lucide-react';
 import { useState } from 'react';
@@ -173,22 +175,25 @@ export function ConfiguratorBuilder({ configurator, initialQuote }: Configurator
               </p>
             </>
           )}
-          <Button
-            size="lg"
-            className="mt-6 w-full"
-            disabled={invalid || quoting.isPending || addToCart.isPending}
-            onClick={() => {
-              addToCart.mutate({ configurator: configurator.slug, selection });
-            }}
-          >
-            {addToCart.isSuccess ? (
-              <>
-                <CheckIcon /> {copy.added}
-              </>
-            ) : (
-              copy.addToCart
-            )}
-          </Button>
+          {!storeOpen && <StoreClosedNotice className="mt-6" />}
+          {storeOpen && (
+            <Button
+              size="lg"
+              className="mt-6 w-full"
+              disabled={invalid || quoting.isPending || addToCart.isPending}
+              onClick={() => {
+                addToCart.mutate({ configurator: configurator.slug, selection });
+              }}
+            >
+              {addToCart.isSuccess ? (
+                <>
+                  <CheckIcon /> {copy.added}
+                </>
+              ) : (
+                copy.addToCart
+              )}
+            </Button>
+          )}
           {addToCart.isError && (
             <p role="alert" className="mt-3 text-sm text-destructive">
               {userMessage(addToCart.error, t)}

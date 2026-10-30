@@ -30,8 +30,8 @@ describe('buildCsp', () => {
       "'self'",
       'https://api.csekeyboards.com',
       'https://api.stripe.com',
-      'https://maps.googleapis.com',
     ]);
+    expect(directive(production, 'script-src')?.join(' ')).not.toContain('googleapis');
     expect(directive(production, 'img-src')).toContain('https://cdn.csekeyboards.com');
     expect(directive(production, 'frame-src')).toContain('https://hooks.stripe.com');
   });

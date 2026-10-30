@@ -1,5 +1,6 @@
 'use client';
 
+import { storeOpen } from '@/lib/env';
 import type { WishlistItem } from '@market/types';
 import { CloudOffIcon, HeartIcon, ShoppingBagIcon, TrashIcon } from 'lucide-react';
 import Link from '@/components/i18n/link';
@@ -92,7 +93,7 @@ function WishlistCard({ item }: { item: WishlistItem }) {
       <div className="mt-4 flex gap-2">
         <Button
           className="flex-1"
-          disabled={!item.available || addToCart.isPending}
+          disabled={!storeOpen || !item.available || addToCart.isPending}
           onClick={() => {
             addToCart.mutate({ variantId: item.variantId, quantity: 1 });
           }}

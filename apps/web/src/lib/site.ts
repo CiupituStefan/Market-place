@@ -4,16 +4,15 @@ export const siteConfig = {
   name: 'CSE Keyboards',
   shortName: 'CSE',
   tagline: 'Precision-built mechanical keyboards',
-  description:
-    'CSE Keyboards builds and curates premium mechanical keyboards, switches, keycaps and desk accessories — tuned, tested and shipped ready to type.',
+  description: 'Mechanical keyboards, switches, keycaps and desk accessories.',
   url: publicEnv.NEXT_PUBLIC_SITE_URL,
   locale: 'en_US',
-  supportEmail: 'support@csekeyboards.com',
-  social: {
-    instagram: 'https://instagram.com/csekeyboards',
-    youtube: 'https://youtube.com/@csekeyboards',
-    discord: 'https://discord.gg/csekeyboards',
-  },
+  /**
+   * Profiles the business actually owns, for search engines (JSON-LD `sameAs`). Empty until
+   * they exist: listing someone else's account as ours would be false. No contact email either
+   * until the domain has a mailbox (it has no MX record yet).
+   */
+  social: [] as readonly string[],
 } as const;
 
 export function absoluteUrl(path = '/'): string {

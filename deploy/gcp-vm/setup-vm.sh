@@ -57,6 +57,15 @@ ENV
 else
   echo "kept the existing settings"
 fi
+# Secrets added after the first install: generated once, never overwritten.
+add_secret() {
+  if ! sudo grep -q "^$1=" "$env_file"; then
+    printf '%s=%s\n' "$1" "$2$(openssl rand -hex 32)" | sudo tee -a "$env_file" >/dev/null
+    echo "generated $1"
+  fi
+}
+add_secret UNSUBSCRIBE_SECRET ''
+add_secret STRIPE_WEBHOOK_SECRET 'whsec_'
 
 step "4/5 Build the images (one at a time: about 30-45 minutes the first time)"
 cd "$repo"

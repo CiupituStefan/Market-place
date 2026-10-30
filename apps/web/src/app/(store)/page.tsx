@@ -1,3 +1,4 @@
+import { storeOpen } from '@/lib/env';
 import { CategoryTiles } from '@/components/home/category-tiles';
 import { ConfiguratorTeaser } from '@/components/home/configurator-teaser';
 import { Hero } from '@/components/home/hero';
@@ -95,17 +96,21 @@ export default async function HomePage() {
         <ConfiguratorTeaser />
       </section>
 
-      <section
-        aria-labelledby="why-title"
-        className="container-page py-16 [contain-intrinsic-size:auto_900px] [content-visibility:auto]"
-      >
-        <SectionHeading id="why-title" eyebrow={copy.why.eyebrow} title={copy.why.title} />
-        <WhyUs />
-      </section>
+      {/* Service promises (support, repairs, dispatch times) only once there is a business to keep them. */}
+      {storeOpen && (
+        <section
+          aria-labelledby="why-title"
+          className="container-page py-16 [contain-intrinsic-size:auto_900px] [content-visibility:auto]"
+        >
+          <SectionHeading id="why-title" eyebrow={copy.why.eyebrow} title={copy.why.title} />
+          <WhyUs />
+        </section>
+      )}
 
       {/* Reviews section returns in the review-service phase, fed by real verified reviews. */}
 
       <section
+        id="newsletter"
         aria-labelledby="newsletter-title"
         className="container-page py-16 [contain-intrinsic-size:auto_900px] [content-visibility:auto]"
       >

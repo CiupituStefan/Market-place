@@ -29,6 +29,8 @@ export interface Footer {
   /** Why the recipient gets this email. */
   reason: string;
   unsubscribeUrl: string | null;
+  /** The sender's postal address (EMAIL_POSTAL_ADDRESS); omitted until one is configured. */
+  postalAddress?: string | null;
 }
 
 const BRAND = 'CSE Keyboards';
@@ -112,7 +114,7 @@ export function renderEmail(
     footer.unsubscribeUrl
       ? `<a href="${escapeHtml(safeHref(footer.unsubscribeUrl))}" style="color:#71717a;">${escapeHtml(words.unsubscribe)}</a>`
       : null,
-    `${BRAND} · ${escapeHtml(words.address)}`,
+    footer.postalAddress ? `${BRAND} · ${escapeHtml(footer.postalAddress)}` : BRAND,
   ]
     .filter(Boolean)
     .join('<br>');

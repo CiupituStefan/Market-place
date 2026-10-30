@@ -18,7 +18,12 @@ const postgres = connectPostgres({
   maxConnections: 2,
 });
 try {
-  logger.info(await seedCatalog(postgres.db, config), 'demo catalog loaded');
+  // Off for anything real people visit: demo ratings, badges and "was" prices would be fake.
+  const demoMerchandising = process.env.SEED_DEMO_MERCHANDISING !== 'false';
+  logger.info(
+    await seedCatalog(postgres.db, config, { demoMerchandising }),
+    demoMerchandising ? 'demo catalog loaded' : 'demo catalog loaded without demo merchandising',
+  );
 } catch (error) {
   logger.fatal({ err: error }, 'seeding failed');
   process.exitCode = 1;

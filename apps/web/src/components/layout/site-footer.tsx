@@ -1,7 +1,6 @@
 import Link from '@/components/i18n/link';
 import type { Messages } from '@/lib/i18n/messages';
 import { getI18n } from '@/lib/i18n/server';
-import { siteConfig } from '@/lib/site';
 import { LogoMark } from './logo';
 
 const columns = (t: Messages) => [
@@ -21,7 +20,8 @@ const columns = (t: Messages) => [
       { href: '/account/orders', label: t.layout.footer.trackOrder },
       { href: '/shipping', label: t.layout.footer.shipping },
       { href: '/returns', label: t.layout.footer.returns },
-      { href: `mailto:${siteConfig.supportEmail}`, label: t.layout.footer.contact },
+      // Contact details live on the legal notice (no mailbox exists yet for the domain).
+      { href: '/legal', label: t.layout.footer.contact },
     ],
   },
   {
@@ -30,6 +30,8 @@ const columns = (t: Messages) => [
       { href: '/about', label: t.layout.footer.about },
       { href: '/privacy', label: t.layout.footer.privacy },
       { href: '/terms', label: t.layout.footer.terms },
+      { href: '/cookies', label: t.layout.footer.cookies },
+      { href: '/legal', label: t.layout.footer.legal },
     ],
   },
 ];

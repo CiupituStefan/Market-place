@@ -24,8 +24,7 @@ export function organizationJsonLd(locale: Locale): JsonLd {
     name: siteConfig.name,
     url: localUrl('/', locale),
     logo: absoluteUrl('/icon.svg'),
-    email: siteConfig.supportEmail,
-    sameAs: Object.values(siteConfig.social),
+    ...(siteConfig.social.length > 0 ? { sameAs: siteConfig.social } : {}),
   };
 }
 

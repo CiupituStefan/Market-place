@@ -2,6 +2,7 @@ import { HeartIcon, UserIcon } from 'lucide-react';
 import Link from '@/components/i18n/link';
 import { LanguageSwitcher } from '@/components/i18n/language-switcher';
 import { Button } from '@/components/ui/button';
+import { storeOpen } from '@/lib/env';
 import { getI18n } from '@/lib/i18n/server';
 import { mainNav } from '@/lib/site';
 import { CartLink } from './cart-link';
@@ -16,7 +17,7 @@ export async function SiteHeader() {
     <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
       <div className="bg-primary text-primary-foreground">
         <p className="container-page py-2 text-center text-xs tracking-wide">
-          {t.layout.announcement}
+          {storeOpen ? t.layout.announcement : t.layout.previewAnnouncement}
         </p>
       </div>
       <div className="container-page flex h-16 items-center gap-3">

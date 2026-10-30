@@ -113,7 +113,6 @@ const en = {
     orderUpdatesGuest: 'Shipping updates for the order you placed at CSE Keyboards.',
     newsletter: 'You subscribed to the CSE Keyboards newsletter.',
     unsubscribe: 'Unsubscribe',
-    address: 'Bucharest, Romania',
   },
 };
 
@@ -225,7 +224,6 @@ const ro: EmailCopy = {
     orderUpdatesGuest: 'Noutăți despre livrarea comenzii plasate la CSE Keyboards.',
     newsletter: 'Te-ai abonat la newsletterul CSE Keyboards.',
     unsubscribe: 'Dezabonare',
-    address: 'București, România',
   },
 };
 

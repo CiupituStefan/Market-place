@@ -29,6 +29,8 @@ export const ConfigSchema = baseServiceEnv
     EMAIL_PROVIDER: z.enum(['ses', 'smtp', 'log']).default('log'),
     EMAIL_FROM: z.string().min(3).default('CSE Keyboards <hello@csekeyboards.test>'),
     EMAIL_REPLY_TO: z.email().optional(),
+    /** Registered business address shown in every email footer; unset until the business exists. */
+    EMAIL_POSTAL_ADDRESS: z.string().trim().min(5).max(200).optional(),
     /** e.g. smtp://localhost:1025 (Mailpit) or smtps://user:pass@host:465. */
     SMTP_URL: z.url().optional(),
     /** SES region; credentials come from the pod's IAM role (IRSA), never from env. */
