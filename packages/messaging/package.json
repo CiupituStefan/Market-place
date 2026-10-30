@@ -29,7 +29,7 @@
     "@market/telemetry": "workspace:*",
     "@platformatic/kafka": "^2.13.0",
     "drizzle-orm": "^0.45.3",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",

@@ -13,3 +13,15 @@ onlyBuiltDependencies:
 ignoredBuiltDependencies:
   - '@scarf/scarf'
   - protobufjs # postinstall only checks peer versions
+
+# Patched versions of vulnerable transitive dependencies (pnpm audit, 2026-10-30).
+# Remove an entry once every dependent ships a release that already requires it.
+overrides:
+  body-parser@>=2.0.0 <2.4.0: '>=2.4.0'
+  multer@>=2.0.0 <2.5.0: '>=2.5.0'
+  qs@>=6.7.0 <6.16.1: '>=6.16.1'
+  fast-uri@>=3.0.0 <3.1.9: ^3.1.9
+  # Development tooling only (query devtools, drizzle-kit, local SMTP test server).
+  seroval@<1.6.10: ^1.6.10
+  nodemailer@>=3.0.0 <10.1.4: ^10.1.4
+  esbuild@<=0.24.2: ^0.25.0
