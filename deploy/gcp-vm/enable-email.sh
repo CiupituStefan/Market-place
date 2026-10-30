@@ -40,16 +40,26 @@ read -rp 'Send a test email to (your own address): ' test_to
 # Checks the credentials and the sender before anything changes. Values go through the
 # environment, not the command line.
 LOGIN="$login" KEY="$key" SENDER="$sender" TO="$test_to" HOST="$host" PORT="$port" python3 - <<'PY'
-import os, smtplib, ssl
+import os, smtplib, ssl, sys, urllib.request
 from email.message import EmailMessage
 msg = EmailMessage()
 msg["From"] = f"CSE Keyboards <{os.environ['SENDER']}>"
 msg["To"] = os.environ["TO"]
 msg["Subject"] = "CSE Keyboards: test email"
 msg.set_content("If you can read this, the shop's emails are delivered through Brevo.")
-with smtplib.SMTP_SSL(os.environ["HOST"], int(os.environ["PORT"]), context=ssl.create_default_context(), timeout=20) as smtp:
-    smtp.login(os.environ["LOGIN"], os.environ["KEY"])
-    smtp.send_message(msg)
+try:
+    with smtplib.SMTP_SSL(os.environ["HOST"], int(os.environ["PORT"]), context=ssl.create_default_context(), timeout=20) as smtp:
+        smtp.login(os.environ["LOGIN"], os.environ["KEY"])
+        smtp.send_message(msg)
+except smtplib.SMTPAuthenticationError as error:
+    detail = error.smtp_error.decode(errors="replace")
+    if "IP" in detail:
+        ip = urllib.request.urlopen("https://api.ipify.org", timeout=10).read().decode()
+        sys.exit(f"Brevo refused this server's IP address ({ip}). Add it in Brevo > Security > "
+                 "Authorised IPs (app.brevo.com/security/authorised_ips), then run this again.")
+    sys.exit(f"Brevo refused the login: {detail}. Check the SMTP login and key, then run this again.")
+except (OSError, smtplib.SMTPException) as error:
+    sys.exit(f"Could not send the test email: {error}")
 print(f"Test email sent to {os.environ['TO']}.")
 PY
 
