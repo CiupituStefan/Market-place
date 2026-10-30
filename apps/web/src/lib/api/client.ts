@@ -68,7 +68,9 @@ export function createApiClient(baseUrl: string, clientOptions: ApiClientOptions
       if (await clientOptions.onUnauthorized(path)) return request(path, options, true);
     }
     if (!response.ok) throw await toApiError(response);
-    if (response.status === 204) return options.schema.parse(undefined);
-    return options.schema.parse(await response.json());
+    // 204, and 202 Accepted from fire-and-forget endpoints (forgot password, resend), have no
+    // body: there is nothing to parse, and response.json() would throw on it.
+    const text = response.status === 204 ? '' : await response.text();
+    return options.schema.parse(text === '' ? undefined : JSON.parse(text));
   };
 }

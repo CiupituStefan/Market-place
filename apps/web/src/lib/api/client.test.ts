@@ -40,6 +40,18 @@ describe('api client', () => {
     expect(init?.body).toBe('{"a":1}');
   });
 
+  it('accepts success responses without a body (202 Accepted, 204 No Content)', async () => {
+    mockFetch(new Response(null, { status: 202 }));
+    await expect(
+      request('/auth/forgot-password', { method: 'POST', body: {}, schema: z.unknown() }),
+    ).resolves.toBeUndefined();
+    mockFetch(new Response(null, { status: 204 }));
+    await expect(request('/x', { method: 'DELETE', schema: z.unknown() })).resolves.toBeUndefined();
+    // A schema that needs data still rejects an empty answer.
+    mockFetch(new Response(null, { status: 202 }));
+    await expect(request('/x', { schema: z.object({ id: z.string() }) })).rejects.toThrow();
+  });
+
   it('rejects responses that violate the schema', async () => {
     mockFetch(Response.json({ id: 42 }));
     await expect(request('/x', { schema: z.object({ id: z.string() }) })).rejects.toThrow();
