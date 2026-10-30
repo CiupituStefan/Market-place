@@ -28,7 +28,7 @@ Infrastructure ports are bound to `127.0.0.1` only: PostgreSQL `5432` (`postgres
 `postgres-dev-password`; each service has its own database and role, `<db>-dev-password`), Redis
 `6379`, Kafka `9094`, object storage `9000`.
 
-Traces, metrics and logs: `docker compose --profile observability up -d`, then Grafana on
+Traces, metrics and logs: `OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318 docker compose --profile observability up -d`, then Grafana on
 http://localhost:3001 ([observability](observability.md)).
 
 Images and the Dockerfiles are described in [infrastructure/docker](../infrastructure/docker/README.md);

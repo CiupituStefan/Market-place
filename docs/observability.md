@@ -152,6 +152,7 @@ Each alert links to its [runbook](runbooks.md).
 ## Running it locally
 
 ```bash
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318   # services export (off by default)
 docker compose --profile observability up -d     # adds collector, Prometheus, Tempo, Loki, Grafana
 open http://localhost:3001                        # dashboards; Explore for traces and logs
 open http://localhost:9090/alerts                 # alert rules and their state

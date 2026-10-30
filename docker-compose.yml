@@ -22,9 +22,10 @@ x-service: &service
     KAFKA_BROKERS: kafka:9092
     AUTH_JWKS_URL: http://auth-service:4001/.well-known/jwks.json
     MIGRATE_ON_START: 'true'
-    # Telemetry goes to the collector of the "observability" profile. Without it running,
-    # exports fail silently and the services work as usual.
-    OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}
+    # Off unless set: export to the collector of the "observability" profile with
+    # OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318. Exporting to a collector that is
+    # not running costs every service CPU (serialise, send, retry) for nothing.
+    OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
     DEPLOYMENT_ENVIRONMENT: local
 
 x-build: &build
@@ -265,7 +266,7 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-info}
       PORT: 4000
       REDIS_URL: redis://redis:6379
-      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
       DEPLOYMENT_ENVIRONMENT: local
       CORS_ORIGINS: http://localhost:3000
       # Off only for the end-to-end suite (scripts/e2e.sh): its parallel journeys all come from one
@@ -299,7 +300,7 @@ services:
       api-gateway: { condition: service_healthy }
     environment:
       API_INTERNAL_URL: http://api-gateway:4000
-      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
       OTEL_SERVICE_NAME: web
       DEPLOYMENT_ENVIRONMENT: local
     ports: ['3000:3000']
