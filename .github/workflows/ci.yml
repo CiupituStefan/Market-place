@@ -3,7 +3,8 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    # main, and the repository's current default branch (development happens there for now).
+    branches: [main, claude/mechanical-keyboard-ecommerce-irdl65]
 
 permissions:
   contents: read # checkout only: CI never writes to the repository or reaches AWS
@@ -21,7 +22,7 @@ jobs:
     services:
       # Real PostgreSQL to prove the committed migrations apply cleanly.
       postgres:
-        image: public.ecr.aws/docker/library/postgres:16.15-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+        image: mirror.gcr.io/library/postgres:16.15-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
         env:
           POSTGRES_USER: auth
           POSTGRES_PASSWORD: ci-only-password
@@ -31,7 +32,7 @@ jobs:
           --health-cmd "pg_isready -U auth" --health-interval 5s --health-timeout 3s --health-retries 10
       # Real Redis for the gateway's rate-limit store integration tests.
       redis:
-        image: public.ecr.aws/docker/library/redis:7.4-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499
+        image: mirror.gcr.io/library/redis:7.4-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499
         ports: ['6379:6379']
         options: >-
           --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10

@@ -7,8 +7,9 @@
 # from the lockfile, build, then copy only production dependencies into a small
 # runtime image that runs as the unprivileged `node` user.
 
-# Official Node image via the AWS ECR mirror (no Docker Hub rate limits), pinned by digest.
-ARG NODE_IMAGE=public.ecr.aws/docker/library/node:22.23.3-alpine3.24@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402
+# Official Node image via Google's Docker Hub mirror (no Docker Hub or ECR Public pull limits on
+# shared CI runners), pinned by digest: the same image and digest as on Docker Hub.
+ARG NODE_IMAGE=mirror.gcr.io/library/node:22.23.3-alpine3.24@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402
 
 FROM ${NODE_IMAGE} AS base
 # Behind a TLS-inspecting proxy, pass its CA as a build secret (never baked into a layer):

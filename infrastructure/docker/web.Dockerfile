@@ -7,7 +7,7 @@
 # NEXT_PUBLIC_* values are inlined into the browser bundle at build time, so they are
 # build arguments; they are public by definition (never put secrets in them).
 
-ARG NODE_IMAGE=public.ecr.aws/docker/library/node:22.23.3-alpine3.24@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402
+ARG NODE_IMAGE=mirror.gcr.io/library/node:22.23.3-alpine3.24@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402
 
 FROM ${NODE_IMAGE} AS base
 ENV PNPM_HOME=/pnpm \

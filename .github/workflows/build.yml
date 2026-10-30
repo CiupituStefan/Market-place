@@ -169,9 +169,11 @@ jobs:
             digest="$(docker inspect --format '{{index .RepoDigests 0}}' "$REGISTRY/$REF")"
             digest="${digest#*@}"
           fi
-          echo "name=$REGISTRY/cse/$IMAGE" >> "$GITHUB_OUTPUT"
-          echo "digest=$digest" >> "$GITHUB_OUTPUT"
-          echo "attest=$attest" >> "$GITHUB_OUTPUT"
+          {
+            echo "name=$REGISTRY/cse/$IMAGE"
+            echo "digest=$digest"
+            echo "attest=$attest"
+          } >> "$GITHUB_OUTPUT"
           echo "### cse/$IMAGE:$TAG ($digest)" >> "$GITHUB_STEP_SUMMARY"
 
       # Signed statements (Sigstore, public transparency log) that this digest was built by this

@@ -34,7 +34,7 @@ x-build: &build
 services:
   # ── infrastructure ────────────────────────────────────────────────────────
   postgres:
-    image: public.ecr.aws/docker/library/postgres:16.15-alpine
+    image: mirror.gcr.io/library/postgres:16.15-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
@@ -50,7 +50,7 @@ services:
       retries: 20
 
   redis:
-    image: public.ecr.aws/docker/library/redis:7.4-alpine
+    image: mirror.gcr.io/library/redis:7.4-alpine
     restart: unless-stopped
     command: ['redis-server', '--save', '', '--appendonly', 'no']
     ports: ['127.0.0.1:6379:6379']
