@@ -74,7 +74,7 @@ downstream did not happen: a stock update, a confirmation email, a refund, an an
 
 1. Find it in Kafka: topic `<topic>.dlq`. The headers say why: `dlq-reason`, `dlq-error`,
    `dlq-consumer`, `dlq-attempts` and the original topic, partition and offset. Locally, use
-   Kafka UI (http://localhost:8080).
+   Kafka UI (`docker compose --profile tools up -d kafka-ui`, http://localhost:8080).
 2. Its trace (`traceparent` header, or `request.id`) shows the failing handler span with the
    exception.
 3. Fix the cause, then re-publish the original message to its topic. Handlers are idempotent

@@ -1,11 +1,12 @@
 # Local development environment: `docker compose up --build`, then open
 #   http://localhost:3000        storefront (admin: http://localhost:3000/admin)
 #   http://localhost:4000/docs   API gateway (OpenAPI)
-#   http://localhost:8080        Kafka UI
 #   http://localhost:8025        Mailpit (every email the shop sends)
 #   http://localhost:9001        object storage console
 # With `--profile observability` (traces, metrics, logs; see docs/observability.md):
 #   http://localhost:3001        Grafana (dashboards, Explore: Tempo, Prometheus, Loki)
+# With `--profile tools`:
+#   http://localhost:8080        Kafka UI
 # Infrastructure ports are bound to 127.0.0.1 only. Every password below is a
 # local-development value; real environments get theirs from Secrets Manager.
 name: cse-keyboards
@@ -94,7 +95,9 @@ services:
       retries: 20
       start_period: 15s
 
+  # A JVM that only helps when looking into Kafka by hand: started on request, never in tests.
   kafka-ui:
+    profiles: [tools]
     image: ghcr.io/kafbat/kafka-ui:v1.5.0
     restart: unless-stopped
     depends_on:

@@ -14,7 +14,7 @@ docker compose down              # stop; add -v to also delete databases, Kafka 
 | http://localhost:3000       | storefront                                                                 |
 | http://localhost:3000/admin | back office — `admin@csekeyboards.test` / `admin passphrase for local dev` |
 | http://localhost:4000/docs  | API gateway, OpenAPI for every service                                     |
-| http://localhost:8080       | Kafka UI (topics, consumer groups, dead-letter topics)                     |
+| http://localhost:8080       | Kafka UI (topics, consumer groups, dead-letter topics), `--profile tools`  |
 | http://localhost:8025       | Mailpit: every email the shop sends                                        |
 | http://localhost:9001       | object storage console (`localdev` / `localdev-storage-secret`)            |
 
@@ -38,7 +38,7 @@ the reasoning in [ADR-017](adr/ADR-017-containers-and-local-environment.md).
 
 ```bash
 nvm use && corepack enable && pnpm install && pnpm build
-docker compose up -d postgres redis kafka mailpit object-storage kafka-ui
+docker compose --profile tools up -d postgres redis kafka mailpit object-storage kafka-ui
 ```
 
 Then run the services you are working on with `pnpm --filter @market/<service> dev`, pointing

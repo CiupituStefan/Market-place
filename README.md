@@ -93,7 +93,8 @@ Mailpit, S3-compatible storage) with one command:
 docker compose up --build
 # storefront http://localhost:3000 · admin http://localhost:3000/admin
 #   (admin@csekeyboards.test / "admin passphrase for local dev")
-# API docs http://localhost:4000/docs · Kafka UI http://localhost:8080 · emails http://localhost:8025
+# API docs http://localhost:4000/docs · emails http://localhost:8025
+# Kafka UI http://localhost:8080 with `docker compose --profile tools up -d kafka-ui`
 ```
 
 Working on the code with hot reload:

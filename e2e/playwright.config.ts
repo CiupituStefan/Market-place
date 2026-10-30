@@ -16,7 +16,9 @@ export default defineConfig({
   // A failure is a failure: no blind retries hiding flaky journeys. Traces and screenshots of
   // the first attempt say what happened.
   retries: 0,
-  workers: env.ci ? 2 : 4,
+  // One worker on CI: the runner's 4 CPUs already carry the whole shop (about 15 containers);
+  // two browsers on top starved every service for seconds at a time.
+  workers: env.ci ? 1 : 4,
   timeout: 90_000,
   expect: { timeout: 15_000 },
   reporter: env.ci
