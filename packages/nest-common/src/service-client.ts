@@ -6,7 +6,12 @@ import {
   REQUEST_ID_HEADER,
   API_PREFIX,
 } from '@market/types';
+import { fetch, type Response } from 'undici';
 import type { z } from 'zod';
+import { createInternalDispatcher } from './internal-http.js';
+
+/** One pool for every client in the process, so connections and name lookups are shared. */
+const dispatcher = createInternalDispatcher();
 
 export interface ServiceClientOptions {
   /** Base URL of the target service, e.g. http://product-service:4002 */
@@ -50,6 +55,7 @@ export function createServiceClient(options: ServiceClientOptions) {
         headers,
         ...(request.body !== undefined ? { body: JSON.stringify(request.body) } : {}),
         signal: AbortSignal.timeout(timeoutMs),
+        dispatcher,
       });
     } catch {
       throw new DomainError(ErrorCode.SERVICE_UNAVAILABLE, `${options.service} is unavailable`);

@@ -1,9 +1,9 @@
 import { pipeline } from 'node:stream/promises';
-import { getRequestId } from '@market/nest-common';
+import { createInternalDispatcher, getRequestId } from '@market/nest-common';
 import { DomainError, ErrorCode } from '@market/types';
 import { Inject, Injectable, Logger, type OnModuleDestroy } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { Agent, errors as undiciErrors, request } from 'undici';
+import { errors as undiciErrors, request } from 'undici';
 import { APP_CONFIG, upstreamUrl, type AppConfig } from '../config.js';
 import type { RouteDefinition } from '../routing/routes.js';
 import { BodyLimit, payloadTooLarge } from './body-limit.js';
@@ -19,12 +19,8 @@ const BODYLESS_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 @Injectable()
 export class ProxyService implements OnModuleDestroy {
   private readonly logger = new Logger(ProxyService.name);
-  // One pooled, keep-alive connection agent shared by all upstreams.
-  private readonly agent = new Agent({
-    keepAliveTimeout: 10_000,
-    connections: 256,
-    connect: { timeout: 2_000 },
-  });
+  // One pooled, keep-alive connection agent shared by all upstreams (IPv4 lookups, cached).
+  private readonly agent = createInternalDispatcher({ connections: 256 });
 
   constructor(@Inject(APP_CONFIG) private readonly config: AppConfig) {}
 

@@ -26,6 +26,7 @@
     "@market/telemetry": "workspace:*",
     "@market/types": "workspace:*",
     "jose": "^6.2.12",
+    "undici": "^8.12.3",
     "zod": "^4.6.7"
   },
   "peerDependencies": {

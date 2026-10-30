@@ -3,6 +3,7 @@ export * from './bootstrap.js';
 export * from './exception.filter.js';
 export * from './health/index.js';
 export * from './http-server.js';
+export * from './internal-http.js';
 export * from './nest-logger.js';
 export * from './openapi.js';
 export * from './request-context.js';
