@@ -81,14 +81,9 @@ export function ProductExperience({ product, initialSelection }: ProductExperien
 
       <div className="flex flex-col gap-8">
         <div>
-          <p className="font-mono text-xs tracking-wider text-muted-foreground uppercase">
-            {product.brand}
-          </p>
-          <h1 className="mt-2 text-4xl font-semibold tracking-tight text-balance">
-            {product.name}
-          </h1>
-          <p className="mt-2 text-muted-foreground">{product.tagline}</p>
-          <a href="#reviews" className="mt-3 inline-block rounded-md">
+          <h1 className="display text-[clamp(3rem,6vw,5.5rem)] text-balance">{product.name}</h1>
+          <p className="mt-4 text-xl leading-snug">{product.tagline}</p>
+          <a href="#reviews" className="mt-3 inline-block empty:hidden">
             <Rating value={product.rating.average} count={product.rating.count} size="md" />
           </a>
         </div>

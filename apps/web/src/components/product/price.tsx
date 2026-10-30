@@ -22,11 +22,11 @@ export function Price({ price, compareAt, from = false, size = 'sm', className }
       <span
         className={cn(
           'font-semibold tabular-nums',
-          size === 'lg' ? 'text-3xl tracking-tight' : 'text-base',
+          size === 'lg' ? 'text-4xl tracking-tight' : 'text-lg',
         )}
       >
         {from && (
-          <span className="mr-1 text-xs font-normal text-muted-foreground">{t.product.from}</span>
+          <span className="mr-1 text-sm font-normal text-muted-foreground">{t.product.from}</span>
         )}
         {money(price)}
       </span>
@@ -41,7 +41,7 @@ export function Price({ price, compareAt, from = false, size = 'sm', className }
             <span className="sr-only">{t.product.originalPrice} </span>
             {money(compareAt)}
           </s>
-          <span className="rounded-full bg-brand-soft px-2 py-0.5 font-mono text-[0.68rem] font-semibold text-foreground">
+          <span className="bg-brand-soft px-2 py-0.5 text-sm font-semibold text-foreground">
             −{discount}%
           </span>
         </>

@@ -20,14 +20,14 @@ export function ProductCard({ product, priority, className }: ProductCardProps) 
   const soldOut = product.availability === 'OUT_OF_STOCK';
   return (
     <article className={cn('group relative flex flex-col', className)}>
-      <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-stage">
-        <div className="absolute inset-0 flex items-center justify-center p-6 transition-transform duration-500 ease-out group-hover:scale-[1.04] motion-reduce:transform-none">
+      <div className="relative aspect-square overflow-hidden bg-stage">
+        <div className="absolute inset-0 flex items-center justify-center p-[8%] transition-transform duration-500 ease-out group-hover:scale-[1.04] motion-reduce:transform-none">
           <ProductMedia
             image={product.images[0]}
             preview={product.preview}
             alt={product.name}
             priority={priority}
-            sizes="(min-width: 1280px) 22vw, (min-width: 768px) 30vw, 90vw"
+            sizes="(min-width: 1024px) 32vw, (min-width: 640px) 48vw, 100vw"
             className="w-full"
           />
         </div>
@@ -41,18 +41,15 @@ export function ProductCard({ product, priority, className }: ProductCardProps) 
         </div>
       </div>
       <div className="flex flex-1 flex-col gap-1.5 pt-4">
-        <p className="font-mono text-[0.7rem] tracking-wider text-muted-foreground uppercase">
-          {product.brand}
-        </p>
-        <h3 className="leading-snug font-medium">
+        <h3 className="text-lg leading-snug font-semibold tracking-tight">
           <Link
             href={`/product/${product.slug}`}
-            className="after:absolute after:inset-0 after:rounded-2xl focus-visible:outline-none focus-visible:after:ring-[3px] focus-visible:after:ring-ring/60"
+            className="after:absolute after:inset-0 focus-visible:outline-none focus-visible:after:ring-[3px] focus-visible:after:ring-ring/60"
           >
             {product.name}
           </Link>
         </h3>
-        <p className="line-clamp-1 text-sm text-muted-foreground">{product.tagline}</p>
+        <p className="line-clamp-2 text-[0.9375rem] text-muted-foreground">{product.tagline}</p>
         <Rating value={product.rating.average} count={product.rating.count} />
         <Price
           price={product.price}
@@ -74,7 +71,7 @@ export function ProductGrid({
 }) {
   return (
     <div
-      className={cn('grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-3 xl:grid-cols-4', className)}
+      className={cn('grid grid-cols-1 gap-x-6 gap-y-14 sm:grid-cols-2 lg:grid-cols-3', className)}
     >
       {products.map((product, index) => (
         <ProductCard key={product.id} product={product} priority={index < 2} />

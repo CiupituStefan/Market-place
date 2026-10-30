@@ -88,8 +88,7 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
 
       <section id="reviews" aria-labelledby="reviews-title" className="mt-24 scroll-mt-28">
         <div className="mb-8">
-          <p className="eyebrow">{t.product.reviewsTitle}</p>
-          <h2 id="reviews-title" className="mt-3 text-3xl font-semibold tracking-tight">
+          <h2 id="reviews-title" className="display text-[clamp(2.5rem,5vw,4.5rem)]">
             {t.product.reviewsHeading}
           </h2>
         </div>
@@ -99,8 +98,7 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
       {product.faq.length > 0 && (
         <section aria-labelledby="faq-title" className="mt-24 grid gap-8 md:grid-cols-[1fr_2fr]">
           <div>
-            <p className="eyebrow">{t.product.faq}</p>
-            <h2 id="faq-title" className="mt-3 text-3xl font-semibold tracking-tight">
+            <h2 id="faq-title" className="display text-[clamp(2.5rem,5vw,4.5rem)]">
               {t.product.faqHeading}
             </h2>
           </div>
@@ -116,7 +114,7 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
       )}
 
       <section aria-labelledby="related-title" className="mt-24">
-        <h2 id="related-title" className="mb-10 text-3xl font-semibold tracking-tight">
+        <h2 id="related-title" className="display mb-10 text-[clamp(2.5rem,5vw,4.5rem)]">
           {t.product.related}
         </h2>
         <ProductGrid products={related} />

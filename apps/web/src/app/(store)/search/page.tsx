@@ -23,7 +23,7 @@ export default async function SearchPage(props: PageProps<'/search'>) {
   return (
     <div className="container-page py-10">
       <header className="mb-10 max-w-2xl">
-        <h1 className="text-4xl font-semibold tracking-tight">
+        <h1 className="display text-[clamp(3rem,7vw,6.5rem)]">
           {query.q ? (
             <>
               {t.search.resultsFor} <span className="text-brand">“{query.q}”</span>

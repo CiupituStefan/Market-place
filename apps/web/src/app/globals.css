@@ -8,82 +8,101 @@
  * Identity: warm "paper" neutrals, graphite ink and an anodised-copper accent
  * (a nod to brass/copper plates). Colors are OKLCH for perceptual consistency.
  */
+/*
+ * CSE Keyboards design tokens: "sheet and biro". White paper, near-black ink, one blue for
+ * actions and links. The keyboards' own colours (Carbon, Chalk, Silver, Sage, Navy, copper
+ * accents) live in the product drawings, not in the interface. Square corners throughout.
+ */
 :root {
-  --radius: 0.75rem;
+  --radius: 0rem;
 
-  --background: oklch(0.985 0.004 85);
-  --foreground: oklch(0.2 0.012 265);
-  --card: oklch(0.995 0.002 85);
+  --background: #ffffff;
+  --foreground: #111111;
+  --card: #ffffff;
   --card-foreground: var(--foreground);
-  --popover: var(--card);
+  --popover: #ffffff;
   --popover-foreground: var(--foreground);
-  --primary: oklch(0.22 0.014 265);
-  --primary-foreground: oklch(0.985 0.004 85);
-  --secondary: oklch(0.95 0.006 85);
+  --primary: #111111;
+  --primary-foreground: #ffffff;
+  --secondary: #f4f4f4;
   --secondary-foreground: var(--foreground);
-  --muted: oklch(0.955 0.006 85);
-  --muted-foreground: oklch(0.48 0.012 265);
-  --accent: oklch(0.94 0.012 70);
+  --muted: #f4f4f4;
+  --muted-foreground: #5c5c5c;
+  --accent: #ececec;
   --accent-foreground: var(--foreground);
-  --destructive: oklch(0.56 0.2 27);
-  --success: oklch(0.55 0.13 155);
-  --border: oklch(0.9 0.008 85);
-  --input: oklch(0.88 0.008 85);
-  --ring: oklch(0.62 0.13 50);
+  --destructive: #c4321f;
+  --success: #1d7a46;
+  --border: #e2e2e2;
+  --input: #cfcfcf;
+  --ring: #1a4be0;
 
-  /* Brand accent: anodised copper */
-  --brand: oklch(0.62 0.14 48);
-  --brand-foreground: oklch(0.99 0.004 85);
-  --brand-soft: oklch(0.93 0.035 60);
-  /* Data marks (validated for lightness, chroma and contrast on --card per theme) */
-  --chart-1: oklch(0.62 0.14 48);
-  --chart-grid: oklch(0.92 0.006 85);
+  /* The one accent: actions and links */
+  --brand: #1a4be0;
+  --brand-foreground: #ffffff;
+  --brand-soft: #e7edfd;
+  /* Data marks */
+  --chart-1: #1a4be0;
+  --chart-grid: #ececec;
 
   /* Product art surfaces */
-  --stage: oklch(0.93 0.008 85);
-  --stage-foreground: oklch(0.35 0.01 265);
+  --stage: #f4f4f4;
+  --stage-foreground: #3a3a3a;
 }
 
 .dark {
-  --background: oklch(0.155 0.006 265);
-  --foreground: oklch(0.95 0.006 85);
-  --card: oklch(0.19 0.007 265);
+  --background: #111111;
+  --foreground: #f2f2f2;
+  --card: #181818;
   --card-foreground: var(--foreground);
-  --popover: oklch(0.2 0.008 265);
+  --popover: #1c1c1c;
   --popover-foreground: var(--foreground);
-  --primary: oklch(0.95 0.006 85);
-  --primary-foreground: oklch(0.18 0.01 265);
-  --secondary: oklch(0.23 0.008 265);
+  --primary: #f2f2f2;
+  --primary-foreground: #111111;
+  --secondary: #1d1d1d;
   --secondary-foreground: var(--foreground);
-  --muted: oklch(0.22 0.008 265);
-  --muted-foreground: oklch(0.7 0.01 265);
-  --accent: oklch(0.26 0.02 55);
+  --muted: #1d1d1d;
+  --muted-foreground: #a6a6a6;
+  --accent: #262626;
   --accent-foreground: var(--foreground);
-  --destructive: oklch(0.65 0.2 25);
-  --success: oklch(0.7 0.14 155);
-  --border: oklch(0.28 0.008 265);
-  --input: oklch(0.3 0.008 265);
-  --ring: oklch(0.72 0.13 55);
+  --destructive: #ff6b57;
+  --success: #4cc283;
+  --border: #2c2c2c;
+  --input: #3a3a3a;
+  --ring: #7d9bff;
 
-  --brand: oklch(0.74 0.13 55);
-  --brand-foreground: oklch(0.17 0.01 265);
-  --brand-soft: oklch(0.3 0.05 55);
-  --chart-1: oklch(0.66 0.13 52);
-  --chart-grid: oklch(0.27 0.008 265);
+  --brand: #5b82ff;
+  --brand-foreground: #0b0b0b;
+  --brand-soft: #1a2442;
+  --chart-1: #7d9bff;
+  --chart-grid: #262626;
 
-  --stage: oklch(0.21 0.008 265);
-  --stage-foreground: oklch(0.8 0.01 265);
+  --stage: #1b1b1b;
+  --stage-foreground: #cfcfcf;
 }
 
 @theme inline {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-sans: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  /* No monospace in the shop: figures that must align use tabular-nums in the text face. */
+  --font-mono: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 10px);
+  /* Square corners everywhere; only true circles (rounded-full) stay round. */
+  --radius-xs: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-3xl: 0px;
+
+  /* Nothing at rest casts a shadow; menus and dialogs (lg and up) still float. */
+  --shadow-2xs: 0 0 #0000;
+  --shadow-xs: 0 0 #0000;
+  --shadow-sm: 0 0 #0000;
+  --shadow-md: 0 0 #0000;
+
+  /* Nothing on the page is set smaller than 13px. */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.4;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -123,7 +142,8 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    font-feature-settings: 'ss01', 'cv11';
+    font-size: 1rem;
+    line-height: 1.5;
   }
   ::selection {
     @apply bg-brand text-brand-foreground;
@@ -143,10 +163,34 @@
   }
 }
 
+/* One pair of tight outer margins on every page; content runs wide. */
 @utility container-page {
-  @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  @apply mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-8;
 }
 
+/* A small heading in sentence case (footer columns, form groups); never a label above a title. */
 @utility eyebrow {
-  @apply font-mono text-xs font-medium tracking-[0.18em] text-brand uppercase;
+  @apply text-sm font-semibold text-foreground;
+}
+
+/* Display type: Archivo at its narrowest, heaviest setting, in capitals. */
+@utility display {
+  font-stretch: 62%;
+  font-weight: 800;
+  line-height: 0.86;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+}
+
+/* Blocks below the first screen rise in once (components/home/reveal.tsx sets the state). */
+@media (prefers-reduced-motion: no-preference) {
+  [data-reveal] {
+    transition:
+      opacity 600ms cubic-bezier(0.2, 0.7, 0.2, 1),
+      translate 600ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  [data-reveal='pending'] {
+    opacity: 0;
+    translate: 0 2rem;
+  }
 }

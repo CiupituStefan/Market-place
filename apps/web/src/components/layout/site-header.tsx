@@ -11,24 +11,23 @@ import { MobileNav } from './mobile-nav';
 import { SearchForm } from './search-form';
 import { ThemeToggle } from './theme-toggle';
 
+/** A plain bar: wordmark, the shop's sections, search and the few account controls. */
 export async function SiteHeader() {
   const { t } = await getI18n();
   return (
-    <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
-      <div className="bg-primary text-primary-foreground">
-        <p className="container-page py-2 text-center text-xs tracking-wide">
-          {storeOpen ? t.layout.announcement : t.layout.previewAnnouncement}
-        </p>
-      </div>
+    <header className="sticky top-0 z-40 bg-background">
+      <p className="bg-primary px-4 py-2 text-center text-sm text-primary-foreground">
+        {storeOpen ? t.layout.announcement : t.layout.previewAnnouncement}
+      </p>
       <div className="container-page flex h-16 items-center gap-3">
         <MobileNav />
-        <Logo className="mr-4" />
-        <nav aria-label={t.layout.mainNav} className="hidden items-center gap-1 lg:flex">
+        <Logo className="mr-6" />
+        <nav aria-label={t.layout.mainNav} className="hidden items-center gap-6 lg:flex">
           {mainNav.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="rounded-full px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              className="py-2 text-[0.9375rem] font-medium underline-offset-[6px] transition-colors hover:underline"
             >
               {t.layout.nav[item.key]}
             </Link>

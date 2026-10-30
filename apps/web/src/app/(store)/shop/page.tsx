@@ -28,7 +28,7 @@ export default async function ShopPage(props: PageProps<'/shop'>) {
         ]}
       />
       <header className="mt-6 mb-10 max-w-2xl">
-        <h1 className="text-4xl font-semibold tracking-tight">{t.shop.allTitle}</h1>
+        <h1 className="display text-[clamp(3rem,7vw,6.5rem)]">{t.shop.allTitle}</h1>
         <p className="mt-3 text-muted-foreground">{t.shop.allIntro}</p>
       </header>
       <ProductListing listing={listing} query={query} pathname="/shop" />

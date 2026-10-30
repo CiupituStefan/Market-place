@@ -45,7 +45,7 @@ export default async function CategoryPage(props: PageProps<'/shop/[category]'>)
     <div className="container-page py-10">
       <Breadcrumbs crumbs={categoryCrumbs(categoryTrail(categories, slug), t)} />
       <header className="mt-6 mb-10 max-w-2xl">
-        <h1 className="text-4xl font-semibold tracking-tight">{category.name}</h1>
+        <h1 className="display text-[clamp(3rem,7vw,6.5rem)]">{category.name}</h1>
         <p className="mt-3 text-muted-foreground">{category.description}</p>
         {children.length > 0 && (
           <ul className="mt-6 flex flex-wrap gap-2">

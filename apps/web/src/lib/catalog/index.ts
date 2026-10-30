@@ -92,6 +92,10 @@ export const catalog = {
   getNewArrivals: async (locale: Locale, limit = 4): Promise<ProductSummary[]> =>
     (await list(locale, { sort: 'newest' }, undefined, limit)).items,
 
+  /** The first hundred products, for the home page's overview of the whole shop. */
+  getOverview: async (locale: Locale): Promise<ProductSummary[]> =>
+    (await list(locale, { sort: 'featured' }, undefined, 100)).items,
+
   getRelated: (locale: Locale, product: Product): Promise<ProductSummary[]> =>
     api(withLocale(`/products/${encodeURIComponent(product.slug)}/related`, locale), {
       schema: z.array(ProductSummarySchema),

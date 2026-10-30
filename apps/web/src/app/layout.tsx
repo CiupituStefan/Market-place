@@ -1,6 +1,5 @@
-import { GeistMono } from 'geist/font/mono';
-import { GeistSans } from 'geist/font/sans';
 import type { Metadata, Viewport } from 'next';
+import { Archivo } from 'next/font/google';
 import { headers } from 'next/headers';
 import type { ReactNode } from 'react';
 import { Providers } from '@/components/providers';
@@ -9,6 +8,17 @@ import { getI18n, getLocale } from '@/lib/i18n/server';
 import { localizedAlternates } from '@/lib/seo/alternates';
 import { siteConfig } from '@/lib/site';
 import './globals.css';
+
+/**
+ * One family for everything: Archivo's width axis runs from condensed capitals for display
+ * (font-stretch 62%) to normal width for reading. Self-hosted by next/font at build time.
+ */
+const archivo = Archivo({
+  subsets: ['latin', 'latin-ext'],
+  axes: ['wdth'],
+  variable: '--font-archivo',
+  display: 'swap',
+});
 
 export async function generateMetadata(): Promise<Metadata> {
   const { locale, t } = await getI18n();
@@ -42,8 +52,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#faf8f4' },
-    { media: '(prefers-color-scheme: dark)', color: '#16171b' },
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#111111' },
   ],
 };
 
@@ -57,11 +67,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const locale = await getLocale();
   return (
     // next-themes sets the theme class before hydration, hence suppressHydrationWarning.
-    <html
-      lang={LOCALE_INFO[locale].htmlLang}
-      suppressHydrationWarning
-      className={`${GeistSans.variable} ${GeistMono.variable}`}
-    >
+    <html lang={LOCALE_INFO[locale].htmlLang} suppressHydrationWarning className={archivo.variable}>
       <body className="min-h-dvh font-sans">
         <Providers nonce={nonce} locale={locale}>
           {children}

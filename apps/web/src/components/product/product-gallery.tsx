@@ -88,9 +88,6 @@ export function ProductGallery({ name, images, preview }: ProductGalleryProps) {
             </div>
           )}
         </div>
-        <p className="pointer-events-none absolute bottom-4 left-4 hidden rounded-full bg-background/80 px-3 py-1 text-xs text-muted-foreground backdrop-blur md:block">
-          Hover to zoom
-        </p>
       </div>
       <div className="grid grid-cols-4 gap-3" role="group" aria-label={copy.images}>
         {slides.map((s, index) => (

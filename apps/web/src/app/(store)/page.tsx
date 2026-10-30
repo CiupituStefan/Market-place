@@ -1,129 +1,106 @@
-import { storeOpen } from '@/lib/env';
-import { CategoryTiles } from '@/components/home/category-tiles';
-import { ConfiguratorTeaser } from '@/components/home/configurator-teaser';
-import { Hero } from '@/components/home/hero';
-import { NewsletterForm } from '@/components/home/newsletter-form';
-import { SectionHeading } from '@/components/home/section-heading';
-import { WhyUs } from '@/components/home/why-us';
-import { ProductGrid } from '@/components/product/product-card';
-import { JsonLd } from '@/components/seo/json-ld';
 import { connection } from 'next/server';
-import { catalog } from '@/lib/catalog';
+import { CatalogueTable } from '@/components/home/catalogue-table';
+import { CloserLook } from '@/components/home/closer-look';
+import { HomeHero, type HeroBoard } from '@/components/home/home-hero';
+import { Materials } from '@/components/home/materials';
+import { NewsletterForm } from '@/components/home/newsletter-form';
+import { Reveal } from '@/components/home/reveal';
+import Link from '@/components/i18n/link';
+import { JsonLd } from '@/components/seo/json-ld';
+import { catalog, KEYBOARD_LAYOUTS, type ProductSummary } from '@/lib/catalog';
+import { storeOpen } from '@/lib/env';
 import { getI18n } from '@/lib/i18n/server';
 import { organizationJsonLd, websiteJsonLd } from '@/lib/seo/structured-data';
+
+const CLOSER_LOOK = 'cse-forge-75';
+
+/** One board per size, smallest first, as the hero's size picker offers them. */
+function heroBoards(products: ProductSummary[]): HeroBoard[] {
+  const boards: HeroBoard[] = [];
+  for (const layout of KEYBOARD_LAYOUTS) {
+    const product = products.find(
+      (p) => p.categorySlug === 'keyboards' && p.attributes.layout?.includes(layout),
+    );
+    if (!product) continue;
+    boards.push({
+      slug: product.slug,
+      name: product.name,
+      tagline: product.tagline,
+      layout,
+      price: product.price,
+      preview: product.preview,
+    });
+  }
+  return boards;
+}
 
 export default async function HomePage() {
   // Rendered per request from cached catalog data, so builds never need the API.
   await connection();
-  const { t, locale } = await getI18n();
+  const i18n = await getI18n();
+  const { t, locale } = i18n;
   const copy = t.home;
-  const [featured, bestSellers, newArrivals, categories] = await Promise.all([
-    catalog.getFeatured(locale),
-    catalog.getBestSellers(locale, 4),
-    catalog.getNewArrivals(locale, 4),
+  const [products, categories, closer, configurator] = await Promise.all([
+    catalog.getOverview(locale),
     catalog.getCategories(locale),
+    catalog.getProduct(locale, CLOSER_LOOK),
+    catalog.getConfigurator(locale, 'cse-custom'),
   ]);
-  const tiles = [
-    ...categories.filter((c) => c.slug !== 'accessories' && c.parentSlug === null),
-    ...categories.filter((c) => c.parentSlug === 'accessories'),
-  ];
+  const keyboards = products.filter((p) => p.categorySlug === 'keyboards');
+  const aluminium = keyboards
+    .filter((p) => p.attributes.material?.includes('Aluminium'))
+    .map((p) => p.name);
+  const switchPreview = products.find((p) => p.kind === 'switch')?.preview ?? null;
 
   return (
     <>
       <JsonLd data={[organizationJsonLd(locale), websiteJsonLd(locale)]} />
-      <Hero />
+      <Reveal />
+      <HomeHero boards={heroBoards(products)} />
 
-      <section
-        aria-labelledby="featured-title"
-        className="container-page py-16 [contain-intrinsic-size:auto_900px] [content-visibility:auto]"
-      >
-        <SectionHeading
-          id="featured-title"
-          eyebrow={copy.featured.eyebrow}
-          title={copy.featured.title}
-          description={copy.featured.description}
-          href="/shop/keyboards"
-          linkLabel={copy.featured.link}
-        />
-        <ProductGrid products={featured} />
-      </section>
-
-      <section
-        aria-labelledby="categories-title"
-        className="container-page py-16 [contain-intrinsic-size:auto_900px] [content-visibility:auto]"
-      >
-        <SectionHeading
-          id="categories-title"
-          eyebrow={copy.categories.eyebrow}
-          title={copy.categories.title}
-        />
-        <CategoryTiles categories={tiles} />
-      </section>
-
-      <section
-        aria-labelledby="bestsellers-title"
-        className="container-page py-16 [contain-intrinsic-size:auto_900px] [content-visibility:auto]"
-      >
-        <SectionHeading
-          id="bestsellers-title"
-          eyebrow={copy.bestSellers.eyebrow}
-          title={copy.bestSellers.title}
-          href="/shop?sort=rating"
-          linkLabel={t.common.viewAll}
-        />
-        <ProductGrid products={bestSellers} />
-      </section>
-
-      <section
-        aria-labelledby="new-title"
-        className="container-page py-16 [contain-intrinsic-size:auto_900px] [content-visibility:auto]"
-      >
-        <SectionHeading
-          id="new-title"
-          eyebrow={copy.newArrivals.eyebrow}
-          title={copy.newArrivals.title}
-          href="/shop?sort=newest"
-          linkLabel={t.common.viewAll}
-        />
-        <ProductGrid products={newArrivals} />
-      </section>
-
-      <section
-        id="configurator"
-        aria-labelledby="configurator-title"
-        className="container-page scroll-mt-28 py-16 [contain-intrinsic-size:auto_900px] [content-visibility:auto]"
-      >
-        <ConfiguratorTeaser />
-      </section>
-
-      {/* Service promises (support, repairs, dispatch times) only once there is a business to keep them. */}
-      {storeOpen && (
-        <section
-          aria-labelledby="why-title"
-          className="container-page py-16 [contain-intrinsic-size:auto_900px] [content-visibility:auto]"
-        >
-          <SectionHeading id="why-title" eyebrow={copy.why.eyebrow} title={copy.why.title} />
-          <WhyUs />
-        </section>
+      {closer && closer.highlights.length > 0 && (
+        <CloserLook slug={closer.slug} preview={closer.preview} highlights={closer.highlights} />
       )}
 
-      {/* Reviews section returns in the review-service phase, fed by real verified reviews. */}
+      <CatalogueTable i18n={i18n} categories={categories} products={products} />
+
+      <Materials
+        i18n={i18n}
+        aluminium={aluminium}
+        switchPreview={switchPreview}
+        buildPreview={closer?.preview ?? keyboards[0]?.preview ?? null}
+        basePrice={configurator ? i18n.money(configurator.basePrice) : null}
+      />
 
       <section
         id="newsletter"
-        aria-labelledby="newsletter-title"
-        className="container-page py-16 [contain-intrinsic-size:auto_900px] [content-visibility:auto]"
+        aria-labelledby="close-title"
+        className="scroll-mt-28 bg-brand text-brand-foreground"
       >
-        <div className="flex flex-col items-start gap-8 rounded-3xl bg-primary p-8 text-primary-foreground md:flex-row md:items-center md:justify-between md:p-14">
-          <div className="max-w-lg">
-            <p className="eyebrow">{copy.newsletter.eyebrow}</p>
-            <h2 id="newsletter-title" className="mt-3 text-3xl font-semibold tracking-tight">
-              {copy.newsletter.title}
-            </h2>
-            <p className="mt-3 opacity-75">{copy.newsletter.body}</p>
-          </div>
-          <div className="w-full max-w-md text-foreground [&_p:not([role=alert])]:text-primary-foreground/70">
-            <NewsletterForm />
+        <div className="container-page grid gap-10 py-24 lg:grid-cols-12 lg:items-end lg:gap-8 lg:py-32">
+          <h2
+            id="close-title"
+            data-reveal
+            className="display text-[clamp(3.25rem,8vw,8rem)] whitespace-pre-line lg:col-span-7"
+          >
+            {storeOpen ? copy.close.openTitle : copy.close.previewTitle}
+          </h2>
+          <div data-reveal className="lg:col-span-5">
+            <p className="max-w-md text-xl leading-snug">
+              {storeOpen ? copy.close.openBody : copy.close.previewBody}
+            </p>
+            <div className="mt-8">
+              {storeOpen ? (
+                <Link
+                  href="/shop/keyboards"
+                  className="inline-flex h-13 items-center bg-brand-foreground px-7 text-base font-semibold text-brand"
+                >
+                  {copy.close.openAction}
+                </Link>
+              ) : (
+                <NewsletterForm />
+              )}
+            </div>
           </div>
         </div>
       </section>

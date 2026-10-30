@@ -40,7 +40,7 @@ export function NewsletterForm() {
 
   if (subscribe.isSuccess) {
     return (
-      <p role="status" className="text-sm font-medium">
+      <p role="status" className="text-lg font-medium">
         {copy.thanks}
       </p>
     );
@@ -50,8 +50,8 @@ export function NewsletterForm() {
   const errorId = `${inputId}-error`;
 
   return (
-    <form onSubmit={onSubmit} noValidate className="w-full max-w-md">
-      <div className="flex gap-2">
+    <form onSubmit={onSubmit} noValidate className="w-full max-w-lg">
+      <div className="flex flex-col gap-2 sm:flex-row">
         <label htmlFor={inputId} className="sr-only">
           {copy.email}
         </label>
@@ -66,18 +66,23 @@ export function NewsletterForm() {
           }}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errorId : undefined}
-          className="h-11 bg-background"
+          className="h-13 border-0 bg-background px-4 text-base text-foreground"
         />
-        <Button type="submit" size="lg" className="h-11" disabled={subscribe.isPending}>
+        <Button
+          type="submit"
+          size="lg"
+          disabled={subscribe.isPending}
+          className="bg-brand-foreground text-brand hover:bg-brand-foreground/90"
+        >
           {subscribe.isPending ? copy.joining : copy.subscribe}
         </Button>
       </div>
       {error && (
-        <p id={errorId} role="alert" className="mt-2 text-sm text-destructive">
+        <p id={errorId} role="alert" className="mt-3 text-base font-medium">
           {error}
         </p>
       )}
-      <p className="mt-3 text-xs text-muted-foreground">{copy.fineprint}</p>
+      <p className="mt-4 text-sm opacity-75">{copy.fineprint}</p>
     </form>
   );
 }

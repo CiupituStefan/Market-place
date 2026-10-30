@@ -18,7 +18,7 @@ export async function ProductDetails({ product }: { product: Product }) {
 
       {/* forceMount keeps every tab in the HTML for search engines and no-JS users. */}
       <TabsContent value="description" forceMount className="data-[state=inactive]:hidden">
-        <div className="max-w-3xl space-y-4 text-pretty text-muted-foreground">
+        <div className="max-w-3xl space-y-4 text-lg leading-relaxed text-pretty">
           {product.description.map((paragraph) => (
             <p key={paragraph.slice(0, 32)}>{paragraph}</p>
           ))}
@@ -29,10 +29,13 @@ export async function ProductDetails({ product }: { product: Product }) {
         <div className="grid gap-10 md:grid-cols-2">
           {product.specs.map((group) => (
             <div key={group.group}>
-              <h3 className="eyebrow text-muted-foreground">{group.group}</h3>
-              <dl className="mt-4 divide-y border-y">
+              <h3 className="text-xl font-semibold tracking-tight">{group.group}</h3>
+              <dl className="mt-4 divide-y border-t-2 border-t-foreground">
                 {group.items.map((item) => (
-                  <div key={item.label} className="grid grid-cols-[10rem_1fr] gap-4 py-3 text-sm">
+                  <div
+                    key={item.label}
+                    className="grid grid-cols-[minmax(7rem,12rem)_1fr] gap-4 py-3 text-base"
+                  >
                     <dt className="text-muted-foreground">{item.label}</dt>
                     <dd>{item.value}</dd>
                   </div>

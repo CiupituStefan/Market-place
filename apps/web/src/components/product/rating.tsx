@@ -13,6 +13,8 @@ interface RatingProps {
 
 export function Rating({ value, count, className, size = 'sm' }: RatingProps) {
   const { t, number } = useI18n();
+  // No stars at all until there is a review: an empty row of stars reads as a bad score.
+  if (count === 0) return null;
   const rounded = Math.round(value * 2) / 2;
   const star = size === 'sm' ? 'size-3.5' : 'size-4.5';
   return (
@@ -34,7 +36,7 @@ export function Rating({ value, count, className, size = 'sm' }: RatingProps) {
           </span>
         ))}
       </div>
-      <span className="text-xs text-muted-foreground">
+      <span className="text-sm text-muted-foreground">
         <span className="sr-only">{t.product.rated} </span>
         {value.toFixed(1)}
         <span className="sr-only"> {t.product.outOf5}</span>

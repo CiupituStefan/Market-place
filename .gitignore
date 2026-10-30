@@ -55,3 +55,6 @@ dump.rdb
 
 # VM deployment settings (generated, contain the admin password)
 deploy/gcp-vm/.env
+
+# Design-inspection screenshots and notes (local only)
+.taste-skill/
