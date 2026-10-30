@@ -36,13 +36,10 @@ export function PrototypeStory({ i18n }: { i18n: I18n }) {
           </p>
           <dl data-animate className="mt-8 grid grid-cols-2 gap-3">
             {stats.map((stat) => (
-              <div key={stat.label} className="panel rounded-2xl p-4">
-                <dt className="sr-only">{stat.label}</dt>
-                <dd>
-                  <span className="block text-[clamp(1.5rem,2.4vw,2rem)] font-semibold tracking-tight tabular-nums">
-                    {stat.value}
-                  </span>
-                  <span className="mt-1 block text-sm text-muted-foreground">{stat.label}</span>
+              <div key={stat.label} className="panel flex flex-col-reverse rounded-2xl p-4">
+                <dt className="mt-1 text-sm text-muted-foreground">{stat.label}</dt>
+                <dd className="text-[clamp(1.5rem,2.4vw,2rem)] font-semibold tracking-tight tabular-nums">
+                  {stat.value}
                 </dd>
               </div>
             ))}

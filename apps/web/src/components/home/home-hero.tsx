@@ -44,13 +44,9 @@ export function HomeHero({ boards }: { boards: HeroBoard[] }) {
       mm.add(MOTION_OK, () => {
         gsap
           .timeline({ defaults: { ease: EASE } })
-          .from('[data-hero-line]', { yPercent: 60, autoAlpha: 0, duration: 0.9, stagger: 0.09 })
+          .from('[data-hero-line]', { yPercent: 105, duration: 0.9, stagger: 0.09 })
           .from('[data-hero-fade]', { y: 16, autoAlpha: 0, duration: 0.7, stagger: 0.07 }, '-=0.5')
-          .from(
-            stage.current,
-            { y: 36, scale: 0.97, autoAlpha: 0, duration: 1.1, ease: 'expo.out' },
-            '-=0.8',
-          );
+          .from(stage.current, { y: 36, scale: 0.97, duration: 1.1, ease: 'expo.out' }, '-=0.8');
       });
       // A slight tilt that follows the pointer, so the stage reads as an object in space.
       mm.add(`${MOTION_OK} and ${FINE_POINTER}`, () => {

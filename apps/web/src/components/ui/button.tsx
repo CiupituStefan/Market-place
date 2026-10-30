@@ -17,7 +17,7 @@ export const buttonVariants = cva(
         secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
         ghost: 'hover:bg-foreground/[0.07] hover:text-foreground',
         link: 'text-foreground underline-offset-4 hover:underline',
-        destructive: 'bg-destructive text-white hover:bg-destructive/90',
+        destructive: 'bg-destructive text-white hover:bg-destructive/90 dark:text-[#0c0d10]',
       },
       size: {
         default: 'h-10 px-4',

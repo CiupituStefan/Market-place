@@ -257,7 +257,8 @@
 /* Without transparency effects (system setting), glass becomes a solid surface. */
 @media (prefers-reduced-transparency: reduce) {
   .glass,
-  .glass-strong {
+  .glass-strong,
+  [data-scrolled='true'] {
     background: var(--card);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;

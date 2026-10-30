@@ -2,6 +2,7 @@ import { ArrowRightIcon } from 'lucide-react';
 import Link from '@/components/i18n/link';
 import { Reveal } from '@/components/motion/reveal';
 import { ProductArt } from '@/components/product/product-art';
+import { Button } from '@/components/ui/button';
 import type { Category, ProductSummary } from '@/lib/catalog';
 import type { I18n } from '@/lib/i18n/core';
 import { CATEGORY_GUIDES } from '@/lib/knowledge/category-guides';
@@ -111,7 +112,7 @@ export function ComponentIndex({
                       <Link
                         key={child.slug}
                         href={`/shop/${child.slug}`}
-                        className="rounded-full border border-border px-3 py-1.5 text-sm font-medium transition-colors hover:border-foreground/30 hover:bg-foreground/[0.05]"
+                        className="rounded-full border border-border px-3 py-2 text-sm font-medium transition-colors hover:border-foreground/30 hover:bg-foreground/[0.05]"
                       >
                         {child.name}
                       </Link>
@@ -120,7 +121,7 @@ export function ComponentIndex({
                       <Link
                         key={slug}
                         href={`/learn/${slug}`}
-                        className="rounded-full bg-brand-soft px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-brand/20"
+                        className="rounded-full bg-brand-soft px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-brand/20"
                       >
                         {copy.choose}: {learn[slug]}
                       </Link>
@@ -141,12 +142,11 @@ export function ComponentIndex({
               <h3 className="text-2xl font-semibold tracking-tight">{copy.build.title}</h3>
               <p className="mt-2 text-lg text-muted-foreground">{copy.build.body(basePrice)}</p>
             </div>
-            <Link
-              href="/configurator"
-              className="inline-flex h-12 shrink-0 items-center gap-2 self-start rounded-full bg-primary px-6 font-medium text-primary-foreground transition-[transform,background-color] duration-200 hover:bg-primary/88 active:scale-[0.97] lg:self-auto"
-            >
-              {copy.build.action} <ArrowRightIcon className="size-4" aria-hidden="true" />
-            </Link>
+            <Button size="lg" asChild className="shrink-0 self-start lg:self-auto">
+              <Link href="/configurator">
+                {copy.build.action} <ArrowRightIcon aria-hidden="true" />
+              </Link>
+            </Button>
           </article>
         )}
       </Reveal>

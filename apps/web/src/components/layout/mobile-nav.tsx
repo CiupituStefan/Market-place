@@ -27,7 +27,7 @@ export function MobileNav() {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="lg:hidden" aria-label={t.layout.openMenu}>
+        <Button variant="ghost" size="icon" className="xl:hidden" aria-label={t.layout.openMenu}>
           <MenuIcon />
         </Button>
       </SheetTrigger>
@@ -64,7 +64,7 @@ export function MobileNav() {
               href={item.href}
               prefetch={false}
               onClick={close}
-              className="rounded-lg px-3 py-2 hover:bg-accent"
+              className="flex min-h-11 items-center rounded-lg px-3 py-2 hover:bg-accent"
             >
               {item.label}
             </Link>

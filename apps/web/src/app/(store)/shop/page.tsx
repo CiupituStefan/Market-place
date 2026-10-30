@@ -22,7 +22,8 @@ export default async function ShopPage(props: PageProps<'/shop'>) {
   const { t, locale } = await getI18n();
   const [listing, categories] = await Promise.all([
     catalog.listProducts(locale, query),
-    catalog.getCategories(locale),
+    // The shelf links are a shortcut: if categories fail to load, the listing still shows.
+    catalog.getCategories(locale).catch(() => []),
   ]);
   const shelves = categories.filter((category) => category.parentSlug === null);
   return (

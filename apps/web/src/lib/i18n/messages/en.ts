@@ -112,8 +112,6 @@ export const en = {
       cookies: 'Cookies',
       legal: 'Legal notice',
       blurb: 'Mechanical keyboards, switches, keycaps and desk accessories.',
-      invitation: 'Find your\nkeyboard',
-      invitationAction: 'See the keyboards',
       guide: 'Guide',
       sources:
         'Photographs, drawings and technical content: Ștefan-Emanuel Ciupitu, bachelor thesis “Wireless multifunction keyboard using the nRF52840 module”, Suceava, 2025.',

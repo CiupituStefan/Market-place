@@ -31,7 +31,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
             key={value}
             lang={value}
             aria-current="true"
-            className="rounded-full bg-primary px-2 py-1 text-primary-foreground uppercase"
+            className="inline-flex min-h-8 min-w-8 items-center justify-center rounded-full bg-primary px-2 py-1 text-primary-foreground uppercase"
           >
             {value}
           </span>
@@ -47,7 +47,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
               // Keep the query (search terms, filters) in the other language too.
               event.currentTarget.search = window.location.search;
             }}
-            className="rounded-full px-2 py-1 text-muted-foreground uppercase transition-colors hover:text-foreground"
+            className="inline-flex min-h-8 min-w-8 items-center justify-center rounded-full px-2 py-1 text-muted-foreground uppercase transition-colors hover:text-foreground"
           >
             {value}
           </a>

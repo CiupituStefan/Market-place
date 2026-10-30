@@ -51,10 +51,8 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f3f4f6' },
-    { media: '(prefers-color-scheme: dark)', color: '#0c0d10' },
-  ],
+  // The shop opens in its dark theme whatever the system setting (see Providers).
+  themeColor: '#0c0d10',
 };
 
 /**

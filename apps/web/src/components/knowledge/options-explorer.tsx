@@ -3,7 +3,7 @@
 import { CheckIcon, MinusIcon } from 'lucide-react';
 import { Tabs as TabsPrimitive } from 'radix-ui';
 import { useRef, useState, type ReactNode } from 'react';
-import { EASE, gsap, MOTION_OK } from '@/lib/motion';
+import { EASE, gsap, MOTION_OK, useGSAP } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 
 export interface ExplorerItem {
@@ -18,34 +18,49 @@ export interface ExplorerItem {
 /**
  * Several alternatives of one thing (the six ways to mount a plate) compared in one place: pick
  * one, see its drawing and what it does well and less well. Tabs, so it works from the keyboard
- * (arrow keys) and reads as a list without script; the drawing crossfades on change.
+ * (arrow keys); every panel is in the page (inactive ones hidden), so all of them are there
+ * without script and for search engines. The new panel's parts rise in on change.
  */
 export function OptionsExplorer({
   label,
   items,
   prosLabel,
   consLabel,
+  headingLevel = 3,
 }: {
   label: string;
+  /** 3 directly under a chapter heading, 4 under the block's own title. */
+  headingLevel?: 3 | 4;
   items: ExplorerItem[];
   prosLabel: string;
   consLabel: string;
 }) {
+  const Heading = headingLevel === 4 ? 'h4' : 'h3';
   const [value, setValue] = useState(items[0]?.id ?? '');
   const scope = useRef<HTMLDivElement>(null);
-  // The new panel's parts rise in (a one-off tween started by the choice).
+  const changed = useRef(false);
+
+  useGSAP(
+    () => {
+      if (!changed.current) return;
+      const mm = gsap.matchMedia();
+      mm.add(MOTION_OK, () => {
+        gsap.fromTo(
+          `[data-explorer-panel="${value}"] [data-explorer-anim]`,
+          { opacity: 0, y: 14 },
+          { opacity: 1, y: 0, duration: 0.5, ease: EASE, stagger: 0.06 },
+        );
+      });
+      return () => {
+        mm.revert();
+      };
+    },
+    { scope, dependencies: [value] },
+  );
+
   const change = (next: string) => {
+    changed.current = true;
     setValue(next);
-    if (!window.matchMedia(MOTION_OK).matches) return;
-    requestAnimationFrame(() => {
-      const panel = scope.current?.querySelector('[data-state="active"][data-explorer-panel]');
-      if (!panel) return;
-      gsap.fromTo(
-        panel.querySelectorAll('[data-explorer-anim]'),
-        { autoAlpha: 0, y: 14 },
-        { autoAlpha: 1, y: 0, duration: 0.5, ease: EASE, stagger: 0.06 },
-      );
-    });
   };
 
   return (
@@ -69,16 +84,17 @@ export function OptionsExplorer({
           <TabsPrimitive.Content
             key={item.id}
             value={item.id}
-            data-explorer-panel
-            className="grid gap-6 p-3 pt-6 outline-none sm:p-5 lg:grid-cols-2 lg:items-center"
+            forceMount
+            data-explorer-panel={item.id}
+            className="grid gap-6 p-3 pt-6 outline-none data-[state=inactive]:hidden sm:p-5 lg:grid-cols-2 lg:items-center"
           >
             <div data-explorer-anim className="rounded-2xl bg-stage p-5">
               {item.figure}
             </div>
             <div>
-              <h4 data-explorer-anim className="text-2xl font-semibold tracking-tight">
+              <Heading data-explorer-anim className="text-2xl font-semibold tracking-tight">
                 {item.name}
-              </h4>
+              </Heading>
               <p data-explorer-anim className="mt-3 text-lg leading-relaxed">
                 {item.summary}
               </p>

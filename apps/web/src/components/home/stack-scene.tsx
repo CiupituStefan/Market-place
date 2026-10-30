@@ -1,10 +1,9 @@
 'use client';
 
 import { ArrowUpRightIcon } from 'lucide-react';
-import { useRef } from 'react';
+import { useRef, type ReactNode } from 'react';
 import Link from '@/components/i18n/link';
 import { useI18n } from '@/components/i18n/provider';
-import { Diagram } from '@/components/knowledge/diagrams';
 import { EASE, gsap, MOTION_OK, ScrollTrigger, useGSAP } from '@/lib/motion';
 
 const LAYERS = [
@@ -20,9 +19,11 @@ const LAYERS = [
  * What a keyboard is made of, as a scroll scene: the drawing stays in view while the six
  * layers are explained one by one; it starts assembled, comes apart as the section begins and
  * lights the layer being read. Without motion (or on small screens) it is a drawing above a list.
+ * The drawing (the `exploded-stack` diagram, with `data-part` layers) comes rendered from the
+ * server, so the diagrams stay out of the browser bundle.
  */
-export function StackScene() {
-  const { t, locale } = useI18n();
+export function StackScene({ diagram }: { diagram: ReactNode }) {
+  const { t } = useI18n();
   const copy = t.home.stack;
   const scope = useRef<HTMLElement>(null);
 
@@ -89,10 +90,19 @@ export function StackScene() {
         });
         // The scene's spacing changed the layout: measure again.
         ScrollTrigger.refresh();
+
+        // Leaving the scene (smaller screen, motion turned off): back to the plain drawing.
+        return () => {
+          delete root.dataset.scene;
+          gsap.killTweensOf(groups);
+          gsap.set(groups, { clearProps: 'opacity,transform' });
+          items.forEach((item) => {
+            item.dataset.active = 'false';
+          });
+        };
       });
       return () => {
         mm.revert();
-        if (scope.current) delete scope.current.dataset.scene;
       };
     },
     { scope },
@@ -110,9 +120,7 @@ export function StackScene() {
             {copy.title}
           </h2>
           <p className="mt-4 max-w-md text-lg text-muted-foreground">{copy.intro}</p>
-          <div className="glass mt-8 rounded-3xl p-5 sm:p-8">
-            <Diagram id="exploded-stack" locale={locale} title={copy.art} className="w-full" />
-          </div>
+          <div className="glass mt-8 rounded-3xl p-5 sm:p-8">{diagram}</div>
         </div>
       </div>
       <ol className="grid gap-4 lg:col-span-6 lg:group-data-[scene=on]/stack:gap-0 lg:group-data-[scene=on]/stack:pt-[28vh] lg:group-data-[scene=on]/stack:pb-[16vh]">
@@ -123,10 +131,10 @@ export function StackScene() {
               key={layer.part}
               data-layer={layer.part}
               data-active="false"
-              className="panel p-6 transition-[opacity,border-color] duration-500 sm:p-8 lg:group-data-[scene=on]/stack:min-h-[44vh] lg:group-data-[scene=on]/stack:border-transparent lg:group-data-[scene=on]/stack:bg-transparent lg:group-data-[scene=on]/stack:opacity-40 lg:group-data-[scene=on]/stack:data-[active=true]:opacity-100"
+              className="panel p-6 transition-[opacity,border-color] duration-500 sm:p-8 lg:group-data-[scene=on]/stack:min-h-[44vh] lg:group-data-[scene=on]/stack:border-transparent lg:group-data-[scene=on]/stack:bg-transparent lg:group-data-[scene=on]/stack:opacity-70 lg:group-data-[scene=on]/stack:data-[active=true]:opacity-100"
             >
               <p className="text-sm font-semibold text-copper tabular-nums">
-                {String(i + 1).padStart(2, '0')} / 06
+                {String(i + 1).padStart(2, '0')} / {String(LAYERS.length).padStart(2, '0')}
               </p>
               <h3 className="mt-2 text-[clamp(1.75rem,2.6vw,2.5rem)] font-semibold tracking-tight">
                 {text.name}

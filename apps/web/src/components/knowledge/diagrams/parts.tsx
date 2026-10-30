@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 
 import type { Locale } from '@/lib/i18n/config';
 import type { DiagramId } from '@/lib/knowledge/types';
@@ -48,7 +48,8 @@ export function DiagramSvg({
   height: number;
   children: ReactNode;
 }) {
-  const titleId = `diagram-${id}-title`;
+  // Unique per instance: the same drawing can appear more than once on a page.
+  const titleId = `diagram-${id}-${useId().replace(/:/g, '')}`;
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"

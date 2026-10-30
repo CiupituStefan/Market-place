@@ -109,8 +109,6 @@ export const ro: Messages = {
       cookies: 'Cookie-uri',
       legal: 'Informații legale',
       blurb: 'Tastaturi mecanice, switch-uri, keycaps și accesorii de birou.',
-      invitation: 'Găsește-ți\ntastatura',
-      invitationAction: 'Vezi tastaturile',
       guide: 'Ghid tehnic',
       sources:
         'Fotografii, desene și conținut tehnic: Ștefan-Emanuel Ciupitu, lucrarea de licență „Tastatură multifuncțională fără fir folosind modulul nRF52840”, Suceava, 2025.',

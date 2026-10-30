@@ -34,7 +34,7 @@ export function CategoryHeader({
               <li key={child.slug}>
                 <Link
                   href={`/shop/${child.slug}`}
-                  className="inline-flex rounded-full border border-border px-3.5 py-1.5 text-sm font-medium transition-colors hover:border-foreground/30 hover:bg-foreground/[0.05]"
+                  className="inline-flex rounded-full border border-border px-3.5 py-2 text-sm font-medium transition-colors hover:border-foreground/30 hover:bg-foreground/[0.05]"
                 >
                   {child.name}
                 </Link>
@@ -49,7 +49,7 @@ export function CategoryHeader({
               <Link
                 key={slug}
                 href={`/learn/${slug}`}
-                className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-3 py-1.5 text-sm font-medium transition-colors hover:bg-brand/20"
+                className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-3 py-2 text-sm font-medium transition-colors hover:bg-brand/20"
               >
                 {t.learn.topicNames[slug]}{' '}
                 <ArrowUpRightIcon className="size-3.5" aria-hidden="true" />

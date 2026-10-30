@@ -8,7 +8,7 @@ export const prototypeTopic: Topic = {
     ro: 'Tastatura wireless construită pentru lucrarea de licență: cum a fost proiectată, ce s-a măsurat, ce a mers prost la asamblare și cum s-a rezolvat.',
     en: 'The wireless keyboard built for the bachelor thesis: how it was designed, what was measured, what went wrong during the build and how it was fixed.',
   },
-  emblem: 'exploded-stack',
+  emblem: 'matrix-scan',
   chapters: [
     {
       id: 'goals',

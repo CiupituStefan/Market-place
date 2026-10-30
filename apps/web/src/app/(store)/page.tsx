@@ -6,6 +6,8 @@ import { NewsletterForm } from '@/components/home/newsletter-form';
 import { PrototypeStory } from '@/components/home/prototype-story';
 import { StackScene } from '@/components/home/stack-scene';
 import Link from '@/components/i18n/link';
+import { Diagram } from '@/components/knowledge/diagrams';
+import { Button } from '@/components/ui/button';
 import { JsonLd } from '@/components/seo/json-ld';
 import { catalog, KEYBOARD_LAYOUTS, type ProductSummary } from '@/lib/catalog';
 import { storeOpen } from '@/lib/env';
@@ -53,7 +55,11 @@ export default async function HomePage() {
     <>
       <JsonLd data={[organizationJsonLd(locale), websiteJsonLd(locale)]} />
       <HomeHero boards={heroBoards(products)} />
-      <StackScene />
+      <StackScene
+        diagram={
+          <Diagram id="exploded-stack" locale={locale} title={copy.stack.art} className="w-full" />
+        }
+      />
       <ComponentIndex
         i18n={i18n}
         categories={categories}
@@ -81,12 +87,9 @@ export default async function HomePage() {
             </p>
             <div className="mt-6">
               {storeOpen ? (
-                <Link
-                  href="/shop/keyboards"
-                  className="inline-flex h-12 items-center rounded-full bg-brand px-6 font-medium text-brand-foreground"
-                >
-                  {copy.close.openAction}
-                </Link>
+                <Button size="lg" variant="brand" asChild>
+                  <Link href="/shop/keyboards">{copy.close.openAction}</Link>
+                </Button>
               ) : (
                 <NewsletterForm />
               )}

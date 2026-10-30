@@ -16,15 +16,15 @@ import { ThemeToggle } from './theme-toggle';
 export async function SiteHeader() {
   const { t } = await getI18n();
   return (
-    <header className="sticky top-0 z-40">
+    <>
       <p className="border-b border-border bg-background px-4 py-1.5 text-center text-sm text-muted-foreground">
         {storeOpen ? t.layout.announcement : t.layout.previewAnnouncement}
       </p>
-      <div className="px-2 pt-2 sm:px-3">
+      <header className="sticky top-0 z-40 px-2 pt-2 sm:px-3">
         <HeaderFrame>
           <MobileNav />
           <Logo className="mr-4" />
-          <nav aria-label={t.layout.mainNav} className="hidden items-center gap-1 lg:flex">
+          <nav aria-label={t.layout.mainNav} className="hidden items-center gap-1 xl:flex">
             {mainNav.map((item) => (
               <Link
                 key={item.href}
@@ -35,7 +35,7 @@ export async function SiteHeader() {
               </Link>
             ))}
           </nav>
-          <SearchForm className="ml-auto hidden w-full max-w-xs md:block lg:max-w-[13rem] xl:max-w-xs" />
+          <SearchForm className="ml-auto hidden w-full max-w-xs md:block xl:max-w-[13rem] 2xl:max-w-xs" />
           <div className="ml-auto flex items-center md:ml-2">
             <LanguageSwitcher className="mr-1 hidden sm:flex" />
             <ThemeToggle />
@@ -52,7 +52,7 @@ export async function SiteHeader() {
             <CartLink />
           </div>
         </HeaderFrame>
-      </div>
-    </header>
+      </header>
+    </>
   );
 }

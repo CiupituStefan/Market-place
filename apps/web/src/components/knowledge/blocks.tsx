@@ -24,10 +24,14 @@ export function KnowledgeBlock({ block, i18n }: { block: Block; i18n: I18n }) {
 
     case 'callout':
       return (
-        <aside className="glass max-w-[68ch] rounded-2xl border-l-4 border-l-brand p-5 sm:p-6">
+        <div
+          role="note"
+          className="glass relative max-w-[68ch] overflow-hidden rounded-2xl p-5 pl-7 sm:p-6 sm:pl-8"
+        >
+          <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1 bg-brand" />
           <p className="font-semibold">{block.title[locale]}</p>
           <p className="mt-2 leading-relaxed text-foreground/90">{block.body[locale]}</p>
-        </aside>
+        </div>
       );
 
     case 'terms':
@@ -54,11 +58,18 @@ export function KnowledgeBlock({ block, i18n }: { block: Block; i18n: I18n }) {
           <div>
             {block.title && <h3 className="mb-4 text-xl font-semibold">{block.title[locale]}</h3>}
             <OptionsExplorer
-              label={block.title?.[locale] ?? copy.compare}
+              label={
+                block.title?.[locale] ??
+                `${copy.compare}: ${block.items.map((item) => item.name[locale]).join(', ')}`
+              }
+              headingLevel={block.title ? 4 : 3}
               prosLabel={copy.pros}
               consLabel={copy.cons}
               items={block.items.map((item) => ({
-                id: item.name.en,
+                id: item.name.en
+                  .toLowerCase()
+                  .replace(/[^a-z0-9]+/g, '-')
+                  .replace(/^-|-$/g, ''),
                 name: item.name[locale],
                 summary: item.summary[locale],
                 pros: (item.pros ?? []).map((line) => line[locale]),
@@ -71,6 +82,8 @@ export function KnowledgeBlock({ block, i18n }: { block: Block; i18n: I18n }) {
           </div>
         );
       }
+      // Cards sit under the block's own title when it has one, else directly under the chapter.
+      const Heading = block.title ? 'h4' : 'h3';
       return (
         <div>
           {block.title && <h3 className="mb-4 text-xl font-semibold">{block.title[locale]}</h3>}
@@ -87,7 +100,7 @@ export function KnowledgeBlock({ block, i18n }: { block: Block; i18n: I18n }) {
                     <Diagram id={item.diagram} locale={locale} title={item.name[locale]} />
                   </div>
                 )}
-                <h4 className="text-lg font-semibold">{item.name[locale]}</h4>
+                <Heading className="text-lg font-semibold">{item.name[locale]}</Heading>
                 <p className="mt-2 text-[0.9375rem] leading-relaxed text-muted-foreground">
                   {item.summary[locale]}
                 </p>
@@ -96,6 +109,7 @@ export function KnowledgeBlock({ block, i18n }: { block: Block; i18n: I18n }) {
                     {(item.pros ?? []).map((line) => (
                       <li key={`+${line.en}`} className="flex gap-2 text-[0.9375rem] leading-snug">
                         <CheckIcon
+                          role="img"
                           aria-label={copy.pros}
                           className="mt-0.5 size-4 shrink-0 text-success"
                         />
@@ -105,6 +119,7 @@ export function KnowledgeBlock({ block, i18n }: { block: Block; i18n: I18n }) {
                     {(item.cons ?? []).map((line) => (
                       <li key={`-${line.en}`} className="flex gap-2 text-[0.9375rem] leading-snug">
                         <MinusIcon
+                          role="img"
                           aria-label={copy.cons}
                           className="mt-0.5 size-4 shrink-0 text-copper"
                         />

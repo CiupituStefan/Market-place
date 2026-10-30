@@ -87,7 +87,7 @@ export function ConfiguratorBuilder({ configurator, initialQuote }: Configurator
           </div>
           <div>
             <dt className="text-muted-foreground">{copy.configurationId}</dt>
-            <dd className="mt-1 font-mono text-xs">{quote.configurationId}</dd>
+            <dd className="mt-1 font-mono text-xs break-all">{quote.configurationId}</dd>
           </div>
         </dl>
       </div>

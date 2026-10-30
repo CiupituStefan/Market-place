@@ -64,7 +64,7 @@ export default async function TopicPage(props: PageProps<'/learn/[topic]'>) {
       </header>
 
       <div className="mt-12 grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-14 xl:grid-cols-[17rem_minmax(0,1fr)]">
-        <aside className="sticky top-[6.75rem] z-20 -mx-4 min-w-0 bg-background/85 px-4 py-2 backdrop-blur-md sm:-mx-6 sm:px-6 lg:top-28 lg:mx-0 lg:self-start lg:bg-transparent lg:p-0 lg:backdrop-blur-none">
+        <aside className="sticky top-[4.75rem] z-20 -mx-4 min-w-0 bg-background px-4 py-2 sm:-mx-6 sm:px-6 lg:top-28 lg:mx-0 lg:self-start lg:bg-transparent lg:p-0 lg:backdrop-blur-none">
           <TopicToc
             label={copy.onThisPage}
             chapters={topic.chapters.map((chapter) => ({
