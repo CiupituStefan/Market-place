@@ -1,12 +1,14 @@
 'use client';
 
+import type { Money } from '@market/types';
 import { ArrowRightIcon } from 'lucide-react';
-import { useState, type CSSProperties } from 'react';
+import { useRef, useState } from 'react';
 import Link from '@/components/i18n/link';
 import { useI18n } from '@/components/i18n/provider';
 import { ProductArt } from '@/components/product/product-art';
-import type { Money } from '@market/types';
+import { Button } from '@/components/ui/button';
 import type { ProductPreview } from '@/lib/catalog/schemas';
+import { EASE, FINE_POINTER, gsap, MOTION_OK, useGSAP } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 
 export interface HeroBoard {
@@ -18,14 +20,9 @@ export interface HeroBoard {
   preview: ProductPreview;
 }
 
-/** Where the seam cuts the two-line headline, in ems of the headline (line-height 0.86). */
-const SEAM = 1.15;
-const BELOW = 2 * 0.86 - SEAM;
-
 /**
- * Two fields, paper over blue, with the headline across the seam. The blue field holds the
- * one thing to do here: pick a size, and see the CSE keyboard made in that size, with its
- * real name, description and price.
+ * The first screen: what the shop is, in large type, and the one thing to try here: pick a
+ * size and see the keyboard made in that size on a glass stage, with its real name and price.
  */
 export function HomeHero({ boards }: { boards: HeroBoard[] }) {
   const { t, money } = useI18n();
@@ -36,105 +33,155 @@ export function HomeHero({ boards }: { boards: HeroBoard[] }) {
   );
   const [index, setIndex] = useState(initial);
   const board = boards[index];
+  const scope = useRef<HTMLElement>(null);
+  const stage = useRef<HTMLDivElement>(null);
+  const art = useRef<HTMLDivElement>(null);
 
-  const size = { '--hero-size': 'clamp(4rem, 10vw, 10rem)' } as CSSProperties;
+  // Entrance: the headline lines rise, then the text, then the stage settles into place.
+  useGSAP(
+    () => {
+      const mm = gsap.matchMedia();
+      mm.add(MOTION_OK, () => {
+        gsap
+          .timeline({ defaults: { ease: EASE } })
+          .from('[data-hero-line]', { yPercent: 60, autoAlpha: 0, duration: 0.9, stagger: 0.09 })
+          .from('[data-hero-fade]', { y: 16, autoAlpha: 0, duration: 0.7, stagger: 0.07 }, '-=0.5')
+          .from(
+            stage.current,
+            { y: 36, scale: 0.97, autoAlpha: 0, duration: 1.1, ease: 'expo.out' },
+            '-=0.8',
+          );
+      });
+      // A slight tilt that follows the pointer, so the stage reads as an object in space.
+      mm.add(`${MOTION_OK} and ${FINE_POINTER}`, () => {
+        const node = stage.current;
+        if (!node) return;
+        const rx = gsap.quickTo(node, 'rotationX', { duration: 0.6, ease: 'power2.out' });
+        const ry = gsap.quickTo(node, 'rotationY', { duration: 0.6, ease: 'power2.out' });
+        gsap.set(node, { transformPerspective: 1200 });
+        const move = (event: PointerEvent) => {
+          const box = node.getBoundingClientRect();
+          ry(((event.clientX - box.left) / box.width - 0.5) * 6);
+          rx(-((event.clientY - box.top) / box.height - 0.5) * 6);
+        };
+        const leave = () => {
+          rx(0);
+          ry(0);
+        };
+        node.addEventListener('pointermove', move);
+        node.addEventListener('pointerleave', leave);
+        return () => {
+          node.removeEventListener('pointermove', move);
+          node.removeEventListener('pointerleave', leave);
+        };
+      });
+      return () => {
+        mm.revert();
+      };
+    },
+    { scope },
+  );
+
+  // Changing the size slides the new keyboard in (a one-off tween started by the click).
+  const choose = (next: number) => {
+    if (next === index) return;
+    setIndex(next);
+    if (!art.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    gsap.fromTo(
+      art.current,
+      { x: next > index ? 40 : -40, autoAlpha: 0 },
+      { x: 0, autoAlpha: 1, duration: 0.6, ease: EASE },
+    );
+  };
+
+  const lines = copy.title.split('\n');
 
   return (
-    <section aria-labelledby="hero-title" style={size}>
-      <div className="bg-background pt-[clamp(2rem,6svh,4.5rem)]">
-        <div
-          className="relative mx-auto w-fit px-4 text-[length:var(--hero-size)]"
-          style={{ marginBottom: `-${String(BELOW)}em` }}
-        >
-          <h1 id="hero-title" className="display relative text-center whitespace-pre-line">
-            <span
-              className="block"
-              style={{ clipPath: `inset(0 0 calc(100% - ${String(SEAM)}em) 0)` }}
-            >
-              {copy.title}
+    <section
+      ref={scope}
+      aria-labelledby="hero-title"
+      className="container-page grid items-center gap-12 pt-10 pb-20 lg:grid-cols-12 lg:gap-10 lg:pt-16 lg:pb-28"
+    >
+      <div className="lg:col-span-6">
+        <h1 id="hero-title" className="display text-[clamp(2.6rem,4.6vw,4.5rem)]">
+          {lines.map((line) => (
+            <span key={line} className="block overflow-hidden pb-[0.06em]">
+              <span data-hero-line className="block">
+                {line}
+              </span>
             </span>
-            {/* The same words below the seam, in the blue field's ink. */}
-            <span
-              aria-hidden="true"
-              className="absolute inset-0 text-brand-foreground"
-              style={{ clipPath: `inset(${String(SEAM)}em 0 0 0)` }}
-            >
-              {copy.title}
-            </span>
-          </h1>
+          ))}
+        </h1>
+        <p data-hero-fade className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
+          {copy.body}
+        </p>
+        <div data-hero-fade className="mt-8 flex flex-wrap gap-3">
+          <Button size="lg" variant="brand" asChild>
+            <Link href="/shop/keyboards">
+              {copy.shop} <ArrowRightIcon aria-hidden="true" />
+            </Link>
+          </Button>
+          <Button size="lg" variant="outline" asChild>
+            <Link href="/learn">{copy.guide}</Link>
+          </Button>
         </div>
       </div>
 
-      <div
-        className="bg-brand text-brand-foreground"
-        style={{ paddingTop: `calc(var(--hero-size) * ${String(BELOW)} + 2.5rem)` }}
-      >
-        <div className="container-page grid items-center gap-10 pb-20 lg:grid-cols-12 lg:gap-8 lg:pb-28">
-          <div className="lg:col-span-5">
-            <p className="max-w-md text-xl leading-snug">{copy.body}</p>
-
-            {boards.length > 0 && board && (
-              <>
-                <div role="group" aria-label={copy.sizes} className="mt-6 flex flex-wrap gap-2">
-                  {boards.map((item, i) => (
-                    <button
-                      key={item.slug}
-                      type="button"
-                      aria-pressed={i === index}
-                      onClick={() => {
-                        setIndex(i);
-                      }}
-                      className={cn(
-                        'h-12 min-w-16 px-4 text-lg font-semibold tabular-nums transition-[background-color,color,transform] duration-150 active:translate-y-px',
-                        i === index
-                          ? 'bg-brand-foreground text-brand'
-                          : 'bg-brand-foreground/12 hover:bg-brand-foreground/25',
-                      )}
-                    >
-                      {item.layout}
-                    </button>
-                  ))}
-                </div>
-
-                <div aria-live="polite" className="mt-8">
-                  <p className="text-3xl font-semibold tracking-tight">{board.name}</p>
-                  <p className="mt-2 text-lg">{board.tagline}</p>
-                  <p className="mt-2 text-lg font-semibold tabular-nums">
-                    {copy.from(money(board.price))}
-                  </p>
-                </div>
-
-                <div className="mt-6 flex flex-wrap items-center gap-x-8 gap-y-4">
-                  <Link
-                    href={`/product/${board.slug}`}
-                    className="inline-flex h-13 items-center gap-2 bg-brand-foreground px-7 text-base font-semibold text-brand transition-transform duration-150 hover:-translate-y-0.5 active:translate-y-0"
-                  >
-                    {copy.see(board.name)} <ArrowRightIcon className="size-4" aria-hidden="true" />
-                  </Link>
-                  <Link
-                    href="/configurator"
-                    className="text-base font-medium underline underline-offset-4 hover:no-underline"
-                  >
-                    {copy.build}
-                  </Link>
-                </div>
-              </>
-            )}
-          </div>
-
-          {board && (
-            <div className="lg:col-span-7">
-              <ProductArt
-                key={board.slug}
-                preview={board.preview}
-                quality="full"
-                title={copy.art(board.name)}
-                className="w-full animate-in duration-500 fade-in slide-in-from-right-6"
-              />
+      {board && (
+        <div className="lg:col-span-6">
+          <div ref={stage} className="glass rounded-3xl p-4 will-change-transform sm:p-6">
+            <div className="relative overflow-hidden rounded-2xl bg-stage/70 px-[6%] py-[8%]">
+              <div ref={art}>
+                <ProductArt
+                  key={board.slug}
+                  preview={board.preview}
+                  quality="full"
+                  title={copy.art(board.name)}
+                  className="w-full"
+                />
+              </div>
             </div>
-          )}
+            <div className="mt-5 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+              <div aria-live="polite">
+                <p className="text-2xl font-semibold tracking-tight">{board.name}</p>
+                <p className="mt-1 text-[0.9375rem] text-muted-foreground">{board.tagline}</p>
+                <p className="mt-2 text-lg font-semibold tabular-nums">
+                  {copy.from(money(board.price))}
+                </p>
+              </div>
+              <Button variant="outline" asChild className="self-start sm:self-auto">
+                <Link href={`/product/${board.slug}`}>
+                  {copy.see(board.name)} <ArrowRightIcon aria-hidden="true" />
+                </Link>
+              </Button>
+            </div>
+            <div
+              role="group"
+              aria-label={copy.sizes}
+              className="mt-5 grid grid-cols-3 gap-1.5 rounded-2xl bg-foreground/[0.05] p-1.5 sm:grid-cols-6"
+            >
+              {boards.map((item, i) => (
+                <button
+                  key={item.slug}
+                  type="button"
+                  aria-pressed={i === index}
+                  onClick={() => {
+                    choose(i);
+                  }}
+                  className={cn(
+                    'h-11 rounded-xl text-[0.9375rem] font-semibold tabular-nums transition-[background-color,color,box-shadow] duration-200',
+                    i === index
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground',
+                  )}
+                >
+                  {item.layout}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </section>
   );
 }

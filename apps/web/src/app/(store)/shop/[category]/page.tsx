@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
-import Link from '@/components/i18n/link';
 import { notFound } from 'next/navigation';
 import { Breadcrumbs } from '@/components/seo/breadcrumbs';
+import { CategoryHeader } from '@/components/shop/category-header';
 import { ProductListing } from '@/components/shop/product-listing';
 import { catalog, categoryTrail, parseCatalogQuery } from '@/lib/catalog';
 import { getI18n } from '@/lib/i18n/server';
@@ -29,7 +29,8 @@ export async function generateMetadata(props: PageProps<'/shop/[category]'>): Pr
 
 export default async function CategoryPage(props: PageProps<'/shop/[category]'>) {
   const { category: slug } = await props.params;
-  const { t, locale } = await getI18n();
+  const i18n = await getI18n();
+  const { t, locale } = i18n;
   const [category, categories] = await Promise.all([
     catalog.getCategory(locale, slug),
     catalog.getCategories(locale),
@@ -44,24 +45,7 @@ export default async function CategoryPage(props: PageProps<'/shop/[category]'>)
   return (
     <div className="container-page py-10">
       <Breadcrumbs crumbs={categoryCrumbs(categoryTrail(categories, slug), t)} />
-      <header className="mt-6 mb-10 max-w-2xl">
-        <h1 className="display text-[clamp(3rem,7vw,6.5rem)]">{category.name}</h1>
-        <p className="mt-3 text-muted-foreground">{category.description}</p>
-        {children.length > 0 && (
-          <ul className="mt-6 flex flex-wrap gap-2">
-            {children.map((child) => (
-              <li key={child.slug}>
-                <Link
-                  href={`/shop/${child.slug}`}
-                  className="rounded-full border px-3.5 py-1.5 text-sm hover:bg-accent"
-                >
-                  {child.name}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </header>
+      <CategoryHeader i18n={i18n} category={category} subcategories={children} />
       <ProductListing listing={listing} query={query} pathname={pathname} />
     </div>
   );

@@ -20,7 +20,7 @@ export function ProductCard({ product, priority, className }: ProductCardProps) 
   const soldOut = product.availability === 'OUT_OF_STOCK';
   return (
     <article className={cn('group relative flex flex-col', className)}>
-      <div className="relative aspect-square overflow-hidden bg-stage">
+      <div className="relative aspect-square overflow-hidden rounded-2xl border border-border bg-stage transition-[border-color,box-shadow] duration-300 group-hover:border-foreground/20 group-hover:shadow-lg">
         <div className="absolute inset-0 flex items-center justify-center p-[8%] transition-transform duration-500 ease-out group-hover:scale-[1.04] motion-reduce:transform-none">
           <ProductMedia
             image={product.images[0]}
@@ -44,7 +44,7 @@ export function ProductCard({ product, priority, className }: ProductCardProps) 
         <h3 className="text-lg leading-snug font-semibold tracking-tight">
           <Link
             href={`/product/${product.slug}`}
-            className="after:absolute after:inset-0 focus-visible:outline-none focus-visible:after:ring-[3px] focus-visible:after:ring-ring/60"
+            className="after:absolute after:inset-0 after:rounded-2xl focus-visible:outline-none focus-visible:after:ring-[3px] focus-visible:after:ring-ring/60"
           >
             {product.name}
           </Link>

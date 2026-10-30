@@ -78,6 +78,7 @@ export const ro: Messages = {
       switches: 'Switch-uri',
       keycaps: 'Keycaps',
       accessories: 'Accesorii',
+      learn: 'Ghid tehnic',
       configurator: 'Configurator',
     },
     mainNav: 'Principal',
@@ -110,7 +111,9 @@ export const ro: Messages = {
       blurb: 'Tastaturi mecanice, switch-uri, keycaps și accesorii de birou.',
       invitation: 'Găsește-ți\ntastatura',
       invitationAction: 'Vezi tastaturile',
-      pictures: 'Imagini din Wikimedia Commons:',
+      guide: 'Ghid tehnic',
+      sources:
+        'Fotografii, desene și conținut tehnic: Ștefan-Emanuel Ciupitu, lucrarea de licență „Tastatură multifuncțională fără fir folosind modulul nRF52840”, Suceava, 2025.',
       rights: (year: number) => `© ${String(year)} CSE Keyboards. Toate drepturile rezervate.`,
       payments:
         'Plăți securizate cu cardul, procesate de Stripe. Nu stocăm niciodată datele cardului.',
@@ -614,63 +617,110 @@ export const ro: Messages = {
     resultsFor: 'Rezultate pentru',
     hint: 'Caută după numele produsului, marcă, cod, categorie sau specificație.',
   },
+  learn: {
+    title: 'Ghid tehnic',
+    intro:
+      'Cum funcționează tastaturile mecanice, de la switch la radio, explicat pe baza unei tastaturi wireless proiectate și construite pentru o lucrare de licență.',
+    topicNames: {
+      layouts: 'Formate',
+      switches: 'Switch-uri',
+      keycaps: 'Keycaps',
+      mounting: 'Montare și materiale',
+      wireless: 'Wireless și firmware',
+      prototype: 'Prototipul',
+    },
+    chapters: (count) => plural(count, 'capitol', 'capitole'),
+    onThisPage: 'Pe această pagină',
+    allTopics: 'Toate temele',
+    previous: 'Anterior',
+    next: 'Următorul',
+    related: 'În magazin',
+    pros: 'Puncte forte',
+    cons: 'Limite',
+    source: (sections) => `Din lucrarea de licență, capitolul ${sections}`,
+    sourceNote:
+      'Scris pe baza lucrării de licență a lui Ștefan-Emanuel Ciupitu, „Tastatură multifuncțională fără fir folosind modulul nRF52840” (Suceava, 2025).',
+    compare: 'Compară',
+  },
   home: {
     hero: {
-      title: 'Tastaturi\nmecanice',
-      body: 'Șase tastaturi asamblate, câte una pentru fiecare format, de la un 60% compact la un 100% full-size.',
+      title: 'Tastaturi mecanice,\nînțelese strat cu strat',
+      body: 'Șase tastaturi asamblate, de la 60% la full-size, piesele pentru a-ți construi una și un ghid tehnic scris pe baza unui prototip wireless construit de la zero.',
+      shop: 'Vezi tastaturile',
+      guide: 'Citește ghidul',
       sizes: 'Formatul tastaturii',
-      from: (price: string) => `de la ${price}`,
-      see: (name: string) => `Vezi ${name}`,
-      build: 'Sau construiește-ți una',
-      art: (name: string) => `${name}, desen în culorile de bază`,
+      from: (price) => `de la ${price}`,
+      see: (name) => `Vezi ${name}`,
+      art: (name) => `${name}, desen în culoarea de bază`,
     },
-    closer: {
-      titleStart: 'Forge 75,',
-      titleEnd: 'de aproape',
-      art: 'CSE Forge 75, desen',
-      see: 'Vezi Forge 75',
+    stack: {
+      title: 'Din ce e făcută o tastatură',
+      intro: 'Șase straturi, de la tasta de sub deget la carcasa de pe birou.',
+      art: 'Vedere explodată a unei tastaturi mecanice: keycaps, switch-uri, placă, PCB, spumă și carcasă',
+      guide: 'În ghid',
+      shop: 'În magazin',
+      layers: {
+        keycaps: {
+          name: 'Keycaps',
+          body: 'Partea pe care o atingi. Plasticul decide textura, sunetul și cât rezistă legendele: ABS-ul capătă luciu cu timpul, PBT-ul își păstrează textura mată, iar legendele double-shot nu se pot șterge.',
+        },
+        switches: {
+          name: 'Switch-uri',
+          body: 'Câte un switch pentru fiecare tastă: carcasă, arc, ax și contacte metalice. Tasta se înregistrează înainte de capătul cursei, de exemplu la 2 din 4 mm, deci scrii mai rapid, mai precis și mai puțin obosit.',
+        },
+        plate: {
+          name: 'Placa',
+          body: 'Fixează switch-urile și stabilește rigiditatea: aluminiul dă un feedback ferm, policarbonatul mai multă flexibilitate și un sunet mai grav.',
+        },
+        pcb: {
+          name: 'PCB',
+          body: 'Switch-urile stau într-o grilă de rânduri și coloane, fiecare cu o diodă contra apăsărilor fantomă. Microcontrolerul scanează grila de sute sau mii de ori pe secundă.',
+        },
+        foam: {
+          name: 'Spuma',
+          body: 'Straturi de spumă sau silicon din carcasă modelează sunetul și elimină vibrațiile nedorite.',
+        },
+        case: {
+          name: 'Carcasa',
+          body: 'Aluminiu frezat CNC, policarbonat injectat sau, la un prototip, printare 3D. Felul în care placa e prinsă în ea (gasket, top mount, tray) schimbă senzația și sunetul.',
+        },
+      },
     },
-    catalogue: {
-      title: 'Tot ce încape\npe birou',
-      label: 'Catalog',
-      count: (count: number) => plural(count, 'produs', 'produse'),
-      from: (price: string) => `de la ${price}`,
-      picture: 'Claviatura unei mașini Linotype, cu dispunerea ei proprie',
-    },
-    materials: {
-      title: 'Din ce\nsunt făcute',
-      aluminium: {
-        title: 'Carcase din aluminiu',
-        body: (names: string) =>
-          `${names} au carcasa din aluminiu, cu placa și spuma din interior alese pentru fiecare model.`,
-        link: 'Tastaturi din aluminiu',
-        picture: 'O piesă de aluminiu ieșită din frezarea CNC',
-      },
-      keycaps: {
-        title: 'Keycaps PBT double-shot',
-        body: 'Fiecare tastatură asamblată vine cu keycaps PBT double-shot, profil Cherry. Seturile separate sunt din PBT și ABS, cu profil Cherry și OEM.',
-        link: 'Seturi de keycaps',
-        picture: 'Taste de mașină de scris, fotografiate de Ralph Steiner în 1921',
-      },
-      switches: {
-        title: 'Socluri hot-swap',
-        body: 'Switch-urile se scot și se pun fără lipire, tip MX cu 3 sau 5 pini. Ai trei de ales: liniar la 45 gf, tactil la 55 gf, clicky la 60 gf.',
-        link: 'Switch-uri',
-        picture: 'Switch Silk Linear, desen',
-      },
-      walnut: {
-        title: 'Nuc cu ulei',
-        body: 'Suporturile pentru încheieturi sunt din nuc american masiv, cu finisaj natural cu ulei, în patru mărimi, de la 60% la full-size.',
-        link: 'Suportul din nuc',
-        picture: 'Esențe de lemn, planșă color din Larousse pour tous, 1909',
-      },
+    components: {
+      title: 'Explorează pe componente',
+      intro: 'Tot ce e în magazin, grupat după cum se construiește o tastatură.',
+      count: (count) => plural(count, 'produs', 'produse'),
+      from: (price) => `de la ${price}`,
+      choose: 'Cum alegi',
+      art: (name) => `${name}, desen`,
       build: {
-        title: 'Sau piesă cu piesă',
-        body: (price: string) =>
-          `Alegi formatul, carcasa, switch-urile, placa, keycaps și conexiunea. Configuratorul calculează prețul la fiecare alegere, de la ${price}.`,
-        link: 'Deschide configuratorul',
-        picture: 'O tastatură configurată, desen',
+        title: 'Construiește-ți una',
+        body: (price) =>
+          `Alegi formatul, carcasa, switch-urile, placa, keycaps și conexiunea; configuratorul calculează prețul la fiecare alegere, de la ${price}.`,
+        action: 'Deschide configuratorul',
       },
+    },
+    prototype: {
+      title: 'Construit de la zero,\nmăsurat pe birou',
+      body: 'Pentru o lucrare de licență, o tastatură wireless proiectată cap-coadă: PCB-ul în Altium Designer, carcasa în Fusion 360, firmware-ul pe ZMK. Acestea sunt rezultatele ei măsurate.',
+      note: 'Prototipul nu este de vânzare; este tastatura din spatele ghidului.',
+      stats: {
+        usb: { value: '4 ms', label: 'latență prin USB, la polling de 250 Hz' },
+        ble: { value: '32 ms', label: 'latență prin Bluetooth LE, la 31.25 Hz' },
+        rollover: { value: '11', label: 'taste înregistrate simultan (11KRO)' },
+        soc: { value: 'nRF52840', label: 'SoC Bluetooth 5, ARM Cortex-M4F la 64 MHz' },
+      },
+      photos: {
+        prototype: 'Prototipul finalizat',
+        pcb: 'PCB-ul cu două straturi, proiectat în Altium Designer',
+        case: 'Rama superioară a carcasei printate 3D',
+      },
+      action: 'Povestea completă a construcției',
+    },
+    guide: {
+      title: 'Ghidul tehnic',
+      intro: 'Șase teme din lucrarea de licență: ce face fiecare piesă, cum e făcută și cum alegi.',
+      read: (topic) => `Citește: ${topic}`,
     },
     close: {
       openTitle: 'Începe cu\nformatul',

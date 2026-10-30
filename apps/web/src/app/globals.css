@@ -4,80 +4,110 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
- * CSE Keyboards design tokens.
- * Identity: warm "paper" neutrals, graphite ink and an anodised-copper accent
- * (a nod to brass/copper plates). Colors are OKLCH for perceptual consistency.
- */
-/*
- * CSE Keyboards design tokens: "sheet and biro". White paper, near-black ink, one blue for
- * actions and links. The keyboards' own colours (Carbon, Chalk, Silver, Sage, Navy, copper
- * accents) live in the product drawings, not in the interface. Square corners throughout.
+ * CSE Keyboards design tokens, v3: "instrument panel".
+ * A graphite ground with two quiet lights behind it (signal blue and the copper of the accent
+ * keys), frosted glass only where something sits above the page (navigation, menus, the
+ * product stage, a few key panels), and solid surfaces for everything that is read. Text
+ * contrast is checked against the solid colours, never against the glass.
  */
 :root {
-  --radius: 0rem;
+  --radius: 1rem;
 
-  --background: #ffffff;
-  --foreground: #111111;
+  --background: #f3f4f6;
+  --foreground: #0e1013;
   --card: #ffffff;
   --card-foreground: var(--foreground);
   --popover: #ffffff;
   --popover-foreground: var(--foreground);
-  --primary: #111111;
+  --primary: #0e1013;
   --primary-foreground: #ffffff;
-  --secondary: #f4f4f4;
+  --secondary: #e8eaee;
   --secondary-foreground: var(--foreground);
-  --muted: #f4f4f4;
-  --muted-foreground: #5c5c5c;
-  --accent: #ececec;
+  --muted: #e8eaee;
+  --muted-foreground: #4f5662;
+  --accent: #dfe2e8;
   --accent-foreground: var(--foreground);
   --destructive: #c4321f;
   --success: #1d7a46;
-  --border: #e2e2e2;
-  --input: #cfcfcf;
-  --ring: #1a4be0;
+  --border: rgb(14 16 19 / 0.1);
+  --input: rgb(14 16 19 / 0.18);
+  --ring: #1f50e6;
 
-  /* The one accent: actions and links */
-  --brand: #1a4be0;
+  --brand: #1f50e6;
   --brand-foreground: #ffffff;
-  --brand-soft: #e7edfd;
-  /* Data marks */
-  --chart-1: #1a4be0;
-  --chart-grid: #ececec;
+  --brand-soft: #e3e9fc;
+  --copper: #a85a1f;
+  --chart-1: #1f50e6;
+  --chart-grid: #e2e5ea;
 
-  /* Product art surfaces */
-  --stage: #f4f4f4;
-  --stage-foreground: #3a3a3a;
+  --stage: #e9ebef;
+  --stage-foreground: #3a3f47;
+
+  /* Glass: tint, rim and the light behind it */
+  --glass: rgb(255 255 255 / 0.62);
+  --glass-strong: rgb(255 255 255 / 0.82);
+  --glass-rim: rgb(255 255 255 / 0.9);
+  --glass-edge: rgb(14 16 19 / 0.08);
+  --glow-blue: rgb(31 80 230 / 0.16);
+  --glow-copper: rgb(208 135 74 / 0.16);
+  --shadow-soft: 0 1px 2px rgb(14 16 19 / 0.06), 0 10px 30px -12px rgb(14 16 19 / 0.18);
+  --shadow-raised: 0 2px 6px rgb(14 16 19 / 0.08), 0 30px 60px -24px rgb(14 16 19 / 0.32);
+
+  /* Technical drawings */
+  --diagram-ink: #1a1d22;
+  --diagram-line: #6b727e;
+  --diagram-fill: #ffffff;
+  --diagram-fill-2: #e6e9ee;
+  --diagram-accent: #1f50e6;
+  --diagram-accent-2: #b8662a;
 }
 
 .dark {
-  --background: #111111;
-  --foreground: #f2f2f2;
-  --card: #181818;
+  --background: #0c0d10;
+  --foreground: #eef0f3;
+  --card: #15171b;
   --card-foreground: var(--foreground);
-  --popover: #1c1c1c;
+  --popover: #17191e;
   --popover-foreground: var(--foreground);
-  --primary: #f2f2f2;
-  --primary-foreground: #111111;
-  --secondary: #1d1d1d;
+  --primary: #eef0f3;
+  --primary-foreground: #0c0d10;
+  --secondary: #1b1e23;
   --secondary-foreground: var(--foreground);
-  --muted: #1d1d1d;
-  --muted-foreground: #a6a6a6;
-  --accent: #262626;
+  --muted: #1b1e23;
+  --muted-foreground: #a3a9b4;
+  --accent: #23272e;
   --accent-foreground: var(--foreground);
   --destructive: #ff6b57;
   --success: #4cc283;
-  --border: #2c2c2c;
-  --input: #3a3a3a;
+  --border: rgb(238 240 243 / 0.1);
+  --input: rgb(238 240 243 / 0.16);
   --ring: #7d9bff;
 
-  --brand: #5b82ff;
-  --brand-foreground: #0b0b0b;
-  --brand-soft: #1a2442;
+  --brand: #6f8fff;
+  --brand-foreground: #0a0c12;
+  --brand-soft: #1a2240;
+  --copper: #e09a5e;
   --chart-1: #7d9bff;
-  --chart-grid: #262626;
+  --chart-grid: #23272e;
 
-  --stage: #1b1b1b;
-  --stage-foreground: #cfcfcf;
+  --stage: #14161a;
+  --stage-foreground: #cfd3da;
+
+  --glass: rgb(28 31 37 / 0.55);
+  --glass-strong: rgb(24 27 32 / 0.78);
+  --glass-rim: rgb(255 255 255 / 0.1);
+  --glass-edge: rgb(255 255 255 / 0.08);
+  --glow-blue: rgb(91 130 255 / 0.22);
+  --glow-copper: rgb(224 154 94 / 0.14);
+  --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.3), 0 12px 32px -12px rgb(0 0 0 / 0.5);
+  --shadow-raised: 0 2px 6px rgb(0 0 0 / 0.35), 0 30px 60px -18px rgb(0 0 0 / 0.65);
+
+  --diagram-ink: #eef0f3;
+  --diagram-line: #8a909b;
+  --diagram-fill: #1b1e23;
+  --diagram-fill-2: #262a31;
+  --diagram-accent: #6f8fff;
+  --diagram-accent-2: #e09a5e;
 }
 
 @theme inline {
@@ -85,20 +115,19 @@
   /* No monospace in the shop: figures that must align use tabular-nums in the text face. */
   --font-mono: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
 
-  /* Square corners everywhere; only true circles (rounded-full) stay round. */
-  --radius-xs: 0px;
-  --radius-sm: 0px;
-  --radius-md: 0px;
-  --radius-lg: 0px;
-  --radius-xl: 0px;
-  --radius-2xl: 0px;
-  --radius-3xl: 0px;
+  /* One radius family: controls 12px, cards 16px, panels 24px, pills full. */
+  --radius-xs: 0.375rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.5rem;
+  --radius-3xl: 2rem;
 
-  /* Nothing at rest casts a shadow; menus and dialogs (lg and up) still float. */
-  --shadow-2xs: 0 0 #0000;
-  --shadow-xs: 0 0 #0000;
-  --shadow-sm: 0 0 #0000;
-  --shadow-md: 0 0 #0000;
+  /* Two tiers: soft for things on the page, raised for things above it. */
+  --shadow-sm: var(--shadow-soft);
+  --shadow-md: var(--shadow-soft);
+  --shadow-lg: var(--shadow-raised);
 
   /* Nothing on the page is set smaller than 13px. */
   --text-xs: 0.8125rem;
@@ -130,6 +159,8 @@
   --color-chart-grid: var(--chart-grid);
   --color-stage: var(--stage);
   --color-stage-foreground: var(--stage-foreground);
+  --color-copper: var(--copper);
+  --color-glass: var(--glass);
 }
 
 @layer base {
@@ -143,7 +174,12 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-size: 1rem;
-    line-height: 1.5;
+    line-height: 1.55;
+    /* Two quiet lights behind the glass: blue upper left, copper lower right. */
+    background-image:
+      radial-gradient(60rem 40rem at 8% -10%, var(--glow-blue), transparent 70%),
+      radial-gradient(50rem 36rem at 100% 60%, var(--glow-copper), transparent 70%);
+    background-attachment: fixed;
   }
   ::selection {
     @apply bg-brand text-brand-foreground;
@@ -173,24 +209,57 @@
   @apply text-sm font-semibold text-foreground;
 }
 
-/* Display type: Archivo at its narrowest, heaviest setting, in capitals. */
+/* Display type: Archivo, semi-condensed and heavy, set tight; sentence case. */
 @utility display {
-  font-stretch: 62%;
-  font-weight: 800;
-  line-height: 0.86;
-  letter-spacing: -0.01em;
-  text-transform: uppercase;
+  font-stretch: 84%;
+  font-weight: 750;
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
 }
 
-/* Blocks below the first screen rise in once (components/home/reveal.tsx sets the state). */
-@media (prefers-reduced-motion: no-preference) {
-  [data-reveal] {
-    transition:
-      opacity 600ms cubic-bezier(0.2, 0.7, 0.2, 1),
-      translate 600ms cubic-bezier(0.2, 0.7, 0.2, 1);
-  }
-  [data-reveal='pending'] {
-    opacity: 0;
-    translate: 0 2rem;
+/*
+ * Frosted glass, for surfaces that sit above the page. The tint carries the contrast (text on
+ * glass is checked against --glass-strong); blur stays modest so text behind never reads.
+ */
+@utility glass {
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(18px) saturate(1.6);
+  backdrop-filter: blur(18px) saturate(1.6);
+  border: 1px solid var(--glass-edge);
+  box-shadow:
+    inset 0 1px 0 var(--glass-rim),
+    var(--shadow-soft);
+}
+
+@utility glass-strong {
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  backdrop-filter: blur(24px) saturate(1.5);
+  border: 1px solid var(--glass-edge);
+  box-shadow:
+    inset 0 1px 0 var(--glass-rim),
+    var(--shadow-raised);
+}
+
+/* A solid reading surface. */
+@utility panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2xl);
+}
+
+/* A small label above a value in spec sheets (not above headings). */
+@utility kicker {
+  @apply text-sm font-medium text-muted-foreground;
+}
+
+/* Without transparency effects (system setting), glass becomes a solid surface. */
+@media (prefers-reduced-transparency: reduce) {
+  .glass,
+  .glass-strong {
+    background: var(--card);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 }

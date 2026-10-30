@@ -1,18 +1,16 @@
 import { connection } from 'next/server';
-import { CatalogueTable } from '@/components/home/catalogue-table';
-import { CloserLook } from '@/components/home/closer-look';
+import { ComponentIndex } from '@/components/home/component-index';
+import { GuideTeaser } from '@/components/home/guide-teaser';
 import { HomeHero, type HeroBoard } from '@/components/home/home-hero';
-import { Materials } from '@/components/home/materials';
 import { NewsletterForm } from '@/components/home/newsletter-form';
-import { Reveal } from '@/components/home/reveal';
+import { PrototypeStory } from '@/components/home/prototype-story';
+import { StackScene } from '@/components/home/stack-scene';
 import Link from '@/components/i18n/link';
 import { JsonLd } from '@/components/seo/json-ld';
 import { catalog, KEYBOARD_LAYOUTS, type ProductSummary } from '@/lib/catalog';
 import { storeOpen } from '@/lib/env';
 import { getI18n } from '@/lib/i18n/server';
 import { organizationJsonLd, websiteJsonLd } from '@/lib/seo/structured-data';
-
-const CLOSER_LOOK = 'cse-forge-75';
 
 /** One board per size, smallest first, as the hero's size picker offers them. */
 function heroBoards(products: ProductSummary[]): HeroBoard[] {
@@ -34,66 +32,58 @@ function heroBoards(products: ProductSummary[]): HeroBoard[] {
   return boards;
 }
 
+/**
+ * The home page, as an argument: what the shop is (and a size to try), what a keyboard is made
+ * of, everything in the shop grouped the same way, the prototype the guide was written from,
+ * the guide itself, and the way to hear when the shop opens.
+ */
 export default async function HomePage() {
   // Rendered per request from cached catalog data, so builds never need the API.
   await connection();
   const i18n = await getI18n();
   const { t, locale } = i18n;
   const copy = t.home;
-  const [products, categories, closer, configurator] = await Promise.all([
+  const [products, categories, configurator] = await Promise.all([
     catalog.getOverview(locale),
     catalog.getCategories(locale),
-    catalog.getProduct(locale, CLOSER_LOOK),
     catalog.getConfigurator(locale, 'cse-custom'),
   ]);
-  const keyboards = products.filter((p) => p.categorySlug === 'keyboards');
-  const aluminium = keyboards
-    .filter((p) => p.attributes.material?.includes('Aluminium'))
-    .map((p) => p.name);
-  const switchPreview = products.find((p) => p.kind === 'switch')?.preview ?? null;
 
   return (
     <>
       <JsonLd data={[organizationJsonLd(locale), websiteJsonLd(locale)]} />
-      <Reveal />
       <HomeHero boards={heroBoards(products)} />
-
-      {closer && closer.highlights.length > 0 && (
-        <CloserLook slug={closer.slug} preview={closer.preview} highlights={closer.highlights} />
-      )}
-
-      <CatalogueTable i18n={i18n} categories={categories} products={products} />
-
-      <Materials
+      <StackScene />
+      <ComponentIndex
         i18n={i18n}
-        aluminium={aluminium}
-        switchPreview={switchPreview}
-        buildPreview={closer?.preview ?? keyboards[0]?.preview ?? null}
+        categories={categories}
+        products={products}
         basePrice={configurator ? i18n.money(configurator.basePrice) : null}
       />
+      <PrototypeStory i18n={i18n} />
+      <GuideTeaser i18n={i18n} />
 
       <section
         id="newsletter"
         aria-labelledby="close-title"
-        className="scroll-mt-28 bg-brand text-brand-foreground"
+        className="container-page scroll-mt-28 py-12"
       >
-        <div className="container-page grid gap-10 py-24 lg:grid-cols-12 lg:items-end lg:gap-8 lg:py-32">
+        <div className="glass grid gap-10 rounded-3xl p-8 sm:p-12 lg:grid-cols-12 lg:items-end lg:p-16">
           <h2
             id="close-title"
-            data-reveal
-            className="display text-[clamp(3.25rem,8vw,8rem)] whitespace-pre-line lg:col-span-7"
+            className="display text-[clamp(2.5rem,5vw,4.5rem)] whitespace-pre-line lg:col-span-7"
           >
             {storeOpen ? copy.close.openTitle : copy.close.previewTitle}
           </h2>
-          <div data-reveal className="lg:col-span-5">
-            <p className="max-w-md text-xl leading-snug">
+          <div className="lg:col-span-5">
+            <p className="max-w-md text-lg leading-relaxed text-muted-foreground">
               {storeOpen ? copy.close.openBody : copy.close.previewBody}
             </p>
-            <div className="mt-8">
+            <div className="mt-6">
               {storeOpen ? (
                 <Link
                   href="/shop/keyboards"
-                  className="inline-flex h-13 items-center bg-brand-foreground px-7 text-base font-semibold text-brand"
+                  className="inline-flex h-12 items-center rounded-full bg-brand px-6 font-medium text-brand-foreground"
                 >
                   {copy.close.openAction}
                 </Link>

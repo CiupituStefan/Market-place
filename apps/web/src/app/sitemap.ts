@@ -3,6 +3,7 @@ import { connection } from 'next/server';
 import { catalog } from '@/lib/catalog';
 import { contentPages } from '@/lib/content';
 import { LOCALES, localizePath } from '@/lib/i18n/config';
+import { TOPICS } from '@/lib/knowledge/topics';
 import { absoluteUrl } from '@/lib/site';
 
 type Entry = MetadataRoute.Sitemap[number];
@@ -30,6 +31,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...localized('/', { changeFrequency: 'daily', priority: 1 }),
     ...localized('/shop', { changeFrequency: 'daily', priority: 0.9 }),
     ...localized('/configurator', { changeFrequency: 'weekly', priority: 0.6 }),
+    ...localized('/learn', { changeFrequency: 'monthly', priority: 0.7 }),
+    ...TOPICS.flatMap((topic) =>
+      localized(`/learn/${topic.slug}`, { changeFrequency: 'monthly', priority: 0.6 }),
+    ),
     ...categories.flatMap((c) =>
       localized(`/shop/${c.slug}`, { changeFrequency: 'daily', priority: 0.8 }),
     ),

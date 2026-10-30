@@ -81,6 +81,7 @@ export const en = {
       switches: 'Switches',
       keycaps: 'Keycaps',
       accessories: 'Accessories',
+      learn: 'Guide',
       configurator: 'Configurator',
     },
     mainNav: 'Main',
@@ -113,7 +114,9 @@ export const en = {
       blurb: 'Mechanical keyboards, switches, keycaps and desk accessories.',
       invitation: 'Find your\nkeyboard',
       invitationAction: 'See the keyboards',
-      pictures: 'Pictures from Wikimedia Commons:',
+      guide: 'Guide',
+      sources:
+        'Photographs, drawings and technical content: Ștefan-Emanuel Ciupitu, bachelor thesis “Wireless multifunction keyboard using the nRF52840 module”, Suceava, 2025.',
       rights: (year: number) => `© ${String(year)} CSE Keyboards. All rights reserved.`,
       payments: 'Secure card payments processed by Stripe. We never store card details.',
     },
@@ -578,63 +581,111 @@ export const en = {
     resultsFor: 'Results for',
     hint: 'Search by product name, brand, SKU, category or spec.',
   },
+  learn: {
+    title: 'Technical guide',
+    intro:
+      'How mechanical keyboards work, from the switch to the radio, explained from a wireless keyboard designed and built for a bachelor thesis.',
+    topicNames: {
+      layouts: 'Layouts',
+      switches: 'Switches',
+      keycaps: 'Keycaps',
+      mounting: 'Mounting & materials',
+      wireless: 'Wireless & firmware',
+      prototype: 'The prototype',
+    },
+    chapters: (count: number) => plural(count, 'chapter', 'chapters'),
+    onThisPage: 'On this page',
+    allTopics: 'All topics',
+    previous: 'Previous',
+    next: 'Next',
+    related: 'In the shop',
+    pros: 'Strengths',
+    cons: 'Limits',
+    source: (sections: string) => `From the thesis, chapter ${sections}`,
+    sourceNote:
+      'Written from Ștefan-Emanuel Ciupitu’s bachelor thesis “Wireless multifunction keyboard using the nRF52840 module” (Suceava, 2025).',
+    compare: 'Compare',
+  },
   home: {
     hero: {
-      title: 'Mechanical\nkeyboards',
-      body: 'Six assembled keyboards, one for every size from a compact 60% to a full-size 100%.',
+      title: 'Mechanical keyboards,\nunderstood layer by layer',
+      body: 'Six assembled keyboards from 60% to full-size, the parts to build your own, and a technical guide written from a wireless prototype built from scratch.',
+      shop: 'See the keyboards',
+      guide: 'Read the guide',
       sizes: 'Keyboard size',
       from: (price: string) => `from ${price}`,
       see: (name: string) => `See the ${name}`,
-      build: 'Or build your own',
       art: (name: string) => `${name}, drawing of the default colourway`,
     },
-    closer: {
-      titleStart: 'Forge 75,',
-      titleEnd: 'up close',
-      art: 'CSE Forge 75, drawing',
-      see: 'See the Forge 75',
+    stack: {
+      title: 'What a keyboard is made of',
+      intro: 'Six layers, from the keycap under your finger to the case on the desk.',
+      art: 'Exploded view of a mechanical keyboard: keycaps, switches, plate, PCB, foam and case',
+      guide: 'In the guide',
+      shop: 'In the shop',
+      layers: {
+        keycaps: {
+          name: 'Keycaps',
+          body: 'The part your fingers touch. The plastic decides texture, sound and how long the legends last: ABS shines with use, PBT keeps its matte texture, and double-shot legends cannot wear off.',
+        },
+        switches: {
+          name: 'Switches',
+          body: 'One switch per key: housing, spring, stem and metal contacts. The key registers before the end of its travel, for example at 2 mm of 4, so typing is faster, more precise and less tiring.',
+        },
+        plate: {
+          name: 'Plate',
+          body: 'Holds the switches and sets the stiffness: aluminium gives firm feedback, polycarbonate more flex and a deeper sound.',
+        },
+        pcb: {
+          name: 'PCB',
+          body: 'The switches sit on a grid of rows and columns, each with a diode against ghost key presses. The microcontroller scans the grid hundreds or thousands of times a second.',
+        },
+        foam: {
+          name: 'Foam',
+          body: 'Layers of foam or silicone inside the case shape the sound and take out unwanted vibration.',
+        },
+        case: {
+          name: 'Case',
+          body: 'CNC-milled aluminium, injected polycarbonate or, for a prototype, 3D-printed. How the plate is held inside it (gasket, top mount, tray) changes the feel and the sound.',
+        },
+      },
     },
-    catalogue: {
-      title: 'Everything that\ngoes on the desk',
-      label: 'Catalogue',
+    components: {
+      title: 'Explore by component',
+      intro: 'Everything in the shop, grouped the way a keyboard is built.',
       count: (count: number) => plural(count, 'product', 'products'),
       from: (price: string) => `from ${price}`,
-      picture: 'A Linotype keyboard, the typesetting machine’s own layout',
-    },
-    materials: {
-      title: 'What they\nare made of',
-      aluminium: {
-        title: 'Aluminium cases',
-        body: (names: string) =>
-          `${names} sit in aluminium cases, with the plate and foam inside chosen per model.`,
-        link: 'Aluminium keyboards',
-        picture: 'An aluminium part fresh from a CNC mill',
-      },
-      keycaps: {
-        title: 'Double-shot PBT keycaps',
-        body: 'Every assembled keyboard comes with double-shot PBT keycaps in Cherry profile. Separate sets come in PBT and ABS, Cherry and OEM profiles.',
-        link: 'Keycap sets',
-        picture: 'Typewriter keys, photographed by Ralph Steiner in 1921',
-      },
-      switches: {
-        title: 'Hot-swap sockets',
-        body: 'Switches pull out and push in without soldering, 3-pin and 5-pin MX-style. Three to choose from: linear at 45 gf, tactile at 55 gf, clicky at 60 gf.',
-        link: 'Switches',
-        picture: 'Silk Linear switch, drawing',
-      },
-      walnut: {
-        title: 'Oiled walnut',
-        body: 'The wrist rests are solid American walnut with a natural oil finish, in four sizes from 60% to full-size.',
-        link: 'Walnut wrist rest',
-        picture: 'Wood species, a colour plate from the Larousse pour tous, 1909',
-      },
+      choose: 'How to choose',
+      art: (name: string) => `${name}, drawing`,
       build: {
-        title: 'Or part by part',
+        title: 'Build your own',
         body: (price: string) =>
-          `Choose the layout, case, switches, plate, keycaps and connection. The configurator prices every choice as you make it, from ${price}.`,
-        link: 'Open the configurator',
-        picture: 'A configured keyboard, drawing',
+          `Choose the layout, case, switches, plate, keycaps and connection; the configurator prices every choice as you make it, from ${price}.`,
+        action: 'Open the configurator',
       },
+    },
+    prototype: {
+      title: 'Built from scratch,\nmeasured on the desk',
+      body: 'For a bachelor thesis, a wireless keyboard designed end to end: the PCB in Altium Designer, the case in Fusion 360, the firmware on ZMK. These are its measured results.',
+      note: 'The prototype is not for sale; it is the keyboard behind the guide.',
+      stats: {
+        usb: { value: '4 ms', label: 'latency over USB, at 250 Hz polling' },
+        ble: { value: '32 ms', label: 'latency over Bluetooth LE, at 31.25 Hz' },
+        rollover: { value: '11', label: 'keys registered at the same time (11KRO)' },
+        soc: { value: 'nRF52840', label: 'Bluetooth 5 SoC, ARM Cortex-M4F at 64 MHz' },
+      },
+      photos: {
+        prototype: 'The finished prototype',
+        pcb: 'Its two-layer PCB, designed in Altium Designer',
+        case: 'Top frame of the 3D-printed case',
+      },
+      action: 'The full build story',
+    },
+    guide: {
+      title: 'The technical guide',
+      intro:
+        'Six topics drawn from the thesis: what each part does, how it is made and how to choose.',
+      read: (topic: string) => `Read: ${topic}`,
     },
     close: {
       openTitle: 'Start with\nthe size',

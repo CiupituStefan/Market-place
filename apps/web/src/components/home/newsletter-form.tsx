@@ -66,23 +66,18 @@ export function NewsletterForm() {
           }}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errorId : undefined}
-          className="h-13 border-0 bg-background px-4 text-base text-foreground"
+          className="h-12 rounded-full border-border bg-background px-5 text-base text-foreground"
         />
-        <Button
-          type="submit"
-          size="lg"
-          disabled={subscribe.isPending}
-          className="bg-brand-foreground text-brand hover:bg-brand-foreground/90"
-        >
+        <Button type="submit" size="lg" disabled={subscribe.isPending} variant="brand">
           {subscribe.isPending ? copy.joining : copy.subscribe}
         </Button>
       </div>
       {error && (
-        <p id={errorId} role="alert" className="mt-3 text-base font-medium">
+        <p id={errorId} role="alert" className="mt-3 text-base font-medium text-destructive">
           {error}
         </p>
       )}
-      <p className="mt-4 text-sm opacity-75">{copy.fineprint}</p>
+      <p className="mt-4 text-sm text-muted-foreground">{copy.fineprint}</p>
     </form>
   );
 }
