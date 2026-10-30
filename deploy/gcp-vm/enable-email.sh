@@ -30,9 +30,22 @@ if [ "${1:-}" = "--mailpit" ]; then
   exit 0
 fi
 
+# Pasted values often carry spaces or line breaks: strip all whitespace.
 read -rp 'Brevo SMTP login (Brevo > SMTP & API > SMTP, e.g. 9a1b2c001@smtp-brevo.com): ' login
-read -rsp 'Brevo SMTP key (xsmtpsib-...): ' key
+login="${login//[[:space:]]/}"
+[[ "$login" == *@smtp-brevo.com ]] || {
+  echo "The login should look like 9a1b2c001@smtp-brevo.com (got '$login'). Run this again." >&2
+  exit 1
+}
+read -rsp 'Brevo SMTP key (xsmtpsib-..., not shown while you type or paste): ' key
 echo
+key="${key//[[:space:]]/}"
+[[ "$key" == xsmtpsib-* ]] || {
+  echo "That is not an SMTP key (they start with xsmtpsib-). Generate one in Brevo > SMTP & API > SMTP." >&2
+  exit 1
+}
+# Brevo's key list shows the last characters: compare them.
+echo "Key received: ${#key} characters, ending in ...${key: -6}"
 read -rp 'Sender address [noreply@csekeyboards.com]: ' sender
 sender="${sender:-noreply@csekeyboards.com}"
 read -rp 'Send a test email to (your own address): ' test_to
