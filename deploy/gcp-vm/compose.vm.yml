@@ -46,6 +46,9 @@ services:
   notification-service:
     environment:
       WEB_URL: ${SITE_URL}
+      # Mailpit (kept on the VM, nothing leaves) until enable-email.sh sets a real relay (Brevo).
+      SMTP_URL: ${SMTP_URL:-smtp://mailpit:1025}
+      EMAIL_FROM: ${EMAIL_FROM:-CSE Keyboards <noreply@csekeyboards.com>}
       # Signs unsubscribe links: the docker-compose.yml default is public, so a random one is
       # required here (setup-vm.sh generates it).
       UNSUBSCRIBE_SECRET: ${UNSUBSCRIBE_SECRET:?set UNSUBSCRIBE_SECRET in deploy/gcp-vm/.env}

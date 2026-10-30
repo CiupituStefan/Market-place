@@ -119,7 +119,7 @@ export const contentPages: Record<string, ContentPage> = {
       },
       {
         heading: 'Who processes data for us',
-        body: 'Vercel Inc. hosts the website (it may process connection data outside the EU, under the EU Standard Contractual Clauses). Google Cloud hosts our servers and databases in Frankfurt, Germany. An email delivery provider and a payment provider will be listed here before launch. [Data processing agreements to be confirmed.]',
+        body: 'Vercel Inc. hosts the website (it may process connection data outside the EU, under the EU Standard Contractual Clauses). Google Cloud hosts our servers and databases in Frankfurt, Germany. Brevo (Sendinblue SAS, France) delivers our emails: it receives your email address and the content of each email we send you. A payment provider will be listed here before launch. [Data processing agreements to be confirmed.]',
       },
       {
         heading: 'How long we keep it',
@@ -300,7 +300,7 @@ const contentPagesRo: Record<string, ContentPage> = {
       },
       {
         heading: 'Cine prelucrează date pentru noi',
-        body: 'Vercel Inc. găzduiește site-ul (poate prelucra date de conexiune în afara UE, în baza Clauzelor Contractuale Standard ale UE). Google Cloud găzduiește serverele și bazele de date la Frankfurt, Germania. Furnizorul de email și procesatorul de plăți vor fi trecuți aici înainte de lansare. [Acordurile de prelucrare a datelor sunt de confirmat.]',
+        body: 'Vercel Inc. găzduiește site-ul (poate prelucra date de conexiune în afara UE, în baza Clauzelor Contractuale Standard ale UE). Google Cloud găzduiește serverele și bazele de date la Frankfurt, Germania. Brevo (Sendinblue SAS, Franța) livrează emailurile noastre: primește adresa ta de email și conținutul fiecărui email pe care ți-l trimitem. Procesatorul de plăți va fi trecut aici înainte de lansare. [Acordurile de prelucrare a datelor sunt de confirmat.]',
       },
       {
         heading: 'Cât timp le păstrăm',

@@ -270,6 +270,19 @@ Scriptul cere cheile (nu se afișează când le scrii), creează webhook-ul
 pentru plăți reale rulezi același script cu cheile `_live_`. Înapoi la simulator:
 `sudo deploy/gcp-vm/enable-stripe.sh --mock`.
 
+**Emailuri reale cu Brevo.** Implicit emailurile rămân în Mailpit, pe mașină. Ca să ajungă la
+oameni: creează un cont Brevo, autentifică domeniul în Brevo (Senders, Domains & Dedicated IPs →
+Domains; înregistrările DNS cerute se adaugă în zona Cloud DNS), ia datele SMTP din
+SMTP & API → SMTP și rulează pe mașină:
+
+```bash
+cd /opt/cse/Market-place && sudo git pull && sudo deploy/gcp-vm/enable-email.sh
+```
+
+Scriptul cere login-ul și cheia SMTP (cheia nu se afișează), trimite un email de test, salvează
+setările în `.env` și repornește `notification-service`. Înapoi la Mailpit:
+`sudo deploy/gcp-vm/enable-email.sh --mailpit`.
+
 **Backup zilnic al discului (opțional, recomandat), din Cloud Shell:**
 
 ```bash
