@@ -112,7 +112,11 @@ fi
 
 step "5/7 Build the images (one at a time: about 30-45 minutes the first time)"
 cd "$repo"
-COMPOSE_PARALLEL_LIMIT=1 "$here/dc" build
+# One image at a time: `compose build` hands every image to BuildKit at once, which on 2 CPUs
+# drove the load above 60 and made the running shop crawl for the whole build.
+mapfile -t built < <("$here/dc" config --format json | python3 -c \
+  'import json, sys; print("\n".join(n for n, s in json.load(sys.stdin)["services"].items() if "build" in s))')
+for service in "${built[@]}"; do "$here/dc" build "$service"; done
 sudo docker builder prune -af >/dev/null
 
 step "6/7 Database passwords"
