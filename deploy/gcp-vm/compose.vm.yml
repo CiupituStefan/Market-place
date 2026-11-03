@@ -12,7 +12,23 @@
 # its own random password from .env (setup-vm.sh generates them and sets them on the running
 # database), so the published ones open nothing on this machine.
 
+# Health checks: every 5 s suits a laptop and CI (fast start-up); on this 2-CPU machine each one
+# starts a process (Node for the services, a whole JVM for Kafka), which kept the CPUs busy with
+# no visitors at all. Here: every 5 s while starting, then every 30 s; Kafka's port is checked
+# without a JVM.
+x-service-health: &service-health
+  interval: 30s
+  start_period: 180s
+  start_interval: 5s
+
 services:
+  kafka:
+    healthcheck:
+      test: ['CMD-SHELL', 'bash -c "</dev/tcp/127.0.0.1/9092"']
+      interval: 30s
+      start_period: 120s
+      start_interval: 5s
+
   postgres:
     environment:
       # Only used when the volume is first created; setup-vm.sh sets it on an existing one.
@@ -32,6 +48,7 @@ services:
       - caddy-config:/config
 
   api-gateway:
+    healthcheck: *service-health
     environment:
       CORS_ORIGINS: ${SITE_ORIGINS:?set SITE_ORIGINS in deploy/gcp-vm/.env}
       # Caddy is the one proxy in front: the client address is the last X-Forwarded-For hop.
@@ -41,6 +58,7 @@ services:
     ports: !reset []
 
   auth-service:
+    healthcheck: *service-health
     environment:
       DATABASE_URL: postgresql://auth:${DB_PASSWORD_AUTH:?run setup-vm.sh}@postgres:5432/auth
       WEB_URL: ${SITE_URL:?set SITE_URL in deploy/gcp-vm/.env}
@@ -52,12 +70,14 @@ services:
       MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY:?run setup-vm.sh}
 
   cart-service:
+    healthcheck: *service-health
     environment:
       DATABASE_URL: postgresql://cart:${DB_PASSWORD_CART:?run setup-vm.sh}@postgres:5432/cart
       COOKIE_DOMAIN: ${COOKIE_DOMAIN}
       COOKIE_SECURE: 'true'
 
   notification-service:
+    healthcheck: *service-health
     environment:
       DATABASE_URL: postgresql://notifications:${DB_PASSWORD_NOTIFICATIONS:?run setup-vm.sh}@postgres:5432/notifications
       WEB_URL: ${SITE_URL}
@@ -71,12 +91,14 @@ services:
       EMAIL_POSTAL_ADDRESS: ${EMAIL_POSTAL_ADDRESS:-}
 
   payment-service:
+    healthcheck: *service-health
     environment:
       DATABASE_URL: postgresql://payments:${DB_PASSWORD_PAYMENTS:?run setup-vm.sh}@postgres:5432/payments
       # With the mock provider this signs its own webhooks; the default is public (generated here).
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:?set STRIPE_WEBHOOK_SECRET in deploy/gcp-vm/.env}
 
   order-service:
+    healthcheck: *service-health
     environment:
       DATABASE_URL: postgresql://orders:${DB_PASSWORD_ORDERS:?run setup-vm.sh}@postgres:5432/orders
       # Preview until the business can sell (registered, real payments): checkout is refused.
@@ -99,18 +121,22 @@ services:
       ADMIN_TOTP_SECRET: ''
 
   product-service:
+    healthcheck: *service-health
     environment:
       DATABASE_URL: postgresql://products:${DB_PASSWORD_PRODUCTS:?run setup-vm.sh}@postgres:5432/products
 
   inventory-service:
+    healthcheck: *service-health
     environment:
       DATABASE_URL: postgresql://inventory:${DB_PASSWORD_INVENTORY:?run setup-vm.sh}@postgres:5432/inventory
 
   review-service:
+    healthcheck: *service-health
     environment:
       DATABASE_URL: postgresql://reviews:${DB_PASSWORD_REVIEWS:?run setup-vm.sh}@postgres:5432/reviews
 
   admin-service:
+    healthcheck: *service-health
     environment:
       DATABASE_URL: postgresql://admin:${DB_PASSWORD_ADMIN:?run setup-vm.sh}@postgres:5432/admin
 
