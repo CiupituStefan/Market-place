@@ -136,6 +136,8 @@ export function hashRecoveryCode(code: string): string {
  * with AES-256-GCM under MFA_ENCRYPTION_KEY: a database dump alone does not give an attacker
  * the second factor. Format: v1.<iv>.<tag>.<ciphertext>, base64url.
  */
+const TAG_LENGTH = 16;
+
 export class SecretBox {
   private readonly key: Buffer;
 
@@ -146,7 +148,7 @@ export class SecretBox {
 
   seal(plaintext: string): string {
     const iv = randomBytes(12);
-    const cipher = createCipheriv('aes-256-gcm', this.key, iv);
+    const cipher = createCipheriv('aes-256-gcm', this.key, iv, { authTagLength: TAG_LENGTH });
     const data = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
     return ['v1', iv, cipher.getAuthTag(), data]
       .map((p) => (typeof p === 'string' ? p : p.toString('base64url')))
@@ -156,7 +158,10 @@ export class SecretBox {
   open(sealed: string): string {
     const [version, iv, tag, data] = sealed.split('.');
     if (version !== 'v1' || !iv || !tag || !data) throw new Error('unknown sealed secret format');
-    const decipher = createDecipheriv('aes-256-gcm', this.key, Buffer.from(iv, 'base64url'));
+    // A fixed tag length: a shortened tag (easier to forge) is refused, not accepted.
+    const decipher = createDecipheriv('aes-256-gcm', this.key, Buffer.from(iv, 'base64url'), {
+      authTagLength: TAG_LENGTH,
+    });
     decipher.setAuthTag(Buffer.from(tag, 'base64url'));
     return Buffer.concat([
       decipher.update(Buffer.from(data, 'base64url')),

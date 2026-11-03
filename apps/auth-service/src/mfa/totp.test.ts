@@ -99,5 +99,12 @@ describe('SecretBox', () => {
     const [v, iv, tag, data] = sealed.split('.');
     const tampered = [v, iv, tag, `${data!.slice(0, -2)}AA`].join('.');
     expect(() => box.open(tampered)).toThrow();
+    const truncated = [
+      v,
+      iv,
+      Buffer.from(tag!, 'base64url').subarray(0, 4).toString('base64url'),
+      data,
+    ].join('.');
+    expect(() => box.open(truncated)).toThrow();
   });
 });
