@@ -77,8 +77,22 @@ gcloud compute firewall-rules create cse-allow-web \
 ```
 
 Regula deschide doar HTTP și HTTPS. Bazele de date, Redis și Kafka **nu** se deschid: ele rămân
-accesibile doar din interiorul mașinii. Conexiunea SSH (portul 22) este deja permisă de regula
-implicită a rețelei și se face doar cu chei, fără parole.
+accesibile doar din interiorul mașinii.
+
+SSH (portul 22) nu rămâne deschis spre tot internetul, cum îl lasă regulile implicite ale rețelei:
+intri prin **IAP** (Identity-Aware Proxy), adică doar cu contul tău Google, prin Google. Ștergi
+regulile implicite pentru SSH și RDP (RDP e pentru Windows, nu se folosește) și permiți portul 22
+doar dinspre IAP:
+
+```bash
+gcloud services enable iap.googleapis.com
+gcloud compute firewall-rules create cse-allow-ssh-iap \
+  --network=default --allow=tcp:22 --target-tags=cse-api \
+  --source-ranges=35.235.240.0/20 --description="SSH only through Identity-Aware Proxy"
+gcloud compute firewall-rules delete default-allow-ssh default-allow-rdp --quiet
+```
+
+De aceea toate comenzile `gcloud compute ssh` de mai jos au `--tunnel-through-iap`.
 
 ## Pasul 6 — Creează mașina virtuală
 
@@ -142,14 +156,14 @@ nu poate fi obținut.
 > Cloud Shell cu:
 >
 > ```bash
-> gcloud compute ssh cse-api --zone=europe-west3-a \
+> gcloud compute ssh cse-api --zone=europe-west3-a --tunnel-through-iap \
 >   --command="sudo grep ADMIN_PASSWORD /opt/cse/Market-place/deploy/gcp-vm/.env"
 > ```
 
 ## Pasul 8 — Conectează-te la mașină
 
 ```bash
-gcloud compute ssh cse-api --zone=europe-west3-a
+gcloud compute ssh cse-api --zone=europe-west3-a --tunnel-through-iap
 ```
 
 Prima dată ți se cere să creezi o cheie SSH. Apasă Enter la toate întrebările, sau pune o
@@ -250,7 +264,7 @@ Poți să-mi ceri să fac eu acest pas, dacă CLI-ul Vercel este încă autentif
 în Mailpit, pe mașină. Ca să le vezi, rulează în **Cloud Shell**:
 
 ```bash
-gcloud compute ssh cse-api --zone=europe-west3-a -- -N -L 8080:localhost:8025
+gcloud compute ssh cse-api --zone=europe-west3-a --tunnel-through-iap -- -N -L 8080:localhost:8025
 ```
 
 Apoi apasă **Web Preview → Preview on port 8080** în bara Cloud Shell. Se deschide Mailpit cu
@@ -283,14 +297,79 @@ Scriptul cere login-ul și cheia SMTP (cheia nu se afișează), trimite un email
 setările în `.env` și repornește `notification-service`. Înapoi la Mailpit:
 `sudo deploy/gcp-vm/enable-email.sh --mailpit`.
 
-**Backup zilnic al discului (opțional, recomandat), din Cloud Shell:**
+## Backup și restaurare
+
+Două niveluri, ambele obligatorii (PO-SMSI-A12.3):
+
+1. **Snapshot zilnic al discului**, păstrat 14 zile, pentru a reface toată mașina.
+2. **Copie zilnică a bazelor de date** (`pg_dump` pentru fiecare serviciu) într-un bucket din altă
+   regiune (Belgia). Mașina are voie doar să **adauge** fișiere acolo: nu poate citi, suprascrie
+   sau șterge un backup, deci o mașină compromisă nu își poate distruge copiile. Bucket-ul șterge
+   singur copiile mai vechi de 35 de zile.
+
+O singură dată, din Cloud Shell:
 
 ```bash
-gcloud compute resource-policies create snapshot-schedule cse-daily \
-  --region=europe-west3 --max-retention-days=7 --daily-schedule --start-time=03:00
-gcloud compute disks add-resource-policies cse-api \
-  --zone=europe-west3-a --resource-policies=cse-daily
+# 1. Snapshot zilnic
+gcloud compute resource-policies create snapshot-schedule cse-daily --region=europe-west3 \
+  --max-retention-days=14 --on-source-disk-delete=keep-auto-snapshots --daily-schedule \
+  --start-time=01:00 --storage-location=europe-west3
+gcloud compute disks add-resource-policies cse-api --zone=europe-west3-a --resource-policies=cse-daily
+
+# 2. Bucket-ul de backup (privat, în altă regiune, copii șterse după 35 de zile)
+gcloud storage buckets create gs://cse-keyboard-db-backups --location=europe-west1 \
+  --uniform-bucket-level-access --public-access-prevention --soft-delete-duration=7d
+echo '{"rule":[{"action":{"type":"Delete"},"condition":{"age":35}}]}' > lifecycle.json
+gcloud storage buckets update gs://cse-keyboard-db-backups --lifecycle-file=lifecycle.json
+
+# 3. Un cont de serviciu doar pentru mașină: scrie jurnale și metrici și adaugă backup-uri,
+#    nimic altceva (contul implicit are rolul Editor pe tot proiectul).
+gcloud iam service-accounts create cse-vm --display-name="cse-api VM"
+sa=cse-vm@$(gcloud config get-value project).iam.gserviceaccount.com
+for role in roles/logging.logWriter roles/monitoring.metricWriter; do
+  gcloud projects add-iam-policy-binding "$(gcloud config get-value project)" \
+    --member="serviceAccount:$sa" --role="$role" --condition=None
+done
+gcloud storage buckets add-iam-policy-binding gs://cse-keyboard-db-backups \
+  --member="serviceAccount:$sa" --role=roles/storage.objectCreator
+# Mașina se oprește un minut ca să primească noul cont.
+gcloud compute instances stop cse-api --zone=europe-west3-a
+gcloud compute instances set-service-account cse-api --zone=europe-west3-a \
+  --service-account="$sa" --scopes=cloud-platform
+gcloud compute instances start cse-api --zone=europe-west3-a
 ```
+
+Apoi, pe mașină, numele bucket-ului în `.env` și rularea `setup-vm.sh`, care instalează timer-ul
+zilnic (02:30 UTC):
+
+```bash
+cd /opt/cse/Market-place && sudo git pull
+echo 'BACKUP_BUCKET=cse-keyboard-db-backups' | sudo tee -a deploy/gcp-vm/.env
+sudo deploy/gcp-vm/setup-vm.sh csekeyboards.com
+sudo deploy/gcp-vm/backup-db.sh        # primul backup, acum
+```
+
+**Testul de restaurare** (cel puțin o dată pe trimestru, și după orice schimbare a bazelor de date),
+din Cloud Shell, care are Docker: descarcă ultimul backup, îi verifică sumele de control, îl
+restaurează într-un PostgreSQL temporar și afișează tabelele și rândurile fiecărei baze. Păstrează
+rezultatul ca dovadă a testului.
+
+```bash
+git clone https://github.com/CiupituStefan/Market-place.git && cd Market-place
+deploy/gcp-vm/restore-test.sh
+```
+
+## Securitatea mașinii
+
+`setup-vm.sh` configurează, la fiecare rulare:
+
+- **Actualizări de securitate automate** (`unattended-upgrades`); dacă una cere repornire, mașina
+  repornește la 04:00 și serviciile pornesc singure.
+- **Jurnalele containerelor** se rotesc pe disc (5 × 20 MB per container) și ajung în **Cloud
+  Logging** prin Ops Agent, împreună cu jurnalul sistemului; tot de acolo vin metricile mașinii
+  (procesor, memorie, disc).
+- **O parolă separată, generată, pentru fiecare bază de date**, în `.env`. Parolele din
+  `docker-compose.yml` sunt publice (valori de dezvoltare) și nu mai deschid nimic pe mașină.
 
 ## Oprire și ștergere (din Cloud Shell)
 
@@ -334,8 +413,9 @@ gcloud dns record-sets delete api.csekeyboards.com. --zone=csekeyboards-com --ty
   accesibilă doar de pe mașină. Produsele din catalog folosesc ilustrații generate, deci
   magazinul arată complet.
 - **O singură mașină**: dacă ea cade, cade tot backend-ul. Nu există replici.
-- Parolele interne ale bazelor de date sunt cele de dezvoltare din `docker-compose.yml`. Sunt
-  acceptabile aici doar pentru că PostgreSQL, Redis și Kafka nu pot fi accesate din internet:
-  sunt legate de `127.0.0.1` și blocate de firewall. Doar Caddy, pe 80/443, este public. Parola
-  de admin, singura care contează din exterior, este generată pentru fiecare instalare.
+- PostgreSQL, Redis și Kafka nu pot fi accesate din internet: sunt legate de `127.0.0.1` și
+  blocate de firewall. Doar Caddy, pe 80/443, este public. Parolele bazelor de date și parola de
+  admin sunt generate la instalare. Redis și Kafka nu au parole pe mașină (rețea internă Docker).
+- Serviciile rulează cu `NODE_ENV=development`: în modul de producție, `payment-service` refuză
+  simulatorul de plăți, deci modul se schimbă odată cu activarea Stripe.
 - Limitele de rată ale gateway-ului rămân active. Documentația API (`/docs`) este oprită.

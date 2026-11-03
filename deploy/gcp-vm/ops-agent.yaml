@@ -1,0 +1,22 @@
+# Google Cloud Ops Agent on the VM (installed by setup-vm.sh): the containers' logs (JSON lines,
+# secrets already redacted by the services' logger) and the system journal go to Cloud Logging,
+# so they outlive the VM's rotation and can be searched and alerted on. Host metrics (CPU,
+# memory, disk) are collected by the agent's defaults.
+logging:
+  receivers:
+    containers:
+      type: files
+      include_paths: [/var/lib/docker/containers/*/*-json.log]
+      record_log_file_path: true
+    journal:
+      type: systemd_journald
+  processors:
+    docker_line:
+      type: parse_json
+  service:
+    pipelines:
+      containers:
+        receivers: [containers]
+        processors: [docker_line]
+      journal:
+        receivers: [journal]

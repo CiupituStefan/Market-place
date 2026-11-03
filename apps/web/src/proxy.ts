@@ -75,6 +75,6 @@ export const config = {
   matcher: [
     // Pages only (prefetches included, so /ro/... links prefetch the right page): not static
     // files, the image optimiser, metadata files or health checks.
-    '/((?!_next/static|_next/image|api/health|favicon.ico|icon.svg|robots.txt|sitemap.xml|opengraph-image).*)',
+    '/((?!_next/static|_next/image|api/health|.well-known|favicon.ico|icon.svg|robots.txt|sitemap.xml|opengraph-image).*)',
   ],
 };

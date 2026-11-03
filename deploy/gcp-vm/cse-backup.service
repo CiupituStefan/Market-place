@@ -1,0 +1,9 @@
+# Installed by setup-vm.sh (the script path is filled in there). Runs from cse-backup.timer.
+[Unit]
+Description=CSE Keyboards: back up the databases to Cloud Storage
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=@BACKUP_SCRIPT@

@@ -1,0 +1,11 @@
+# Installed by setup-vm.sh. Daily at 02:30 UTC; a run missed while the VM was off runs at boot.
+[Unit]
+Description=CSE Keyboards: daily database backup
+
+[Timer]
+OnCalendar=*-*-* 02:30:00 UTC
+RandomizedDelaySec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

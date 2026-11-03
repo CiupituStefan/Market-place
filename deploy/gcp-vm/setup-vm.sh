@@ -12,7 +12,7 @@ env_file="$here/.env"
 
 step() { printf '\n\033[1m── %s\033[0m\n' "$1"; }
 
-step "1/5 Docker"
+step "1/7 Docker"
 if ! command -v docker >/dev/null 2>&1; then
   # Docker's own apt repository (signed), not the distribution's older packages.
   sudo apt-get update -q
@@ -28,7 +28,7 @@ if ! command -v docker >/dev/null 2>&1; then
 fi
 sudo docker compose version
 
-step "2/5 Swap (headroom for building the images on 8 GB)"
+step "2/7 Swap (headroom for building the images on 8 GB)"
 if ! swapon --show | grep -q /swapfile; then
   sudo fallocate -l 4G /swapfile
   sudo chmod 600 /swapfile
@@ -38,7 +38,7 @@ if ! swapon --show | grep -q /swapfile; then
 fi
 swapon --show
 
-step "3/5 Settings ($env_file)"
+step "3/7 Settings ($env_file)"
 if [ ! -f "$env_file" ]; then
   umask 077
   admin_password="$(openssl rand -base64 24 | tr -d '/+=' | cut -c1-24)"
@@ -66,18 +66,73 @@ add_secret() {
 }
 add_secret UNSUBSCRIBE_SECRET ''
 add_secret STRIPE_WEBHOOK_SECRET 'whsec_'
+# One password per database role (docker-compose.yml only has public development values).
+databases=(auth products inventory cart orders payments notifications reviews admin)
+add_secret DB_PASSWORD_POSTGRES ''
+for db in "${databases[@]}"; do add_secret "DB_PASSWORD_${db^^}" ''; done
 
-step "4/5 Build the images (one at a time: about 30-45 minutes the first time)"
+step "4/7 Host: security updates, log rotation, Cloud Logging, backups"
+# Security updates install themselves; a reboot they need happens at 04:00 (the services restart
+# on their own).
+sudo apt-get install -yq unattended-upgrades >/dev/null
+sudo tee /etc/apt/apt.conf.d/20auto-upgrades >/dev/null <<'APT'
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Unattended-Upgrade "1";
+APT
+sudo tee /etc/apt/apt.conf.d/52cse-unattended-upgrades >/dev/null <<'APT'
+Unattended-Upgrade::Automatic-Reboot "true";
+Unattended-Upgrade::Automatic-Reboot-Time "04:00";
+APT
+# Container logs: rotated on the VM (they could fill the disk), kept centrally by the Ops Agent.
+daemon_json='{ "log-driver": "json-file", "log-opts": { "max-size": "20m", "max-file": "5" }, "live-restore": true }'
+recreate=()
+if [ "$(sudo cat /etc/docker/daemon.json 2>/dev/null)" != "$daemon_json" ]; then
+  echo "$daemon_json" | sudo tee /etc/docker/daemon.json >/dev/null
+  sudo systemctl restart docker
+  recreate=(--force-recreate) # log options apply to containers created from now on
+fi
+if ! systemctl is-active --quiet google-cloud-ops-agent 2>/dev/null; then
+  curl -fsSL https://dl.google.com/cloudagents/add-google-cloud-ops-agent-repo.sh -o /tmp/add-ops-agent-repo.sh
+  sudo bash /tmp/add-ops-agent-repo.sh --also-install >/dev/null
+fi
+sudo install -m 644 "$here/ops-agent.yaml" /etc/google-cloud-ops-agent/config.yaml
+sudo systemctl restart google-cloud-ops-agent
+# Daily database backup to Cloud Storage, once a bucket is set (docs/deploy-google-cloud.md).
+if sudo grep -q '^BACKUP_BUCKET=.' "$env_file"; then
+  sed "s#@BACKUP_SCRIPT@#$here/backup-db.sh#" "$here/cse-backup.service" |
+    sudo tee /etc/systemd/system/cse-backup.service >/dev/null
+  sudo install -m 644 "$here/cse-backup.timer" /etc/systemd/system/cse-backup.timer
+  sudo systemctl daemon-reload
+  sudo systemctl enable --now cse-backup.timer
+  systemctl list-timers cse-backup.timer --no-pager | head -2
+else
+  echo "no BACKUP_BUCKET in $env_file: database backups not scheduled"
+fi
+
+step "5/7 Build the images (one at a time: about 30-45 minutes the first time)"
 cd "$repo"
 COMPOSE_PARALLEL_LIMIT=1 "$here/dc" build
 sudo docker builder prune -af >/dev/null
 
-step "5/5 Start"
+step "6/7 Database passwords"
+# The roles were created with the public development passwords; set the generated ones (again on
+# every run, so .env stays the single source). Connects over the container's local socket.
+cd "$repo"
+"$here/dc" up -d --wait postgres
+{
+  for role in postgres "${databases[@]}"; do
+    password="$(sudo grep "^DB_PASSWORD_${role^^}=" "$env_file" | cut -d= -f2)"
+    printf "ALTER ROLE \"%s\" PASSWORD '%s';\n" "$role" "$password"
+  done
+} | "$here/dc" exec -T postgres psql -q -v ON_ERROR_STOP=1 -U postgres -d postgres
+echo "set for postgres and ${#databases[@]} service roles"
+
+step "7/7 Start"
 # Every long-running service, waiting until each is healthy; then the one-off jobs (admin account,
 # catalog, stock, discount codes, image bucket), which exit when done.
 jobs='^(seed-admin|seed-catalog|seed-inventory|seed-discounts|storage-init)$'
 mapfile -t services < <("$here/dc" config --services | grep -vE "$jobs")
-"$here/dc" up -d --wait --wait-timeout 900 "${services[@]}"
+"$here/dc" up -d "${recreate[@]}" --wait --wait-timeout 900 "${services[@]}"
 "$here/dc" up -d seed-admin seed-catalog seed-inventory seed-discounts storage-init
 # The Caddyfile is a bind-mounted file: `git pull` replaces it, so recreate Caddy to load it.
 "$here/dc" up -d --force-recreate --no-deps caddy

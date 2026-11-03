@@ -7,7 +7,17 @@
 # storage and Kafka UI stay bound to 127.0.0.1 as in docker-compose.yml, behind the VM firewall.
 # Production proper is Kubernetes on AWS (infrastructure/terraform), not this.
 
+#
+# Database passwords: docker-compose.yml carries public development values. Here every role has
+# its own random password from .env (setup-vm.sh generates them and sets them on the running
+# database), so the published ones open nothing on this machine.
+
 services:
+  postgres:
+    environment:
+      # Only used when the volume is first created; setup-vm.sh sets it on an existing one.
+      POSTGRES_PASSWORD: ${DB_PASSWORD_POSTGRES:?run setup-vm.sh}
+
   caddy:
     image: caddy:2.11.7-alpine@sha256:eb4d35b7452d1ab6171fbdbe8d9275b2301dad6dad92115d91e19fb9b24d510f
     restart: unless-stopped
@@ -32,6 +42,7 @@ services:
 
   auth-service:
     environment:
+      DATABASE_URL: postgresql://auth:${DB_PASSWORD_AUTH:?run setup-vm.sh}@postgres:5432/auth
       WEB_URL: ${SITE_URL:?set SITE_URL in deploy/gcp-vm/.env}
       # The storefront (csekeyboards.com) and the API (api.csekeyboards.com) share the session
       # cookies, so the storefront's server can tell a signed-in visitor.
@@ -40,11 +51,13 @@ services:
 
   cart-service:
     environment:
+      DATABASE_URL: postgresql://cart:${DB_PASSWORD_CART:?run setup-vm.sh}@postgres:5432/cart
       COOKIE_DOMAIN: ${COOKIE_DOMAIN}
       COOKIE_SECURE: 'true'
 
   notification-service:
     environment:
+      DATABASE_URL: postgresql://notifications:${DB_PASSWORD_NOTIFICATIONS:?run setup-vm.sh}@postgres:5432/notifications
       WEB_URL: ${SITE_URL}
       # Mailpit (kept on the VM, nothing leaves) until enable-email.sh sets a real relay (Brevo).
       SMTP_URL: ${SMTP_URL:-smtp://mailpit:1025}
@@ -57,23 +70,55 @@ services:
 
   payment-service:
     environment:
+      DATABASE_URL: postgresql://payments:${DB_PASSWORD_PAYMENTS:?run setup-vm.sh}@postgres:5432/payments
       # With the mock provider this signs its own webhooks; the default is public (generated here).
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:?set STRIPE_WEBHOOK_SECRET in deploy/gcp-vm/.env}
 
   order-service:
     environment:
+      DATABASE_URL: postgresql://orders:${DB_PASSWORD_ORDERS:?run setup-vm.sh}@postgres:5432/orders
       # Preview until the business can sell (registered, real payments): checkout is refused.
       ORDERS_ENABLED: ${ORDERS_ENABLED:-false}
 
   seed-catalog:
     environment:
+      DATABASE_URL: postgresql://products:${DB_PASSWORD_PRODUCTS:?run setup-vm.sh}@postgres:5432/products
       # Real visitors: no made-up ratings, badges or "was" prices (also removes them if present).
       SEED_DEMO_MERCHANDISING: 'false'
 
   seed-admin:
     environment:
+      DATABASE_URL: postgresql://auth:${DB_PASSWORD_AUTH:?run setup-vm.sh}@postgres:5432/auth
       ADMIN_EMAIL: ${ADMIN_EMAIL:?set ADMIN_EMAIL in deploy/gcp-vm/.env}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in deploy/gcp-vm/.env}
+
+  product-service:
+    environment:
+      DATABASE_URL: postgresql://products:${DB_PASSWORD_PRODUCTS:?run setup-vm.sh}@postgres:5432/products
+
+  inventory-service:
+    environment:
+      DATABASE_URL: postgresql://inventory:${DB_PASSWORD_INVENTORY:?run setup-vm.sh}@postgres:5432/inventory
+
+  review-service:
+    environment:
+      DATABASE_URL: postgresql://reviews:${DB_PASSWORD_REVIEWS:?run setup-vm.sh}@postgres:5432/reviews
+
+  admin-service:
+    environment:
+      DATABASE_URL: postgresql://admin:${DB_PASSWORD_ADMIN:?run setup-vm.sh}@postgres:5432/admin
+
+  seed-inventory:
+    environment:
+      DATABASE_URL: postgresql://inventory:${DB_PASSWORD_INVENTORY:?run setup-vm.sh}@postgres:5432/inventory
+
+  seed-discounts:
+    environment:
+      DATABASE_URL: postgresql://cart:${DB_PASSWORD_CART:?run setup-vm.sh}@postgres:5432/cart
+
+  storage-init:
+    environment:
+      DATABASE_URL: postgresql://products:${DB_PASSWORD_PRODUCTS:?run setup-vm.sh}@postgres:5432/products
 
   # The storefront runs on Vercel: not started here.
   web:
