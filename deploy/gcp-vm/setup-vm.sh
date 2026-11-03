@@ -105,7 +105,7 @@ if sudo grep -q '^BACKUP_BUCKET=.' "$env_file"; then
   sudo install -m 644 "$here/cse-backup.timer" /etc/systemd/system/cse-backup.timer
   sudo systemctl daemon-reload
   sudo systemctl enable --now cse-backup.timer
-  systemctl list-timers cse-backup.timer --no-pager | head -2
+  systemctl list-timers cse-backup.timer --no-pager
 else
   echo "no BACKUP_BUCKET in $env_file: database backups not scheduled"
 fi
