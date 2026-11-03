@@ -50,6 +50,13 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
+/**
+ * Server rendering runs in Frankfurt (Vercel fra1), beside the API (Google Cloud europe-west3):
+ * each catalog read stays in the city instead of crossing the Atlantic from the default region.
+ * Applies to every route below this layout.
+ */
+export const preferredRegion = 'fra1';
+
 export const viewport: Viewport = {
   // The shop opens in its dark theme whatever the system setting (see Providers).
   themeColor: '#0c0d10',
