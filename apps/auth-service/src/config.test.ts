@@ -23,17 +23,29 @@ describe('auth-service config', () => {
     ).toBe(false);
   });
 
-  it('requires a signing key and secure cookies in production', () => {
-    expect(() => loadConfig({ NODE_ENV: 'production', DATABASE_URL })).toThrow(/JWT_PRIVATE_KEY/);
+  it('requires a signing key, an MFA key and secure cookies in production', () => {
+    const MFA_ENCRYPTION_KEY = 'a production key of at least thirty-two characters';
+    expect(() => loadConfig({ NODE_ENV: 'production', DATABASE_URL, MFA_ENCRYPTION_KEY })).toThrow(
+      /JWT_PRIVATE_KEY/,
+    );
+    expect(() =>
+      loadConfig({ NODE_ENV: 'production', DATABASE_URL, JWT_PRIVATE_KEY: 'x' }),
+    ).toThrow(/MFA_ENCRYPTION_KEY/);
     expect(() =>
       loadConfig({
         NODE_ENV: 'production',
         DATABASE_URL,
         JWT_PRIVATE_KEY: 'x',
+        MFA_ENCRYPTION_KEY,
         COOKIE_SECURE: 'false',
       }),
     ).toThrow(/COOKIE_SECURE/);
-    const prod = loadConfig({ NODE_ENV: 'production', DATABASE_URL, JWT_PRIVATE_KEY: 'x' });
+    const prod = loadConfig({
+      NODE_ENV: 'production',
+      DATABASE_URL,
+      JWT_PRIVATE_KEY: 'x',
+      MFA_ENCRYPTION_KEY,
+    });
     expect(prod).toMatchObject({ COOKIE_SECURE: true, MIGRATE_ON_START: false });
   });
 

@@ -20,7 +20,7 @@ export const DEFAULT_POLICIES: readonly RateLimitPolicy[] = [
     windowMs: MINUTE,
     matches: (method, path) =>
       method === 'POST' &&
-      /^\/api\/v1\/auth\/(login|register|forgot-password|reset-password|verify-email)(\/|$)/.test(
+      /^\/api\/v1\/auth\/(login|register|forgot-password|reset-password|verify-email|mfa)(\/|$)/.test(
         path,
       ),
   },

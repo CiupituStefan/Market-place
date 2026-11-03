@@ -1,4 +1,4 @@
-import { RoleSchema } from '@market/types';
+import { RoleSchema, UserAccountSchema } from '@market/types';
 import { z } from 'zod';
 
 export const PASSWORD_MIN = 12;
@@ -29,6 +29,19 @@ export const LoginSchema = z
   .strict();
 export type LoginInput = z.infer<typeof LoginSchema>;
 
+const Challenge = z.string().min(20).max(200);
+/** A 6-digit TOTP code or a recovery code (`k7d2m-9xq4p`); spaces allowed, as people type them. */
+const MfaCode = z.string().trim().min(6).max(20);
+
+export const MfaLoginSchema = z.object({ challenge: Challenge, code: MfaCode }).strict();
+export type MfaLoginInput = z.infer<typeof MfaLoginSchema>;
+
+export const MfaSetupSchema = z.object({ password: z.string().min(1).max(PASSWORD_MAX) }).strict();
+export const MfaEnableSchema = z.object({ code: MfaCode }).strict();
+export const MfaDisableSchema = z
+  .object({ password: z.string().min(1).max(PASSWORD_MAX), code: MfaCode })
+  .strict();
+
 export const ForgotPasswordSchema = z.object({ email: Email }).strict();
 
 const OneTimeToken = z.string().min(20).max(200);
@@ -58,3 +71,11 @@ export {
   UserAccountSchema as UserResponseSchema,
   type UserAccount as UserResponse,
 } from '@market/types';
+
+/**
+ * `/auth/me`: the account as this session sees it. `roles` are the session's (STAFF and ADMIN
+ * need a sign-in with the second factor); `mfaSetupRequired` tells a staff account without
+ * two-step sign-in that it has to turn it on to use the back office.
+ */
+export const MeResponseSchema = UserAccountSchema.extend({ mfaSetupRequired: z.boolean() });
+export type MeResponse = z.infer<typeof MeResponseSchema>;

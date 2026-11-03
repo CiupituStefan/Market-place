@@ -38,6 +38,12 @@ export const users = pgTable(
     /** Consecutive failed sign-ins; reset on success. Drives the temporary lockout. */
     failedLoginCount: integer('failed_login_count').notNull().default(0),
     lockedUntil: timestamp('locked_until', { withTimezone: true }),
+    /** TOTP secret, AES-256-GCM sealed (mfa/totp.ts SecretBox). Set at setup, kept once enabled. */
+    totpSecret: text('totp_secret'),
+    /** Set when the user proved the authenticator works; null while setup is pending or off. */
+    totpEnabledAt: timestamp('totp_enabled_at', { withTimezone: true }),
+    /** Last accepted time step: a code is never accepted twice. */
+    totpLastStep: integer('totp_last_step'),
     ...timestamps,
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -63,6 +69,8 @@ export const sessions = pgTable(
     revokedReason: text('revoked_reason'),
     userAgent: text('user_agent'),
     ip: text('ip'),
+    /** When this session passed the second factor. STAFF/ADMIN roles are only granted if set. */
+    mfaVerifiedAt: timestamp('mfa_verified_at', { withTimezone: true }),
   },
   (table) => [index('sessions_user_id_idx').on(table.userId)],
 );
@@ -92,6 +100,8 @@ export const refreshTokens = pgTable(
 export const oneTimeTokenPurpose = pgEnum('one_time_token_purpose', [
   'EMAIL_VERIFICATION',
   'PASSWORD_RESET',
+  /** Password accepted, second factor pending (minutes, never emailed). */
+  'MFA_CHALLENGE',
 ]);
 
 /** Single-use, short-lived tokens sent by email (verification, password reset). Hashed at rest. */
@@ -112,6 +122,21 @@ export const oneTimeTokens = pgTable(
     uniqueIndex('one_time_tokens_token_hash_key').on(table.tokenHash),
     index('one_time_tokens_user_purpose_idx').on(table.userId, table.purpose),
   ],
+);
+
+/** Single-use codes for signing in without the authenticator; SHA-256 at rest. */
+export const mfaRecoveryCodes = pgTable(
+  'mfa_recovery_codes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    codeHash: text('code_hash').notNull(),
+    ...timestamps,
+    usedAt: timestamp('used_at', { withTimezone: true }),
+  },
+  (table) => [uniqueIndex('mfa_recovery_codes_user_code_key').on(table.userId, table.codeHash)],
 );
 
 /** Transactional outbox (shared definition, one table per service database). */

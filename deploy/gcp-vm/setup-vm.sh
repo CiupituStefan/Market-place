@@ -66,6 +66,7 @@ add_secret() {
 }
 add_secret UNSUBSCRIBE_SECRET ''
 add_secret STRIPE_WEBHOOK_SECRET 'whsec_'
+add_secret MFA_ENCRYPTION_KEY ''
 # One password per database role (docker-compose.yml only has public development values).
 databases=(auth products inventory cart orders payments notifications reviews admin)
 add_secret DB_PASSWORD_POSTGRES ''

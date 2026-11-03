@@ -91,6 +91,8 @@ export const UserAccountSchema = z.object({
   lastName: z.string(),
   roles: z.array(RoleSchema),
   emailVerified: z.boolean(),
+  /** Two-step sign-in (TOTP) is on. */
+  mfaEnabled: z.boolean().default(false),
   createdAt: z.iso.datetime(),
 });
 export type UserAccount = z.infer<typeof UserAccountSchema>;

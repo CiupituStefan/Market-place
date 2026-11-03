@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { expect, request as playwrightRequest, type APIRequestContext } from '@playwright/test';
 import { env } from './env.js';
+import { freshAdminCode } from './totp.js';
 
 export interface Money {
   amount: number;
@@ -17,6 +18,12 @@ export interface ApiResult<T> {
   body: T;
 }
 
+type StorageState = Awaited<ReturnType<APIRequestContext['storageState']>>;
+
+/** Well inside the access token's 15 minutes. */
+const ADMIN_SESSION_REUSE_MS = 10 * 60_000;
+let adminSession: { state: StorageState; at: number } | undefined;
+
 /**
  * The public API as one client sees it: its own cookie jar (session or visitor cart), the
  * storefront's Origin (cookie-authenticated writes are CSRF-checked), JSON in and out.
@@ -25,19 +32,32 @@ export interface ApiResult<T> {
 export class ShopApi {
   private constructor(readonly context: APIRequestContext) {}
 
-  static async create(): Promise<ShopApi> {
+  static async create(storageState?: StorageState): Promise<ShopApi> {
     return new ShopApi(
       await playwrightRequest.newContext({
+        storageState,
         baseURL: `${env.apiUrl}/api/v1/`,
         extraHTTPHeaders: { origin: env.webUrl, accept: 'application/json' },
       }),
     );
   }
 
-  /** Signed in as the seeded administrator. */
+  /**
+   * Signed in as the seeded administrator, with the second factor (STAFF and ADMIN need it).
+   * The session is shared by this worker's tests for a while: each authenticator code works
+   * once per 30 s, so signing in for every test would mostly wait.
+   */
   static async admin(): Promise<ShopApi> {
+    if (adminSession && Date.now() - adminSession.at < ADMIN_SESSION_REUSE_MS) {
+      return ShopApi.create(adminSession.state);
+    }
     const api = await ShopApi.create();
-    await api.ok('POST', 'auth/login', { email: env.adminEmail, password: env.adminPassword });
+    const { challenge } = await api.ok<{ challenge: string }>('POST', 'auth/login', {
+      email: env.adminEmail,
+      password: env.adminPassword,
+    });
+    await api.ok('POST', 'auth/login/mfa', { challenge, code: await freshAdminCode() });
+    adminSession = { state: await api.context.storageState(), at: Date.now() };
     return api;
   }
 

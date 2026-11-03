@@ -5,6 +5,8 @@ export const env = {
   mailUrl: process.env.E2E_MAIL_URL ?? 'http://localhost:8025',
   adminEmail: process.env.E2E_ADMIN_EMAIL ?? 'admin@csekeyboards.test',
   adminPassword: process.env.E2E_ADMIN_PASSWORD ?? 'admin passphrase for local dev',
+  /** The authenticator docker-compose.yml enrols for the admin (ADMIN_TOTP_SECRET). */
+  adminTotpSecret: process.env.E2E_ADMIN_TOTP_SECRET ?? 'KRSXG5CTMVRXEZLUKRSXG5CTMVRXEZLU',
   /** A Chromium already on the machine, instead of Playwright's download. */
   chromiumPath: process.env.E2E_CHROMIUM_PATH,
   ci: Boolean(process.env.CI),

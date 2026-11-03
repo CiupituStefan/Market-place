@@ -14,6 +14,8 @@ import { OneTimeTokenService } from './auth/one-time-tokens.service.js';
 import { SessionService } from './auth/session.service.js';
 import { APP_CONFIG, SERVICE_NAME, type AppConfig } from './config.js';
 import { DATABASE, type Database } from './db/database.js';
+import { MfaController } from './mfa/mfa.controller.js';
+import { MfaService } from './mfa/mfa.service.js';
 import { JwksController } from './tokens/jwks.controller.js';
 import { SigningKeys } from './tokens/signing-keys.js';
 import { UsersController } from './users/users.controller.js';
@@ -62,7 +64,7 @@ export class AppModule {
           ],
         }),
       ],
-      controllers: [AuthController, UsersController, JwksController],
+      controllers: [AuthController, MfaController, UsersController, JwksController],
       providers: [
         { provide: APP_CONFIG, useValue: config },
         { provide: DATABASE, useValue: deps.db },
@@ -71,6 +73,7 @@ export class AppModule {
         SessionService,
         OneTimeTokenService,
         AccountRecoveryService,
+        MfaService,
         UsersService,
         {
           provide: InfrastructureLifecycle,

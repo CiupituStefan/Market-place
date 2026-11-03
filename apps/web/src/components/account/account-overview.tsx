@@ -6,6 +6,7 @@ import { useI18n } from '@/components/i18n/provider';
 import { SignOutButton } from '@/components/auth/sign-out-button';
 import { EmailPreferences } from './email-preferences';
 import { RequireSession } from './require-session';
+import { TwoStepSettings } from './two-step-settings';
 
 const LINKS = [
   { key: 'orders', href: '/account/orders', icon: PackageIcon },
@@ -44,6 +45,7 @@ export function AccountOverview() {
               </li>
             ))}
           </ul>
+          <TwoStepSettings required={user.mfaSetupRequired} />
           <EmailPreferences />
         </div>
       )}

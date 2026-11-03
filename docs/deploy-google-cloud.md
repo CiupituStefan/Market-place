@@ -359,6 +359,26 @@ git clone https://github.com/CiupituStefan/Market-place.git && cd Market-place
 deploy/gcp-vm/restore-test.sh
 ```
 
+## Autentificarea în doi pași a administratorului
+
+Contul de admin (și orice cont STAFF) are drepturile de back-office **doar** după o conectare cu
+codul dintr-o aplicație de autentificare. Prima dată după actualizare:
+
+1. Conectează-te pe site cu emailul și parola de admin. Back-office-ul îți arată „Turn on two-step
+   sign-in”.
+2. **Contul meu → Autentificare în doi pași → Activează**: parola, apoi scanezi codul QR cu
+   aplicația (Google Authenticator, Microsoft Authenticator, 1Password, Aegis) și introduci codul.
+3. **Salvează cele 10 coduri de recuperare** (manager de parole sau tipărite), apoi te conectezi
+   din nou: parolă, apoi codul din aplicație.
+
+Dacă pierzi telefonul: te conectezi cu un cod de recuperare (în locul codului din aplicație) și
+reactivezi. Dacă ai pierdut și codurile, ultima soluție, pe mașină:
+
+```bash
+sudo /opt/cse/Market-place/deploy/gcp-vm/dc exec -T postgres psql -U postgres -d auth -c \
+  "UPDATE users SET totp_secret = NULL, totp_enabled_at = NULL WHERE email = 'admin@csekeyboards.com'"
+```
+
 ## Securitatea mașinii
 
 `setup-vm.sh` configurează, la fiecare rulare:

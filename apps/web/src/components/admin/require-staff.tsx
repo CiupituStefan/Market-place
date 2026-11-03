@@ -1,7 +1,7 @@
 'use client';
 
 import { BACK_OFFICE_ROLES, hasAnyRole } from '@market/types';
-import { ShieldAlertIcon } from 'lucide-react';
+import { KeyRoundIcon, ShieldAlertIcon } from 'lucide-react';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { RequireSession } from '@/components/account/require-session';
@@ -19,6 +19,18 @@ export function RequireStaff({ children }: { children: ReactNode }) {
       {(user) =>
         hasAnyRole(user.roles, BACK_OFFICE_ROLES) ? (
           children
+        ) : user.mfaSetupRequired ? (
+          // A staff account signs in with customer rights until two-step sign-in is on.
+          <EmptyState
+            icon={KeyRoundIcon}
+            title="Turn on two-step sign-in"
+            description="The back office needs a sign-in with an authenticator app. Turn it on in your account, then sign in again with the code."
+            action={
+              <Button asChild>
+                <Link href="/account#security">Open account security</Link>
+              </Button>
+            }
+          />
         ) : (
           <EmptyState
             icon={ShieldAlertIcon}

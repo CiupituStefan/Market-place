@@ -4,6 +4,7 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { APP_CONFIG, type AppConfig } from '../config.js';
 import { DATABASE, type Database } from '../db/database.js';
 import { refreshTokens, sessions, users, type UserRow } from '../db/schema.js';
+import { isPrivileged } from '../mfa/mfa.service.js';
 import { generateOpaqueToken, hashOpaqueToken } from '../tokens/opaque-token.js';
 import { SigningKeys } from '../tokens/signing-keys.js';
 import type { IssuedTokens } from './cookies.js';
@@ -14,6 +15,15 @@ export interface ClientInfo {
 }
 
 const DAY_MS = 86_400_000;
+
+/**
+ * The roles a session acts with. STAFF and ADMIN reach customers' data and the shop's settings,
+ * so they need a session that passed the second factor; without it the account works as a
+ * customer's (and can turn two-step sign-in on). Every service enforces roles from this token.
+ */
+export function sessionRoles(roles: Role[], mfaVerified: boolean): Role[] {
+  return mfaVerified || !isPrivileged(roles) ? roles : roles.filter((role) => role === 'USER');
+}
 
 function unauthenticated(message = 'Your session has ended. Please sign in again.'): DomainError {
   return new DomainError(ErrorCode.UNAUTHENTICATED, message);
@@ -34,12 +44,15 @@ export class SessionService {
     private readonly keys: SigningKeys,
   ) {}
 
+  /** `mfaVerified`: the sign-in passed the second factor (what that unlocks: `sessionRoles`). */
   async createSession(
     user: UserRow,
     client: ClientInfo,
     tx: Database = this.db,
+    mfaVerified = false,
   ): Promise<IssuedTokens> {
     const expiresAt = new Date(Date.now() + this.config.SESSION_TTL_DAYS * DAY_MS);
+    const mfaVerifiedAt = mfaVerified ? new Date() : null;
     const [session] = await tx
       .insert(sessions)
       .values({
@@ -47,6 +60,7 @@ export class SessionService {
         expiresAt,
         userAgent: client.userAgent?.slice(0, 512),
         ip: client.ip,
+        mfaVerifiedAt,
       })
       .returning({ id: sessions.id });
     if (!session) throw new Error('session insert returned no row');
@@ -54,7 +68,7 @@ export class SessionService {
     await tx
       .insert(refreshTokens)
       .values({ sessionId: session.id, tokenHash: hashOpaqueToken(refreshToken), expiresAt });
-    return this.issue(user, session.id, refreshToken, expiresAt);
+    return this.issue(user, session.id, refreshToken, expiresAt, mfaVerifiedAt !== null);
   }
 
   async rotate(
@@ -100,6 +114,7 @@ export class SessionService {
         sessionId: row.session.id,
         next,
         expiresAt: row.session.expiresAt,
+        mfaVerified: row.session.mfaVerifiedAt !== null,
       };
     });
 
@@ -122,6 +137,7 @@ export class SessionService {
             outcome.sessionId,
             outcome.next,
             outcome.expiresAt,
+            outcome.mfaVerified,
           ),
         };
     }
@@ -149,6 +165,15 @@ export class SessionService {
       .where(and(eq(sessions.userId, userId), isNull(sessions.revokedAt)));
   }
 
+  /** Whether a live session passed the second factor. */
+  async isMfaVerified(sessionId: string): Promise<boolean> {
+    const [session] = await this.db
+      .select({ mfaVerifiedAt: sessions.mfaVerifiedAt })
+      .from(sessions)
+      .where(eq(sessions.id, sessionId));
+    return (session?.mfaVerifiedAt ?? null) !== null;
+  }
+
   async isActive(sessionId: string): Promise<boolean> {
     const [session] = await this.db
       .select({ revokedAt: sessions.revokedAt, expiresAt: sessions.expiresAt })
@@ -163,12 +188,13 @@ export class SessionService {
     sessionId: string,
     refreshToken: string,
     sessionExpiresAt: Date,
+    mfaVerified: boolean,
   ): Promise<IssuedTokens> {
     const accessToken = await this.keys.signAccessToken(
       {
         sub: user.id,
         sid: sessionId,
-        roles: user.roles as Role[],
+        roles: sessionRoles(user.roles as Role[], mfaVerified),
         email_verified: user.emailVerifiedAt !== null,
         email: user.email,
       },

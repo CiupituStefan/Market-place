@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { oneTimeTokens, outboxEvents, sessions, users } from '../src/db/schema.js';
+import { timeStep, totpCode } from '../src/mfa/totp.js';
 import { cookiesFrom, createHarness, type Harness } from './harness.js';
 
 const PASSWORD = 'correct horse battery staple';
@@ -39,6 +40,44 @@ async function login(email: string, password = PASSWORD) {
   const res = await request(http).post('/api/v1/auth/login').send({ email, password }).expect(200);
   const cookies = cookiesFrom(res.headers['set-cookie']);
   return { res, access: cookies.cse_at!.value, refresh: cookies.cse_rt!.value, cookies };
+}
+
+/**
+ * Turns two-step sign-in on through the API (setup → enable) and returns the secret. Codes are
+ * single-use per 30 s step, so `code(n)` gives the code n steps ahead: accepted (one step of
+ * drift is allowed) and never one already spent.
+ */
+async function enableMfa(email: string, password = PASSWORD) {
+  const { access } = await login(email, password);
+  const setup = await request(http)
+    .post('/api/v1/auth/mfa/setup')
+    .set('cookie', `cse_at=${access}`)
+    .send({ password })
+    .expect(200);
+  const secret: string = setup.body.secret;
+  const enabled = await request(http)
+    .post('/api/v1/auth/mfa/enable')
+    .set('cookie', `cse_at=${access}`)
+    .send({ code: totpCode(secret, timeStep()) })
+    .expect(200);
+  return { secret, recoveryCodes: enabled.body.recoveryCodes as string[], oldAccess: access };
+}
+
+const code = (secret: string, ahead = 1) => totpCode(secret, timeStep() + ahead);
+
+/** Password step, then the code step; returns the session cookies. */
+async function loginWithCode(email: string, codeValue: string, password = PASSWORD) {
+  const first = await request(http)
+    .post('/api/v1/auth/login')
+    .send({ email, password })
+    .expect(200);
+  expect(first.body).toEqual({ mfaRequired: true, challenge: expect.any(String) });
+  expect(first.headers['set-cookie']).toBeUndefined();
+  const second = await request(http)
+    .post('/api/v1/auth/login/mfa')
+    .send({ challenge: first.body.challenge, code: codeValue });
+  const cookies = cookiesFrom(second.headers['set-cookie']);
+  return { res: second, challenge: first.body.challenge as string, access: cookies.cse_at?.value };
 }
 
 /** Email links are only in the outbox event (the raw token is never stored). */
@@ -358,10 +397,17 @@ describe('password reset', () => {
 });
 
 describe('back-office users API', () => {
+  /** Staff and admins sign in with the second factor, as they must to act with their roles. */
   async function loginAs(roles: string[]) {
     const email = await register();
     await h.db.update(users).set({ roles }).where(eq(users.email, email));
-    const { access } = await login(email);
+    let access: string;
+    if (roles.length > 1) {
+      const { secret } = await enableMfa(email);
+      access = (await loginWithCode(email, code(secret))).access!;
+    } else {
+      access = (await login(email)).access;
+    }
     const [user] = await h.db.select().from(users).where(eq(users.email, email));
     return { access, id: user!.id };
   }
@@ -422,6 +468,152 @@ describe('back-office users API', () => {
       .set('cookie', `cse_at=${admin.access}`)
       .send({ roles: ['USER'] })
       .expect(409);
+  });
+});
+
+describe('two-step sign-in (TOTP)', () => {
+  async function staffAccount() {
+    const email = await register();
+    await h.db
+      .update(users)
+      .set({ roles: ['USER', 'STAFF'] })
+      .where(eq(users.email, email));
+    return email;
+  }
+
+  it('gives staff without it customer rights only, and says why', async () => {
+    const email = await staffAccount();
+    const { access } = await login(email);
+    await request(http).get('/api/v1/users').set('cookie', `cse_at=${access}`).expect(403);
+    const me = await request(http).get('/api/v1/auth/me').set('cookie', `cse_at=${access}`);
+    expect(me.body).toMatchObject({ roles: ['USER'], mfaEnabled: false, mfaSetupRequired: true });
+  });
+
+  it('sets up only with the password and a working code, then signs every device out', async () => {
+    const email = await staffAccount();
+    const { access } = await login(email);
+    const auth = { cookie: `cse_at=${access}` };
+    await request(http)
+      .post('/api/v1/auth/mfa/setup')
+      .set(auth)
+      .send({ password: 'not the password' })
+      .expect(401);
+    const setup = await request(http)
+      .post('/api/v1/auth/mfa/setup')
+      .set(auth)
+      .send({ password: PASSWORD })
+      .expect(200);
+    expect(setup.body.otpauthUri).toMatch(/^otpauth:\/\/totp\/CSE%20Keyboards%3A/);
+    const [stored] = await h.db.select().from(users).where(eq(users.email, email));
+    expect(stored!.totpSecret).toMatch(/^v1\./); // sealed, not the secret itself
+    expect(stored!.totpSecret).not.toContain(setup.body.secret);
+
+    const wrong = await request(http)
+      .post('/api/v1/auth/mfa/enable')
+      .set(auth)
+      .send({ code: '000000' === code(setup.body.secret, 0) ? '111111' : '000000' })
+      .expect(401);
+    expect(wrong.body.error.code).toBe('INVALID_MFA_CODE');
+    const enabled = await request(http)
+      .post('/api/v1/auth/mfa/enable')
+      .set(auth)
+      .send({ code: code(setup.body.secret, 0) })
+      .expect(200);
+    expect(enabled.body.recoveryCodes).toHaveLength(10);
+    await request(http).get('/api/v1/auth/me').set(auth).expect(401);
+  });
+
+  it('asks for the code after the password, and unlocks the roles with it', async () => {
+    const email = await staffAccount();
+    const { secret } = await enableMfa(email);
+    const { res, access } = await loginWithCode(email, code(secret));
+    expect(res.status).toBe(200);
+    await request(http).get('/api/v1/users').set('cookie', `cse_at=${access}`).expect(200);
+    const me = await request(http).get('/api/v1/auth/me').set('cookie', `cse_at=${access}`);
+    expect(me.body).toMatchObject({
+      roles: ['USER', 'STAFF'],
+      mfaEnabled: true,
+      mfaSetupRequired: false,
+    });
+    const status = await request(http).get('/api/v1/auth/mfa').set('cookie', `cse_at=${access}`);
+    expect(status.body).toEqual({ enabled: true, recoveryCodesLeft: 10, sessionVerified: true });
+  });
+
+  it('refuses a code already used, a used challenge and a wrong password', async () => {
+    const email = await staffAccount();
+    const { secret } = await enableMfa(email);
+    const used = code(secret);
+    const first = await loginWithCode(email, used);
+    expect(first.res.status).toBe(200);
+    const replay = await loginWithCode(email, used);
+    expect(replay.res.status).toBe(401);
+    expect(replay.res.body.error.code).toBe('INVALID_MFA_CODE');
+    // The challenge from the successful sign-in cannot open a second session.
+    await request(http)
+      .post('/api/v1/auth/login/mfa')
+      .send({ challenge: first.challenge, code: code(secret, -1) })
+      .expect(400);
+    await request(http)
+      .post('/api/v1/auth/login')
+      .send({ email, password: 'not the password' })
+      .expect(401);
+  });
+
+  it('accepts each recovery code once', async () => {
+    const email = await staffAccount();
+    const { recoveryCodes } = await enableMfa(email);
+    const recovery = recoveryCodes[0]!;
+    expect((await loginWithCode(email, ` ${recovery.toUpperCase()} `)).res.status).toBe(200);
+    expect((await loginWithCode(email, recovery)).res.status).toBe(401);
+  });
+
+  it('locks the account after too many wrong codes, like wrong passwords', async () => {
+    const email = await staffAccount();
+    const { secret } = await enableMfa(email);
+    const first = await request(http)
+      .post('/api/v1/auth/login')
+      .send({ email, password: PASSWORD })
+      .expect(200);
+    const valid = new Set([-1, 0, 1].map((n) => code(secret, n)));
+    const wrong = ['123456', '234567', '345678', '456789'].filter((c) => !valid.has(c));
+    for (const bad of wrong.slice(0, 3)) {
+      await request(http)
+        .post('/api/v1/auth/login/mfa')
+        .send({ challenge: first.body.challenge, code: bad })
+        .expect(401);
+    }
+    // Locked (LOGIN_MAX_FAILURES is 3 in tests): even the right code is refused now.
+    await request(http)
+      .post('/api/v1/auth/login/mfa')
+      .send({ challenge: first.body.challenge, code: code(secret) })
+      .expect(401);
+    await request(http).post('/api/v1/auth/login').send({ email, password: PASSWORD }).expect(401);
+  });
+
+  it('turns off only with the password and a code', async () => {
+    const email = await staffAccount();
+    const { secret, recoveryCodes } = await enableMfa(email);
+    const { access } = await loginWithCode(email, code(secret));
+    const auth = { cookie: `cse_at=${access}` };
+    await request(http)
+      .post('/api/v1/auth/mfa/disable')
+      .set(auth)
+      .send({ password: PASSWORD, code: '12345' })
+      .expect(400);
+    await request(http)
+      .post('/api/v1/auth/mfa/disable')
+      .set(auth)
+      .send({ password: 'not the password', code: recoveryCodes[0] })
+      .expect(401);
+    // The sign-in spent the newest TOTP step, so (as with a lost phone) a recovery code.
+    await request(http)
+      .post('/api/v1/auth/mfa/disable')
+      .set(auth)
+      .send({ password: PASSWORD, code: recoveryCodes[0] })
+      .expect(204);
+    await request(http).get('/api/v1/auth/me').set(auth).expect(401);
+    const plain = await login(email);
+    expect(plain.res.body.user.mfaEnabled).toBe(false);
   });
 });
 

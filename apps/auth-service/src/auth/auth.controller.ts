@@ -11,6 +11,7 @@ import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 import { APP_CONFIG, type AppConfig } from '../config.js';
+import { isPrivileged, mfaEnabled } from '../mfa/mfa.service.js';
 import { toUserResponse } from '../users/user-response.js';
 import { AccountRecoveryService } from './account-recovery.service.js';
 import { AuthService } from './auth.service.js';
@@ -18,11 +19,15 @@ import { clearSessionCookies, setSessionCookies } from './cookies.js';
 import {
   ForgotPasswordSchema,
   LoginSchema,
+  MeResponseSchema,
+  MfaLoginSchema,
   RegisterSchema,
   ResetPasswordSchema,
   UserResponseSchema,
   VerifyEmailSchema,
   type LoginInput,
+  type MeResponse,
+  type MfaLoginInput,
   type RegisterInput,
   type UserResponse,
 } from './dto.js';
@@ -60,15 +65,34 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(200)
-  @ApiOperation({ summary: 'Sign in; sets httpOnly session cookies' })
+  @ApiOperation({
+    summary:
+      'Sign in; sets httpOnly session cookies, or (two-step sign-in on) returns a challenge for /auth/login/mfa',
+  })
   @ApiBody({ schema: openApiSchema(LoginSchema) })
   @ApiOkResponse(userResponse)
   async login(
     @Body(new ZodValidationPipe(LoginSchema)) body: LoginInput,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
+  ): Promise<{ user: UserResponse } | { mfaRequired: true; challenge: string }> {
+    const result = await this.auth.login(body, clientInfo(req));
+    if (result.kind === 'mfa') return { mfaRequired: true, challenge: result.challenge };
+    setSessionCookies(res, result.tokens, this.config);
+    return { user: toUserResponse(result.user) };
+  }
+
+  @Post('login/mfa')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Second sign-in step: an authenticator or recovery code' })
+  @ApiBody({ schema: openApiSchema(MfaLoginSchema) })
+  @ApiOkResponse(userResponse)
+  async loginMfa(
+    @Body(new ZodValidationPipe(MfaLoginSchema)) body: MfaLoginInput,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
   ): Promise<{ user: UserResponse }> {
-    const { user, tokens } = await this.auth.login(body, clientInfo(req));
+    const { user, tokens } = await this.auth.loginWithMfa(body, clientInfo(req));
     setSessionCookies(res, tokens, this.config);
     return { user: toUserResponse(user) };
   }
@@ -108,9 +132,15 @@ export class AuthController {
   @Get('me')
   @Authenticated()
   @ApiOperation({ summary: 'Current user' })
-  @ApiOkResponse({ schema: openApiSchema(UserResponseSchema) })
-  async me(@CurrentUser() principal: AuthUser): Promise<UserResponse> {
-    return toUserResponse(await this.auth.findActiveUser(principal.id, principal.sessionId));
+  @ApiOkResponse({ schema: openApiSchema(MeResponseSchema) })
+  async me(@CurrentUser() principal: AuthUser): Promise<MeResponse> {
+    const user = await this.auth.findActiveUser(principal.id, principal.sessionId);
+    return {
+      ...toUserResponse(user),
+      // The session's roles, not the account's: privileged ones need the second factor.
+      roles: principal.roles,
+      mfaSetupRequired: isPrivileged(user.roles) && !mfaEnabled(user),
+    };
   }
 
   @Post('forgot-password')

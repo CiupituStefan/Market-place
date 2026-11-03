@@ -4,6 +4,9 @@ import { z } from 'zod';
 
 export const SERVICE_NAME = 'auth-service';
 
+// Development default only; the schema refuses it when NODE_ENV=production.
+const DEV_MFA_ENCRYPTION_KEY = 'local-development-mfa-key-not-for-production';
+
 export const ConfigSchema = baseServiceEnv
   .extend(postgresEnv.shape)
   .extend(messagingEnv.shape)
@@ -28,6 +31,13 @@ export const ConfigSchema = baseServiceEnv
     LOGIN_MAX_FAILURES: z.coerce.number().int().min(3).max(20).default(5),
     LOGIN_LOCKOUT_MINUTES: z.coerce.number().int().min(1).max(1_440).default(15),
 
+    /** Encrypts TOTP secrets at rest (any long random string; changing it disables every authenticator). */
+    MFA_ENCRYPTION_KEY: z.string().min(32).default(DEV_MFA_ENCRYPTION_KEY),
+    /** Name shown in authenticator apps. */
+    MFA_ISSUER: z.string().min(1).max(40).default('CSE Keyboards'),
+    /** How long the second step of a sign-in may take. */
+    MFA_CHALLENGE_MINUTES: z.coerce.number().int().min(1).max(15).default(5),
+
     COOKIE_SECURE: booleanString.optional(),
     COOKIE_DOMAIN: z.string().min(1).optional(),
 
@@ -49,6 +59,13 @@ export const ConfigSchema = baseServiceEnv
     path: ['JWT_PRIVATE_KEY'],
     message: 'is required in production',
   })
+  .refine(
+    (env) => env.NODE_ENV !== 'production' || env.MFA_ENCRYPTION_KEY !== DEV_MFA_ENCRYPTION_KEY,
+    {
+      path: ['MFA_ENCRYPTION_KEY'],
+      message: 'must be set in production',
+    },
+  )
   .refine((env) => env.NODE_ENV !== 'production' || env.COOKIE_SECURE, {
     path: ['COOKIE_SECURE'],
     message: 'must be true in production',

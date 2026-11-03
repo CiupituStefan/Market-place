@@ -48,6 +48,8 @@ services:
       # cookies, so the storefront's server can tell a signed-in visitor.
       COOKIE_DOMAIN: ${COOKIE_DOMAIN:?set COOKIE_DOMAIN in deploy/gcp-vm/.env}
       COOKIE_SECURE: 'true'
+      # Encrypts the TOTP secrets at rest (the default is public; setup-vm.sh generates one).
+      MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY:?run setup-vm.sh}
 
   cart-service:
     environment:
@@ -91,6 +93,10 @@ services:
       DATABASE_URL: postgresql://auth:${DB_PASSWORD_AUTH:?run setup-vm.sh}@postgres:5432/auth
       ADMIN_EMAIL: ${ADMIN_EMAIL:?set ADMIN_EMAIL in deploy/gcp-vm/.env}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in deploy/gcp-vm/.env}
+      MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY:?run setup-vm.sh}
+      # Never the public development authenticator: the admin turns two-step sign-in on in
+      # the account page (Account → Security).
+      ADMIN_TOTP_SECRET: ''
 
   product-service:
     environment:

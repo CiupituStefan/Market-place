@@ -13,6 +13,12 @@ Security controls by layer. Items marked _(Phase N)_ land in that phase.
 - Password reset and role changes revoke all sessions; forgot-password never reveals whether an
   account exists.
 - Email links require an explicit click (scanners that prefetch links cannot consume them).
+- Two-step sign-in (TOTP, RFC 6238) for any account, **required for STAFF and ADMIN**: a session
+  only receives those roles if it passed the second factor (`sessions.mfa_verified_at`), so a
+  stolen staff password alone gives customer rights. Secrets are AES-256-GCM sealed
+  (`MFA_ENCRYPTION_KEY`), each 30 s step is accepted once, wrong codes count towards the same
+  lockout as wrong passwords, ten single-use recovery codes (SHA-256 at rest), and turning it on
+  or off needs the password again and signs every device out.
 
 ## Visitor carts
 

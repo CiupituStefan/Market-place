@@ -387,6 +387,10 @@ services:
       DATABASE_URL: postgresql://auth:auth-dev-password@postgres:5432/auth
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@csekeyboards.test}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin passphrase for local dev}
+      # Local and end-to-end only: a known authenticator for the admin's two-step sign-in
+      # (add it to an authenticator app to sign in to /admin locally). Public, like the
+      # passwords here; the VM deployment sets it empty.
+      ADMIN_TOTP_SECRET: ${ADMIN_TOTP_SECRET:-KRSXG5CTMVRXEZLUKRSXG5CTMVRXEZLU}
     command: ['node', 'dist/scripts/seed-admin.js']
     restart: 'no'
 

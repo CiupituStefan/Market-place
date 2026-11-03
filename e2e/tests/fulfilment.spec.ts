@@ -1,6 +1,7 @@
 import { ShopApi } from '../src/api.js';
 import { Mailbox } from '../src/mail.js';
 import { env } from '../src/env.js';
+import { freshAdminCode } from '../src/totp.js';
 import { expect, test } from '../src/fixtures.js';
 import { shop } from '../src/shop.js';
 
@@ -47,6 +48,8 @@ test.describe('from payment to review', () => {
     await admin.getByLabel('Email').fill(env.adminEmail);
     await admin.getByLabel('Password').fill(env.adminPassword);
     await admin.getByRole('button', { name: 'Sign in' }).click();
+    await admin.getByLabel('Authentication code').fill(await freshAdminCode());
+    await admin.getByRole('button', { name: 'Verify' }).click();
     await expect(admin).toHaveURL(/\/admin$/);
     await admin.goto(`/admin/orders/${orderId}`);
     await admin.getByRole('button', { name: 'Start preparing' }).click();

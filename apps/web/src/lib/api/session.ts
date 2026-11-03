@@ -11,8 +11,12 @@ export const SessionUserSchema = z.object({
   email: z.email(),
   firstName: z.string(),
   lastName: z.string(),
+  /** The session's roles: STAFF and ADMIN only after a sign-in with the second factor. */
   roles: z.array(RoleSchema),
   emailVerified: z.boolean(),
+  mfaEnabled: z.boolean().default(false),
+  /** A staff account without two-step sign-in: it must turn it on to use the back office. */
+  mfaSetupRequired: z.boolean().default(false),
 });
 export type SessionUser = z.infer<typeof SessionUserSchema>;
 
