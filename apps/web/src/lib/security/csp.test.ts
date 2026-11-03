@@ -21,6 +21,8 @@ describe('buildCsp', () => {
     const scripts = directive(production, 'script-src');
     expect(scripts).toContain("'nonce-abc123'");
     expect(scripts).toContain("'strict-dynamic'");
+    expect(scripts).toContain("'inline-speculation-rules'");
+    expect(scripts).not.toContain("'unsafe-inline'");
     expect(scripts).not.toContain("'unsafe-inline'");
     expect(scripts).not.toContain("'unsafe-eval'");
   });

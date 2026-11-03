@@ -46,6 +46,9 @@ export function buildCsp(options: CspOptions): string {
       "'self'",
       `'nonce-${options.nonce}'`,
       "'strict-dynamic'",
+      // Inline <script type="speculationrules"> only (JSON, not code): lets the language
+      // switch prerender the other language's page so the click is instant.
+      "'inline-speculation-rules'",
       ...STRIPE.script,
       options.development && "'unsafe-eval'",
     ],

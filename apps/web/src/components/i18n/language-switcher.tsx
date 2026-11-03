@@ -1,6 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
+import { useEffect } from 'react';
 import { LOCALE_COOKIE, localizePath, splitLocale, type Locale } from '@/lib/i18n/config';
 import { cn } from '@/lib/utils';
 import { useI18n } from './provider';
@@ -13,12 +14,34 @@ function rememberLocale(locale: Locale) {
 }
 
 /**
+ * Asks the browser (Chromium: Speculation Rules) to prerender the other language's page when
+ * the visitor hovers or focuses the switch, so the click shows it at once. Browsers without
+ * support ignore the rules and simply load the page on click.
+ */
+function usePrerenderOtherLanguage(href: string) {
+  useEffect(() => {
+    if (!('supports' in HTMLScriptElement) || !HTMLScriptElement.supports('speculationrules'))
+      return;
+    const rules = document.createElement('script');
+    rules.type = 'speculationrules';
+    rules.textContent = JSON.stringify({
+      prerender: [{ urls: [href], eagerness: 'moderate' }],
+    });
+    document.head.append(rules);
+    return () => {
+      rules.remove();
+    };
+  }, [href]);
+}
+
+/**
  * RO / EN switch: plain links to the same page in the other language (a full page load, so
  * every Server Component renders in it), remembering the choice in a cookie on the way.
  */
 export function LanguageSwitcher({ className }: { className?: string }) {
   const { locale, t } = useI18n();
   const { path } = splitLocale(usePathname());
+  usePrerenderOtherLanguage(localizePath(path, locale === 'ro' ? 'en' : 'ro'));
   return (
     <div
       role="group"
